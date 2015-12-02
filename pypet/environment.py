@@ -24,11 +24,13 @@ import sys
 import logging
 import shutil
 import multiprocessing as multip
+import multiprocessing.managers as multipman
 import traceback
 import hashlib
 import time
 import datetime
 import inspect
+import signal
 
 try:
     from sumatra.projects import load_project
@@ -78,6 +80,7 @@ from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
+from pypet.utils.sigtermhandling import sigterm_handling, SIGTERM
 from pypet.utils.helpful_functions import is_debug, result_sort, format_time, port_to_tcp, \
     racedirs
 from pypet.utils.storagefactory import storage_factory
@@ -234,6 +237,7 @@ def _configure_niceness(kwargs):
             psutil.Process().nice(niceness)
 
 
+@sigterm_handling
 def _single_run(kwargs):
     """ Performs a single run of the experiment.
 
@@ -320,6 +324,7 @@ def _single_run(kwargs):
         raise
 
 
+@sigterm_handling
 def _wrap_handling(kwargs):
     """ Starts running a queue handler and creates a log file for the queue."""
     _configure_logging(kwargs, extract=False)
@@ -1113,6 +1118,8 @@ class Environment(HasLogger):
         self._set_logger()
 
         self._map_arguments = False
+        self._stop_iteration = False  # Marker to cancel
+        # iteration in case of Keyboard interrupt
 
         # Helper attributes defined later on
         self._start_timestamp = None
@@ -2166,6 +2173,8 @@ class Environment(HasLogger):
         total_runs = len(self._traj)
         for n in compat.xrange(start_run_idx, total_runs):
             self._current_idx = n + 1
+            if self._stop_iteration:
+                break
             if not self._traj._is_completed(n):
                 self._traj.f_set_crun(n)
                 yield n
@@ -2343,6 +2352,7 @@ class Environment(HasLogger):
             try:
                 self._inner_run_loop(results)
             finally:
+                self._stop_iteration = False
                 self._traj._run_by_environment = False
 
         self._add_wildcard_config()
@@ -2402,12 +2412,15 @@ class Environment(HasLogger):
             # Finalize the storage service if this is supported
             self._traj.v_storage_service.finalize()
 
-        all_completed = True
+        incomplete = []
         for run_name in self._traj.f_get_run_names():
             if not self._traj._is_completed(run_name):
-                all_completed = False
-                self._logger.error('Run `%s` did NOT complete!' % run_name)
-        if all_completed:
+                incomplete.append(run_name)
+        if len(incomplete) > 0:
+            self._logger.error('Following runs of trajectory `%s` '
+                               'did NOT complete: `%s`' % (self._traj.v_name,
+                                                           ', '.join(incomplete)))
+        else:
             self._logger.info('All runs of trajectory `%s` were completed successfully.' %
                               self._traj.v_name)
 
@@ -2448,6 +2461,7 @@ class Environment(HasLogger):
             except Exception:
                 pass  # We cannot find the source, just leave it
 
+    @sigterm_handling
     def _inner_run_loop(self, results):
         """Performs the inner loop of the run execution"""
         start_run_idx = self._current_idx
@@ -2479,11 +2493,8 @@ class Environment(HasLogger):
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
                     result = _single_run(task)
-                    self._check_and_store_references(result)
-                    self._traj._update_run_information(result[1])
-                    results.append(result[0])
-                    self._show_progress(n, total_runs)
-                    n += 1
+                    result, n = self._check_result_and_store_references(result, results,
+                                                                        n, total_runs)
 
             repeat = False
             if self._postproc is not None:
@@ -2523,20 +2534,25 @@ class Environment(HasLogger):
         # Get all results from the result queue
         while not result_queue.empty():
             result = result_queue.get()
-            self._check_and_store_references(result)
-            self._traj._update_run_information(result[1])
-            results.append(result[0])
-            self._show_progress(n, total_runs)
-            n += 1
+            n = self._check_result_and_store_references(result, results, n, total_runs)
         return n
 
-    def _check_and_store_references(self, result):
-        """Checks if reference wrapping and stores references."""
+    def _check_result_and_store_references(self, result, results, n, total_runs):
+        """Checks for SIGTERM and if reference wrapping and stores references."""
+        if result[0] == SIGTERM:
+            self._stop_iteration = True
+            result = result[1]  # If SIGTERM result is a nested tuple
         if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._multiproc_wrapper.store_references(result[2])
-        if self._resumable:
-            # [0:2] to not store references
-            self._trigger_result_snapshot(result[0:2])
+        if result is not None:
+            self._traj._update_run_information(result[1])
+            results.append(result[0])
+            if self._resumable:
+                # [0:2] to not store references
+                self._trigger_result_snapshot(result[0:2])
+        self._show_progress(n, total_runs)
+        n += 1
+        return n
 
     def _trigger_result_snapshot(self, result):
         """ Triggers a snapshot of the results for continuing
@@ -2627,11 +2643,8 @@ class Environment(HasLogger):
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
                     for result in pool_results:
-                        self._check_and_store_references(result)
-                        self._traj._update_run_information(result[1])
-                        results.append(result[0])
-                        self._show_progress(n, total_runs)
-                        n += 1
+                        n = self._check_result_and_store_references(result, results,
+                                                                    n, total_runs)
 
                     # Everything is done
                     mpool.close()
@@ -2690,11 +2703,8 @@ class Environment(HasLogger):
                     # Signal start of progress calculation
                     self._show_progress(n - 1, total_runs)
                     for result in scoop_results:
-                        self._check_and_store_references(result)
-                        self._traj._update_run_information(result[1])
-                        results.append(result[0])
-                        self._show_progress(n, total_runs)
-                        n += 1
+                        n = self._check_result_and_store_references(result, results,
+                                                                    n, total_runs)
                 finally:
                     if self._freeze_input:
                         self._traj.v_full_copy = scoop_full_copy
@@ -2842,6 +2852,11 @@ class Environment(HasLogger):
                 self._multiproc_wrapper = None
 
         return expanded_by_postproc
+
+
+def _sync_init():
+    """Initialiser for manager to ignore Ctrl+C"""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 @prefix_naming
@@ -3061,6 +3076,12 @@ class MultiprocContext(HasLogger):
     def pipe_wrapper(self):
         return self._pipe_wrapper
 
+    @staticmethod
+    def _make_manager():
+        m = multipman.SyncManager()
+        m.start(_sync_init())
+        return m
+
     def __enter__(self):
         self.start()
         return self
@@ -3162,7 +3183,7 @@ class MultiprocContext(HasLogger):
         if self._lock is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = multip.Manager()
+                    self._manager = self._make_manager()
                 # We need a lock that is shared by all processes.
                 self._lock = self._manager.Lock()
             else:
@@ -3209,7 +3230,7 @@ class MultiprocContext(HasLogger):
         if self._queue is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = multip.Manager()
+                    self._manager = self._make_manager()
                 self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
             else:
                 self._queue = multip.Queue(maxsize=self._queue_maxsize)
@@ -3338,3 +3359,6 @@ class MultiprocContext(HasLogger):
         self._logging_manager = None
 
         self._traj._storage_service = self._storage_service
+
+    def __del__(self):
+        self.finalize()
