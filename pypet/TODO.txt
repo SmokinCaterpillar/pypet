@@ -1,3 +1,6 @@
+
+* Add docu about graceful exit
+
 * Add docu about new map feature *DONE*
 
 * Write more tests for new map feature *DONE*
@@ -24,7 +27,7 @@
 
 * Document new NETLOCK wrap mode *DONE*
 
-* Create NETQUEUE mode (Mehmet)
+* Create NETQUEUE mode (Mehmet) *DONE*
 
 * Document and test TimeOutLockerServer *DONE*
 

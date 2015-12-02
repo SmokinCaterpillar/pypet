@@ -414,6 +414,12 @@ because most of the time the default settings are sufficient.
     environment won't add config information like number of processors to the
     trajectory.
 
+* ``graceful_exit``
+
+    If ``True`` hitting CTRL+C (i.e.sending SIGINT) will not terminate the program
+    immediately. Instead, active single runs will be finished and stored before
+    shutdown. Hitting CTRL+C twice will raise a KeyboardInterrupt as usual.
+
 * ``lazy_debug``
 
     If ``lazy_debug=True`` and in case you debug your code (aka you use *pydevd* and

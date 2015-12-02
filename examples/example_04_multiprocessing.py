@@ -39,7 +39,8 @@ def main():
                       freeze_input=True, # We can avoid some
                       # overhead by freezing the input to the pool
                       wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
-                      overwrite_file=True)
+                      overwrite_file=True,
+                      graceful_exit=True)
 
     # Get the trajectory from the environment
     traj = env.trajectory

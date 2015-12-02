@@ -40,7 +40,8 @@ import tables as pt
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_dir,  make_trajectory_name,\
      get_root_logger, parse_args, get_log_config, get_log_path
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
-    simple_calculations, TrajectoryComparator, multiply_args, multiply_with_storing
+    simple_calculations, TrajectoryComparator, multiply_args, multiply_with_storing, \
+    multiply_with_graceful_exit
 
 
 def add_one_particular_item(traj, store_full):
@@ -146,6 +147,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.port = None
         self.timeout = None
         self.add_time=True
+        self.graceful_exit = False
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -274,7 +276,8 @@ class EnvironmentTest(TrajectoryComparator):
                           use_scoop=self.use_scoop,
                           port=self.port,
                           add_time=self.add_time,
-                          timeout=self.timeout)
+                          timeout=self.timeout,
+                          graceful_exit=self.graceful_exit)
 
         traj = env.v_trajectory
 
@@ -801,6 +804,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = False
         self.encoding='latin1'
+        self.graceful_exit = True
 
 
 
@@ -825,7 +829,6 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.wildcard_functions = {('$', 'crun') : my_run_func, ('$set', 'crunset'): my_set_func}
 
 
-
 class ResultSortTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'
@@ -840,6 +843,7 @@ class ResultSortTest(TrajectoryComparator):
         self.use_scoop = False
         self.log_config = True
         self.port = None
+        self.graceful_exit = True
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -862,7 +866,8 @@ class ResultSortTest(TrajectoryComparator):
                           use_pool=self.use_pool,
                           use_scoop=self.use_scoop,
                           port=self.port,
-                          freeze_input=self.freeze_input,)
+                          freeze_input=self.freeze_input,
+                          graceful_exit=self.graceful_exit)
 
         traj = env.v_trajectory
 
@@ -888,6 +893,9 @@ class ResultSortTest(TrajectoryComparator):
         self.explore_dict={'x':[0,1,2,3,4],'y':[1,1,2,2,3]}
         traj.f_explore(self.explore_dict)
 
+    def explore_cartesian(self,traj):
+        self.explore_dict=cartesian_product({'x':[0,1,2,3,4, 5, 6],'y':[1,1,2,2,3,4,4]})
+        traj.f_explore(self.explore_dict)
 
     def expand(self,traj):
         self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12,13]}
@@ -981,6 +989,15 @@ class ResultSortTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj,newtraj)
+
+    def test_graceful_exit(self):
+
+        ###Explore
+        self.explore_cartesian(self.traj)
+
+        results = self.env.f_run(multiply_with_graceful_exit)
+        self.are_results_in_order(results)
+        self.assertFalse(self.traj.f_is_completed())
 
     def test_f_iter_runs(self):
 

@@ -154,6 +154,7 @@ class MultiprocPoolSortLocalTest(ResultSortTest):
         self.multiproc = True
         self.ncores = 4
         self.use_pool=True
+        self.graceful_exit = True
 
 
 @unittest.skipIf(platform.system() == 'Windows', 'Pipes cannot be pickled!')
@@ -272,6 +273,7 @@ class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
         self.niceness = check_nice(1)
         self.use_pool=True
         self.gc_interval = 2
+        self.graceful_exit = True
 
 
 # class MultiprocFrozenPoolLockTest(EnvironmentTest):

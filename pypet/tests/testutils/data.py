@@ -15,6 +15,7 @@ from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
 from pypet.utils.helpful_functions import flatten_dictionary
 from pypet.utils.mpwrappers import LockWrapper
+from pypet.utils.siginthandling import sigint_handling
 
 __author__ = 'Robert Meyer'
 
@@ -144,6 +145,16 @@ def multiply(traj):
     z=traj.x*traj.y
     rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
+    return z
+
+
+def multiply_with_graceful_exit(traj):
+    z=traj.x*traj.y
+    rootlogger = get_root_logger()
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
+    traj.f_add_result('z',z)
+    if traj.v_idx == 5:
+        sigint_handling._handle_sigint(None, None)
     return z
 
 def multiply_with_storing(traj):

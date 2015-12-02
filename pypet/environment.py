@@ -24,11 +24,13 @@ import sys
 import logging
 import shutil
 import multiprocessing as multip
+import multiprocessing.managers as multipman
 import traceback
 import hashlib
 import time
 import datetime
 import inspect
+import signal
 
 try:
     from sumatra.projects import load_project
@@ -75,6 +77,7 @@ from pypet.utils.mpwrappers import QueueStorageServiceWriter, LockWrapper, \
     ReferenceStore, QueueStorageServiceSender, LockerServer, LockerClient, \
     ForkAwareLockerClient, TimeOutLockerServer, QueuingClient, QueuingServer, \
     ForkAwareQueuingClient
+from pypet.utils.siginthandling import sigint_handling
 from pypet.utils.gitintegration import make_git_commit
 from pypet._version import __version__ as VERSION
 from pypet.utils.decorators import deprecated, kwargs_api_change, prefix_naming
@@ -93,7 +96,7 @@ def _pool_single_run(kwargs):
     if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
         # Free references from previous runs
         traj.v_storage_service.free_references()
-    return _single_run(kwargs)
+    return _sigint_handling_single_run(kwargs)
 
 
 def _frozen_pool_single_run(kwargs):
@@ -104,7 +107,7 @@ def _frozen_pool_single_run(kwargs):
     # we need to update job's args and kwargs
     traj = frozen_kwargs['traj']
     traj.f_set_crun(idx)
-    return _single_run(frozen_kwargs)
+    return _sigint_handling_single_run(frozen_kwargs)
 
 
 def _configure_pool(kwargs):
@@ -128,7 +131,7 @@ def _process_single_run(kwargs):
     """Wrapper function that first configures logging and starts a single run afterwards."""
     _configure_niceness(kwargs)
     _configure_logging(kwargs)
-    return _single_run(kwargs)
+    return _sigint_handling_single_run(kwargs)
 
 
 def _configure_frozen_scoop(kwargs):
@@ -178,7 +181,7 @@ def _frozen_scoop_single_run(kwargs):
         frozen_kwargs.update(kwargs)
         traj = frozen_kwargs['traj']
         traj.f_set_crun(idx)
-        return _single_run(frozen_kwargs)
+        return _sigint_handling_single_run(frozen_kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
@@ -198,7 +201,7 @@ def _scoop_single_run(kwargs):
             # configure logging and niceness if not the main process:
             _configure_niceness(kwargs)
             _configure_logging(kwargs)
-        return _single_run(kwargs)
+        return _sigint_handling_single_run(kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
@@ -232,6 +235,21 @@ def _configure_niceness(kwargs):
         except AttributeError:
             # Fall back on psutil under Windows
             psutil.Process().nice(niceness)
+
+
+def _sigint_handling_single_run(kwargs):
+    """Wrapper that allow graceful exits of single runs"""
+    graceful_exit = kwargs['graceful_exit']
+    if graceful_exit:
+        sigint_handling.start()
+        if sigint_handling.hit:
+            return (sigint_handling.SIGINT, None)
+        result = _single_run(kwargs)
+        if sigint_handling.hit:
+            result = (sigint_handling.SIGINT, result)
+        return result
+    else:
+        return _single_run(kwargs)
 
 
 def _single_run(kwargs):
@@ -325,9 +343,12 @@ def _wrap_handling(kwargs):
     _configure_logging(kwargs, extract=False)
     # Main job, make the listener to the queue start receiving message for writing to disk.
     handler=kwargs['handler']
+    graceful_exit = kwargs['graceful_exit']
     # import cProfile as profile
     # profiler = profile.Profile()
     # profiler.enable()
+    if graceful_exit:
+        sigint_handling.start()
     handler.run()
     # profiler.disable()
     # profiler.dump_stats('./queue.profile2')
@@ -789,6 +810,12 @@ class Environment(HasLogger):
         environment won't add config information like number of processors to the
         trajectory.
 
+    :param graceful_exit:
+
+        If ``True`` hitting CTRL+C (i.e.sending SIGINT) will not terminate the program
+        immediately. Instead, active single runs will be finished and stored before
+        shutdown. Hitting CTRL+C twice will raise a KeyboardInterrupt as usual.
+
     :param lazy_debug:
 
         If ``lazy_debug=True`` and in case you debug your code (aka you use pydevd and
@@ -1018,6 +1045,7 @@ class Environment(HasLogger):
                  sumatra_reason='',
                  sumatra_label=None,
                  do_single_runs=True,
+                 graceful_exit=False,
                  lazy_debug=False,
                  **kwargs):
 
@@ -1103,6 +1131,9 @@ class Environment(HasLogger):
                                                   pypetconstants.WRAP_MODE_NETQUEUE):
             raise ValueError('You can only specify a port for the `NETLOCK` wrapping.')
 
+        if (compat.python_major == 2 and compat.python_minor == 6) and graceful_exit:
+            raise ValueError('You can only gracefully exit with Python 2.7 or higher.')
+
         unused_kwargs = set(kwargs.keys())
 
         self._logging_manager = LoggingManager(log_config=log_config,
@@ -1113,6 +1144,9 @@ class Environment(HasLogger):
         self._set_logger()
 
         self._map_arguments = False
+        self._stop_iteration = False  # Marker to cancel
+        # iteration in case of Keyboard interrupt
+        self._graceful_exit = graceful_exit
 
         # Helper attributes defined later on
         self._start_timestamp = None
@@ -1429,6 +1463,11 @@ class Environment(HasLogger):
                                     comment='Whether or not resume files should '
                                             'be created. If yes, everything is '
                                             'handled by `dill`.').f_lock()
+
+            config_name = 'environment.%s.graceful_exit' % self._name
+            self._traj.f_add_config(Parameter, config_name, self._graceful_exit,
+                                    comment='Whether or not to allow graceful handling '
+                                            'of `SIGINT` (`CTRL+C`).').f_lock()
 
         config_name = 'environment.%s.trajectory.name' % self.v_name
         self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_name,
@@ -2139,7 +2178,8 @@ class Environment(HasLogger):
                        'clean_up_runs': self._clean_up_runs,
                        'automatic_storing': self._automatic_storing,
                        'wrap_mode': self._wrap_mode,
-                       'niceness': self._niceness}
+                       'niceness': self._niceness,
+                       'graceful_exit': self._graceful_exit}
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool or self._use_scoop:
@@ -2166,6 +2206,8 @@ class Environment(HasLogger):
         total_runs = len(self._traj)
         for n in compat.xrange(start_run_idx, total_runs):
             self._current_idx = n + 1
+            if self._stop_iteration:
+                break
             if not self._traj._is_completed(n):
                 self._traj.f_set_crun(n)
                 yield n
@@ -2340,10 +2382,14 @@ class Environment(HasLogger):
 
         if self._runfunc is not None:
             self._traj._run_by_environment = True
+            if self._graceful_exit:
+                sigint_handling.start()
             try:
                 self._inner_run_loop(results)
             finally:
                 self._traj._run_by_environment = False
+                if self._graceful_exit:
+                    sigint_handling.finalize()
 
         self._add_wildcard_config()
 
@@ -2481,7 +2527,7 @@ class Environment(HasLogger):
                 # Signal start of progress calculation
                 self._show_progress(n - 1, total_runs)
                 for task in iterator:
-                    result = _single_run(task)
+                    result = _sigint_handling_single_run(task)
                     n = self._check_result_and_store_references(result, results,
                                                                         n, total_runs)
 
@@ -2528,6 +2574,9 @@ class Environment(HasLogger):
 
     def _check_result_and_store_references(self, result, results, n, total_runs):
         """Checks for SIGINT and if reference wrapping and stores references."""
+        if result[0] == sigint_handling.SIGINT:
+            self._stop_iteration = True
+            result = result[1]  # If SIGINT result is a nested tuple
         if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
             self._multiproc_wrapper.store_references(result[2])
         if result is not None:
@@ -2588,7 +2637,8 @@ class Environment(HasLogger):
                                timeout=self._timeout,
                                gc_interval=self._gc_interval,
                                log_config=self._logging_manager.log_config,
-                               log_stdout=self._logging_manager.log_stdout)
+                               log_stdout=self._logging_manager.log_stdout,
+                               graceful_exit=self._graceful_exit)
 
             self._multiproc_wrapper.start()
         try:
@@ -2977,6 +3027,10 @@ class MultiprocContext(HasLogger):
 
         If stdout of the queue process should also be logged.
 
+    :param graceful_exit:
+
+        Hitting Ctrl+C won't kill a server process unless hit twice.
+
     For an usage example see :ref:`example-16`.
 
     """
@@ -2992,7 +3046,8 @@ class MultiprocContext(HasLogger):
                  timeout=None,
                  gc_interval=None,
                  log_config=None,
-                 log_stdout=False):
+                 log_stdout=False,
+                 graceful_exit=False):
 
         self._set_logger()
 
@@ -3016,6 +3071,7 @@ class MultiprocContext(HasLogger):
         self._use_manager = use_manager
         self._logging_manager = None
         self._gc_interval = gc_interval
+        self._graceful_exit = graceful_exit
 
         if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                         self._wrap_mode == pypetconstants.WRAP_MODE_PIPE or
@@ -3056,6 +3112,19 @@ class MultiprocContext(HasLogger):
     @property
     def pipe_wrapper(self):
         return self._pipe_wrapper
+
+    @staticmethod
+    def _sync_init():
+        """Initialiser for manager to ignore Ctrl+C"""
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    def _make_manager(self):
+        m = multipman.SyncManager()
+        if self._graceful_exit:
+            m.start(MultiprocContext._sync_init())
+        else:
+            m.start()
+        return m
 
     def __enter__(self):
         self.start()
@@ -3140,7 +3209,8 @@ class MultiprocContext(HasLogger):
 
         self._lock_process = multip.Process(name='LockServer', target=_wrap_handling,
                                             args=(dict(handler=lock_server,
-                                            logging_manager=self._logging_manager),))
+                                                       logging_manager=self._logging_manager,
+                                                       graceful_exit=self._graceful_exit),))
         # self._lock_process = threading.Thread(name='LockServer', target=_wrap_handling,
         #                                       args=(dict(handler=lock_server,
         #                                       logging_manager=self._logging_manager),))
@@ -3158,7 +3228,7 @@ class MultiprocContext(HasLogger):
         if self._lock is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = multip.Manager()
+                    self._manager = self._make_manager()
                 # We need a lock that is shared by all processes.
                 self._lock = self._manager.Lock()
             else:
@@ -3187,7 +3257,8 @@ class MultiprocContext(HasLogger):
         # Start the queue process
         self._pipe_process = multip.Process(name='PipeProcess', target=_wrap_handling,
                                              args=(dict(handler=pipe_handler,
-                                                        logging_manager=self._logging_manager),))
+                                                        logging_manager=self._logging_manager,
+                                                        graceful_exit=self._graceful_exit),))
         self._pipe_process.start()
 
         # Replace the storage service of the trajectory by a sender.
@@ -3205,7 +3276,7 @@ class MultiprocContext(HasLogger):
         if self._queue is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = multip.Manager()
+                    self._manager = self._make_manager()
                 self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
             else:
                 self._queue = multip.Queue(maxsize=self._queue_maxsize)
@@ -3218,7 +3289,8 @@ class MultiprocContext(HasLogger):
         # Start the queue process
         self._queue_process = multip.Process(name='QueueProcess', target=_wrap_handling,
                                              args=(dict(handler=queue_handler,
-                                                        logging_manager=self._logging_manager),))
+                                                        logging_manager=self._logging_manager,
+                                                        graceful_exit=self._graceful_exit),))
         self._queue_process.start()
 
         # Replace the storage service of the trajectory by a sender.
@@ -3256,7 +3328,8 @@ class MultiprocContext(HasLogger):
         # Start the queue process
         self._queue_process = multip.Process(name='QueuingServerProcess', target=_wrap_handling,
                                              args=(dict(handler=queuing_server_handler,
-                                                        logging_manager=self._logging_manager),))
+                                                        logging_manager=self._logging_manager,
+                                                        graceful_exit=self._graceful_exit),))
         self._queue_process.start()
         self._queue.start()
 
