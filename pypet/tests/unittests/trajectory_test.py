@@ -116,6 +116,15 @@ class TrajectoryTest(unittest.TestCase):
         y = self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
         self.assertEqual(y.data, x.data)
 
+    def test_kids(self):
+        self.traj.f_add_parameter('test.test2', 42, comment='Here to stay')
+        data = self.traj.kids.parameters.kids.test.kids.test2.data
+        self.assertEqual(data, 42)
+        with self.assertRaises(AttributeError):
+            self.traj.kids.parameters.kids.test.kids.test5
+        self.assertEqual(set(self.traj._children.keys()),
+                         set(dir(self.traj._kids)))
+
     def test_re_raise_old_wildcard_error(self):
         self.traj.v_idx = 0
         with self.assertRaises(AttributeError):

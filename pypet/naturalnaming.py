@@ -107,13 +107,31 @@ class _NEW_GROUP(object): pass
 new_group = _NEW_GROUP()  # Dummy for lazy adding of new group nodes
 
 
-class NNTreeNodeFunc(HasSlots):
+class NNTreeNodeKids(HasSlots):
 
-    __slots__ = ('_node', '_prefix')
+    __slots__ = ('_node',)
 
     def __init__(self, node):
-        super(NNTreeNodeFunc, self).__init__()
         self._node = node
+
+    def __getattr__(self, item):
+        if item in self._node._children:
+            return self._node._children[item]
+        else:
+            raise AttributeError('Group/Link/Leaf `%s` unknown for %s '
+                                 '`%s`.' % (item, self._node.__class__.__name__,
+                                            self._node.v_name))
+
+    def __dir__(self):
+        return compat.listkeys(self._node._children)
+
+
+class NNTreeNodeFunc(NNTreeNodeKids):
+
+    __slots__ = ('_prefix',)
+
+    def __init__(self, node):
+        super(NNTreeNodeFunc, self).__init__(node)
         self._prefix = 'f_'
 
     def _is_part(self, name):
@@ -195,6 +213,7 @@ class NNTreeNode(WithAnnotations):
 
     @property
     def func(self):
+        """Alternative naming, you can use `node.func.name` instead of `node.f_func`"""
         if self._func is None:
             self._func = NNTreeNodeFunc(self)
         return self._func
@@ -2448,7 +2467,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     """
 
-    __slots__ = ('_children', '_links', '_groups', '_leaves', '_nn_interface',)
+    __slots__ = ('_children', '_links', '_groups', '_leaves',
+                 '_nn_interface', '_kids')
 
     def __init__(self, full_name='', trajectory=None, comment=''):
         super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
@@ -2456,10 +2476,19 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         self._links = {}
         self._groups = {}
         self._leaves = {}
+        self._kids = None
         if trajectory is not None:
             self._nn_interface = trajectory._nn_interface
         else:
             self._nn_interface = None
+
+    @property
+    def kids(self):
+        """Alternative naming, you can use `node.kids.name` instead of `node.name`
+        for easier tab completion."""
+        if self._kids is None:
+            self._kids = NNTreeNodeKids(self)
+        return self._kids
 
     def __copy__(self):
         """Shallow copy includes copy of full tree but not leave nodes"""
