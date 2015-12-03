@@ -253,7 +253,7 @@ def _sigint_handling_single_run(kwargs):
                 result = _single_run(kwargs)
                 if sigint_handling.hit:
                     result = (sigint_handling.SIGINT, result)
-                return result
+            return result
         return _single_run(kwargs)
 
     except:

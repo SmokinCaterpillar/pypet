@@ -313,6 +313,9 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
         self.use_pool=True
         self.gc_interval = 2
 
+    # def test_graceful_exit(self):
+    #     return super(MultiprocFrozenPoolSortQueueTest, self).test_graceful_exit()
+
     def test_if_full_copy_is_old_value(self):
 
         ###Explore
