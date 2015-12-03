@@ -120,6 +120,7 @@ class MultiprocSCOOPNetqueueTest(EnvironmentTest):
         self.niceness = check_nice(1)
         self.use_pool = False
         self.use_scoop = True
+        self.graceful_exit = False
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
     def test_niceness(self):
@@ -142,7 +143,7 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
         self.ncores = 4
         self.use_pool = False
         self.use_scoop = True
-        self.graceful_exit = not(compat.python_major == 2 and compat.python_minor == 6)
+        self.graceful_exit = False
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -160,6 +161,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
         self.niceness = check_nice(1)
         self.use_pool = False
         self.use_scoop = True
+        self.graceful_exit = False
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')
     def test_niceness(self):
@@ -198,6 +200,7 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.use_pool = False
         self.use_scoop = True
         self.port = (10000, 60000)
+        self.graceful_exit = False
 
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -213,7 +216,7 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
         self.ncores = 4
         self.use_pool = False
         self.use_scoop = True
-        self.graceful_exit = not(compat.python_major == 2 and compat.python_minor == 6)
+        self.graceful_exit = False
         #self.port = 'tcp://127.0.0.1:22334'
 
 
@@ -253,6 +256,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.use_scoop = True
         self.port = None
         self.timeout = 1099.99
+        self.graceful_exit = False
         # self.port = 'tcp://127.0.0.1:22334'
 
     @unittest.skip('Does not work with scoop (fully), because scoop uses main frame.')

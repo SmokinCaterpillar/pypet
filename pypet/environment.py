@@ -184,7 +184,7 @@ def _frozen_scoop_single_run(kwargs):
         frozen_kwargs.update(kwargs)
         traj = frozen_kwargs['traj']
         traj.f_set_crun(idx)
-        return _sigint_handling_single_run(frozen_kwargs)
+        return _single_run(frozen_kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
@@ -204,7 +204,7 @@ def _scoop_single_run(kwargs):
             # configure logging and niceness if not the main process:
             _configure_niceness(kwargs)
             _configure_logging(kwargs)
-        return _sigint_handling_single_run(kwargs)
+        return _single_run(kwargs)
     except Exception:
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
@@ -1131,6 +1131,9 @@ class Environment(HasLogger):
 
         if (compat.python_major == 2 and compat.python_minor == 6) and graceful_exit:
             raise ValueError('You can only gracefully exit with Python 2.7 or higher.')
+
+        if use_scoop and graceful_exit:
+            raise ValueError('You cannot exit gracefully using SCOOP.')
 
         unused_kwargs = set(kwargs.keys())
 
@@ -2181,6 +2184,8 @@ class Environment(HasLogger):
         result_dict.update(kwargs)
         if self._multiproc:
             if self._use_pool or self._use_scoop:
+                if self._use_scoop:
+                    del result_dict['graceful_exit']
                 if self._freeze_input:
                     # Remember the full copy setting for the frozen input to
                     # change this back once the trajectory is received by
