@@ -310,6 +310,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._standard_leaf = Result
 
         self._auto_run_prepend = True
+        self._no_clobber = False
 
         self._run_started = False  # For manually using a trajectory
         self._run_by_environment = False  # To disable manual running of experiment
@@ -1195,6 +1196,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         new_traj._standard_leaf = self._standard_leaf
 
         new_traj._auto_run_prepend = self._auto_run_prepend
+        new_traj._no_clobber = self._no_clobber
 
         new_traj._run_started = self._run_started # For manually using a trajectory
         new_traj._run_by_environment = self._run_by_environment  # To disable manual running of experiment
@@ -3368,6 +3370,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_standard_leaf(self, leaf):
         """Sets standard result"""
         self._standard_leaf = leaf
+
+    @property
+    def v_no_clobber(self):
+        """If `f_add_leaf` should not throw an error in case something is added
+        that is already part of the Trajectory. If `True` no error is thrown and
+        the new data is ignored."""
+        return self._no_clobber
+
+    @v_no_clobber.setter
+    def v_no_clobber(self, value):
+        """Sets no_clobber"""
+        self._no_clobber = bool(value)
 
     @property
     def v_auto_run_prepend(self):

@@ -107,6 +107,15 @@ class TrajectoryTest(unittest.TestCase):
     #     self.assertEqual(self.traj.new, 5)
     #     self.assertEqual(self.traj.very.new, 4)
 
+    def test_no_clobber(self):
+        x = self.traj.f_add_parameter('test.test2', 42, comment='Here to stay')
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
+
+        self.traj.v_no_clobber = True
+        y = self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
+        self.assertEqual(y.data, x.data)
+
     def test_re_raise_old_wildcard_error(self):
         self.traj.v_idx = 0
         with self.assertRaises(AttributeError):

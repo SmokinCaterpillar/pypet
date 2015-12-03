@@ -1376,8 +1376,15 @@ class NaturalNamingInterface(HasLogger):
                                              'There is a link called `%s` under `%s`.' %
                                              (name, act_node.v_full_name))
                     if idx == last_idx:
-                        raise AttributeError('You already have a group/instance/link `%s` under '
-                                             '`%s`' % (name, act_node.v_full_name))
+                        if self._root_instance._no_clobber:
+                            self._logger.warning('You already have a group/instance/link `%s` '
+                                                 'under `%s`. '
+                                                 'However, you set `v_no_clobber=True`, '
+                                                 'so I will ignore your addition of '
+                                                 'data.' % (name, act_node.v_full_name))
+                        else:
+                            raise AttributeError('You already have a group/instance/link `%s` '
+                                                 'under `%s`' % (name, act_node.v_full_name))
                 act_node = act_node._children[name]
             return act_node
         except:
