@@ -990,7 +990,7 @@ class NaturalNamingInterface(HasLogger):
         if isinstance(name, int):
             return True, self._root_instance.f_wildcard('$', name)
 
-        if name.startswith('r') and (name.startswith('run_') or name.startswith('r_')):
+        if name.startswith('run_') or name.startswith('r_'):
             split_name = name.split('_')
             if len(split_name) == 2:
                 index = split_name[1]
@@ -998,6 +998,17 @@ class NaturalNamingInterface(HasLogger):
                     return True, self._root_instance.f_wildcard('$', int(index))
                 elif index == 'A':
                     return True, self._root_instance.f_wildcard('$', -1)
+
+        if name.startswith('run_set_') or name.startswith('rs_') or name.startswith('runset_'):
+            split_name = name.split('_')
+            if name.startswith('run_set_'):
+                split_name = split_name[1:]
+            if len(split_name) == 2:
+                index = split_name[1]
+                if index.isdigit():
+                    return True, self._root_instance.f_wildcard('$set', int(index))
+                elif index == 'A':
+                    return True, self._root_instance.f_wildcard('$set', -1)
 
         if name in SHORTCUT_SET:
             if name == 'par':

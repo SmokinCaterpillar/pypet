@@ -145,6 +145,10 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
         self.use_scoop = True
         self.graceful_exit = False
 
+    @unittest.skip('Does not work with SCOOP')
+    def test_graceful_exit(self):
+        pass
+
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
@@ -202,6 +206,10 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
         self.port = (10000, 60000)
         self.graceful_exit = False
 
+    @unittest.skip('Does not work with SCOOP')
+    def test_graceful_exit(self):
+        pass
+
 
 @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
 class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
@@ -218,6 +226,10 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
         self.use_scoop = True
         self.graceful_exit = False
         #self.port = 'tcp://127.0.0.1:22334'
+
+    @unittest.skip('Does not work with SCOOP')
+    def test_graceful_exit(self):
+        pass
 
 
 # @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
