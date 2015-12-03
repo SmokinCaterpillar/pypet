@@ -115,6 +115,7 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.v_no_clobber = True
         y = self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
         self.assertEqual(y.data, x.data)
+        self.traj.v_no_clobber = False
 
     def test_kids(self):
         self.traj.f_add_parameter('test.test2', 42, comment='Here to stay')
@@ -1235,6 +1236,11 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue('run_set_00004' not in traj)
         self.assertEqual(len(traj.res._children), 3)
         self.assertEqual(len(traj.run_set_00001._children), 1000)
+        self.assertTrue('rts_1000' in traj)
+        self.assertFalse('rts_4000' in traj)
+        self.assertTrue('runtoset_1000' in traj)
+        self.assertFalse('runtoset_4000' in traj)
+
 
     def test_short_cuts(self):
 

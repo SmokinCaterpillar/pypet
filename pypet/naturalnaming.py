@@ -999,10 +999,8 @@ class NaturalNamingInterface(HasLogger):
                 elif index == 'A':
                     return True, self._root_instance.f_wildcard('$', -1)
 
-        if name.startswith('run_set_') or name.startswith('rs_') or name.startswith('runset_'):
+        if name.startswith('runtoset_') or name.startswith('rts_'):
             split_name = name.split('_')
-            if name.startswith('run_set_'):
-                split_name = split_name[1:]
             if len(split_name) == 2:
                 index = split_name[1]
                 if index.isdigit():

@@ -3,6 +3,8 @@
 
 * Add docu about no clobber
 
+* Add docu about rt2, runtoset
+
 * Add docu about new map feature *DONE*
 
 * Write more tests for new map feature *DONE*
