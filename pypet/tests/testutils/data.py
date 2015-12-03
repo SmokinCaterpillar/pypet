@@ -153,8 +153,9 @@ def multiply_with_graceful_exit(traj):
     rootlogger = get_root_logger()
     rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
     traj.f_add_result('z',z)
-    if traj.v_idx == 2:
-        sigint_handling._handle_sigint(None, None)
+    if traj.v_idx > 3:
+        if not sigint_handling.hit:
+            sigint_handling._handle_sigint(None, None)
     return z
 
 def multiply_with_storing(traj):

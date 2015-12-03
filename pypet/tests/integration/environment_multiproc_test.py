@@ -258,6 +258,9 @@ class MultiprocNoPoolSortPipeTest(ResultSortTest):
         self.ncores = 3
         self.use_pool=False
 
+    # def test_graceful_exit(self):
+    #     return super(MultiprocNoPoolSortPipeTest, self).test_graceful_exit()
+
 
 class MultiprocFrozenPoolQueueTest(TestOtherHDF5Settings2):
 

@@ -131,7 +131,10 @@ def _process_single_run(kwargs):
     """Wrapper function that first configures logging and starts a single run afterwards."""
     _configure_niceness(kwargs)
     _configure_logging(kwargs)
-    return _sigint_handling_single_run(kwargs)
+    result_queue = kwargs['result_queue']
+    result = _sigint_handling_single_run(kwargs)
+    result_queue.put(result)
+    result_queue.close()
 
 
 def _configure_frozen_scoop(kwargs):
@@ -239,17 +242,25 @@ def _configure_niceness(kwargs):
 
 def _sigint_handling_single_run(kwargs):
     """Wrapper that allow graceful exits of single runs"""
-    graceful_exit = kwargs['graceful_exit']
-    if graceful_exit:
-        sigint_handling.start()
-        if sigint_handling.hit:
-            return (sigint_handling.SIGINT, None)
-        result = _single_run(kwargs)
-        if sigint_handling.hit:
-            result = (sigint_handling.SIGINT, result)
-        return result
-    else:
+    try:
+        graceful_exit = kwargs['graceful_exit']
+
+        if graceful_exit:
+            sigint_handling.start()
+            if sigint_handling.hit:
+                result = (sigint_handling.SIGINT, None)
+            else:
+                result = _single_run(kwargs)
+                if sigint_handling.hit:
+                    result = (sigint_handling.SIGINT, result)
+                return result
         return _single_run(kwargs)
+
+    except:
+        # Log traceback of exception
+        pypet_root_logger = logging.getLogger('pypet')
+        pypet_root_logger.exception('ERROR occurred during a single run! ')
+        raise
 
 
 def _single_run(kwargs):
@@ -279,63 +290,50 @@ def _single_run(kwargs):
 
     """
     pypet_root_logger = logging.getLogger('pypet')
-    try:
-        traj = kwargs['traj']
-        runfunc = kwargs['runfunc']
-        runargs = kwargs['runargs']
-        kwrunparams = kwargs['runkwargs']
-        clean_up_after_run = kwargs['clean_up_runs']
-        automatic_storing = kwargs['automatic_storing']
-        wrap_mode = kwargs['wrap_mode']
+    traj = kwargs['traj']
+    runfunc = kwargs['runfunc']
+    runargs = kwargs['runargs']
+    kwrunparams = kwargs['runkwargs']
+    clean_up_after_run = kwargs['clean_up_runs']
+    automatic_storing = kwargs['automatic_storing']
+    wrap_mode = kwargs['wrap_mode']
 
-        # result queue is optional
-        result_queue = kwargs.get('result_queue', None)
+    idx = traj.v_idx
+    total_runs = len(traj)
 
-        idx = traj.v_idx
-        total_runs = len(traj)
+    pypet_root_logger.info('\n=========================================\n '
+              'Starting single run #%d of %d '
+              '\n=========================================\n' % (idx, total_runs))
 
-        pypet_root_logger.info('\n=========================================\n '
-                  'Starting single run #%d of %d '
-                  '\n=========================================\n' % (idx, total_runs))
+    # Measure start time
+    traj.f_start_run(turn_into_run=True)
 
-        # Measure start time
-        traj.f_start_run(turn_into_run=True)
+    # Run the job function of the user
+    result = runfunc(traj, *runargs, **kwrunparams)
 
-        # Run the job function of the user
-        result = runfunc(traj, *runargs, **kwrunparams)
+    # Store data if desired
+    if automatic_storing:
+        traj.f_store()
 
-        # Store data if desired
-        if automatic_storing:
-            traj.f_store()
+    # Add the index to the result and the run information
+    if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+        result = ((traj.v_idx, result),
+                   traj.f_get_run_information(traj.v_idx, copy=False),
+                   traj.v_storage_service.references)
+        traj.v_storage_service.free_references()
+    else:
+        result = ((traj.v_idx, result),
+                   traj.f_get_run_information(traj.v_idx, copy=False))
 
-        # Measure time of finishing
-        traj.f_finalize_run(store_meta_data=False,
-                            clean_up=clean_up_after_run)
+    # Measure time of finishing
+    traj.f_finalize_run(store_meta_data=False,
+                        clean_up=clean_up_after_run)
 
-        pypet_root_logger.info('\n=========================================\n '
-                  'Finished single run #%d of %d '
-                  '\n=========================================\n' % (idx, total_runs))
+    pypet_root_logger.info('\n=========================================\n '
+              'Finished single run #%d of %d '
+              '\n=========================================\n' % (idx, total_runs))
 
-        # Add the index to the result and the run information
-        if wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
-            result = ((traj.v_idx, result),
-                       traj.f_get_run_information(traj.v_idx, copy=False),
-                       traj.v_storage_service.references)
-            traj.v_storage_service.free_references()
-        else:
-            result = ((traj.v_idx, result),
-                       traj.f_get_run_information(traj.v_idx, copy=False))
-
-        if result_queue is not None:
-            result_queue.put(result)
-            result_queue.close()
-        else:
-            return result
-
-    except:
-        # Log traceback of exception
-        pypet_root_logger.exception('ERROR occurred during a single run! ')
-        raise
+    return result
 
 
 def _wrap_handling(kwargs):
@@ -2578,9 +2576,9 @@ class Environment(HasLogger):
         if result[0] == sigint_handling.SIGINT:
             self._stop_iteration = True
             result = result[1]  # If SIGINT result is a nested tuple
-        if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
-            self._multiproc_wrapper.store_references(result[2])
         if result is not None:
+            if self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL:
+                self._multiproc_wrapper.store_references(result[2])
             self._traj._update_run_information(result[1])
             results.append(result[0])
             if self._resumable:

@@ -1,8 +1,6 @@
 """Module that handles KeyboardInterrupt to exit gracefully"""
 
-
 __author__ = 'Robert Meyer'
-
 
 import signal
 import sys
@@ -15,13 +13,16 @@ class _SigintHandler(object):
     def __init__(self):
         self.original_handler = signal.getsignal(signal.SIGINT)
         self.hit = False  # variable to signal if SIGINT has been encountered before
+        self.started = False
 
     def start(self):
-        if signal.getsignal(signal.SIGINT) is not self._handle_sigint:
+        if not self.started:
             signal.signal(signal.SIGINT, self._handle_sigint)
+            self.started = True
 
     def finalize(self):
         self.hit = False
+        self.started = False
         signal.signal(signal.SIGINT, self.original_handler)
 
     def _handle_sigint(self, signum, frame):
