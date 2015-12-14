@@ -1278,7 +1278,6 @@ class Environment(HasLogger):
             if resume_folder is None:
                 resume_folder = os.path.join(os.getcwd(), 'resume')
             resume_path = os.path.join(resume_folder, self._traj.v_name)
-            racedirs(os.path.abspath(resume_path))
         else:
             resume_path = None
 
@@ -1635,7 +1634,7 @@ class Environment(HasLogger):
 
         return self._execute_runs(None)
 
-    @deprecated('Please use `f_resume` instead')
+    @deprecated('Please use `resume` instead')
     def f_continue(self, *args, **kwargs):
         return self.resume(*args, **kwargs)
 
@@ -2148,8 +2147,11 @@ class Environment(HasLogger):
             raise RuntimeError('You cannot make a run if you did create an environment '
                                'with `do_single_runs=False`.')
 
-        if self._resumable and os.listdir(self._resume_path):
-            raise RuntimeError('Your resume folder `%s` needs to be empty to allow continuing!')
+        if self._resumable:
+            racedirs(self._resume_path)
+            if os.listdir(self._resume_path):
+                raise RuntimeError('Your resume folder `%s` needs '
+                                   'to be empty to allow continuing!' % self._resume_path)
 
         if self._user_pipeline:
             self._logger.info('\n************************************************************\n'
