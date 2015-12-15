@@ -1958,13 +1958,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             version = compat.tostr(metarow['version'])
-        except IndexError as ke:
+        except (IndexError, ValueError) as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             version = '`COULD NOT BE LOADED`'
 
         try:
             python = compat.tostr(metarow['python'])
-        except IndexError as ke:
+        except (IndexError, ValueError) as ke:
             self._logger.error('Could not check version due to: %s' % str(ke))
             python = '`COULD NOT BE LOADED`'
 
@@ -2007,7 +2007,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     try:
                         runtime = compat.tostr(row['runtime'])
                         finish_timestamp = float(row['finish_timestamp'])
-                    except IndexError as ke:
+                    except (IndexError, ValueError) as ke:
                         runtime = ''
                         finish_timestamp = 0.0
                         self._logger.debug('Could not load runtime, ' + repr(ke))
@@ -2036,7 +2036,7 @@ class HDF5StorageService(StorageService, HasLogger):
         def _extract_meta_data(attr_name, row, name_in_row, conversion_function):
             try:
                 setattr(self, attr_name, conversion_function(row[name_in_row]))
-            except IndexError as exc:
+            except (IndexError, ValueError) as exc:
                 self._logger.error('Using default hdf5 setting, '
                                    'could not extract `%s` hdf5 setting because of: %s' %
                                         (name_in_row, repr(exc)))
