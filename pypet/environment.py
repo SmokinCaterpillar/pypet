@@ -233,12 +233,17 @@ def _configure_niceness(kwargs):
     niceness = kwargs['niceness']
     if niceness is not None:
         try:
-            current = os.nice(0)
-            os.nice(niceness-current)
-        except AttributeError:
-            # Fall back on psutil under Windows
-            psutil.Process().nice(niceness)
-
+            try:
+                current = os.nice(0)
+                if niceness - current > 0:
+                    # Under Linux you cannot decrement niceness if set elsewhere
+                    os.nice(niceness-current)
+            except AttributeError:
+                # Fall back on psutil under Windows
+                psutil.Process().nice(niceness)
+        except Exception as exc:
+            sys.stderr.write('Could not configure niceness because of: %s' % repr(exc))
+            traceback.print_exc()
 
 def _sigint_handling_single_run(kwargs):
     """Wrapper that allow graceful exits of single runs"""
