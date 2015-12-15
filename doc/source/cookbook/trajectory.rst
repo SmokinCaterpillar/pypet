@@ -32,8 +32,12 @@ Moreover, the following abbreviations are supported by *pypet* for interaction w
     * ``res`` to ``results``
     * ``crun`` or the ``$`` symbol to the name of the
       current single run, e.g. ``run_00000002``
-    * ``r_X`` and ``run_X`` (e.g. ``r_2``) are mapped to the corresponding run name, e.g
-      ``run_00000008``.
+    * ``r_X`` and ``run_X`` (e.g. ``r_8``) are mapped to the corresponding run name (e.g
+      ``run_00000008``).
+    * ``rts_X`` and ``runtoset_X`` (e.g. ``rts_8``) are translated into the corresponding
+      run set for the given **run index** (e.g. ``run_set_00000``). Note that you need to
+      give the index of the **run** not the index of the set, e.g. ``rts_4042`` gives
+      ``run_set_00004``.
 
 If you add or request data by using the abbreviations, these are automatically
 translated into the corresponding long forms.
@@ -360,6 +364,21 @@ to the current run, like ``run_00000002``) first. If this fails, it will fall ba
 ``traj.dpar.random_vector.run_ALL`` (if this fails, too, *pypet* will throw an error).
 
 Accordingly, you have to write less code and post-processing and data analysis become easier.
+
+
+^^^^^^^^^^
+No Clobber
+^^^^^^^^^^
+
+You can set ``traj.v_no_clobber=True`` to ignore the addition of existing data.
+In this case adding an already existing item to your trajectory won't throw an
+``AttributeError`` but simply ignore your addition:
+
+    >>> traj.f_add_parameter('testparam', 42)
+    >>> traj.v_no_clobber=True
+    >>> traj.f_add_parameter('testparam', 39)
+    >>> traj.par.testparam
+    42
 
 
 .. _more-on-wildcards:

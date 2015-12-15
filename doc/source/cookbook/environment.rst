@@ -222,6 +222,9 @@ because most of the time the default settings are sufficient.
     Under Linux these usually range from 0 (highest priority)
     to 19 (lowest priority). For Windows values check the psutil_ homepage.
     Leave ``None`` if you don't care about niceness.
+    Under Linux the `niceness`` value is a minimum value, if the OS decides to
+    nice your program (maybe you are running on a server) *pypet* does not try to
+    decrease the `niceness` again.
 
 * ``wrap_mode``
 
@@ -1179,6 +1182,21 @@ For instance, assuming besides the trajectory your job function takes
 Thus, the first run of your job function will be started with the arguments
 ``0`` (from ``range``) ``'a'`` (from the list) and ``arg3=5`` (from the other list).
 Accordingly the second run gets passed ``1, 'b', arg3=4``.
+
+
+^^^^^^^^^^^^^
+Graceful Exit
+^^^^^^^^^^^^^
+
+Sometimes you might need to stop your experiments via ``CTRL-C``. If you did choose
+``graceful_exit=True`` when creating an environment, ``CTRL-C`` won't kill your
+program immediately but *pypet* will try to exit gracefully. That is *pypet* will finish
+the currently active runs and wait until their results have been returned.
+Hitting ``CTRL+C`` twice will, of course, immediately kill your program.
+
+By default ``graceful_exit`` is ``False`` because it does not work in all python contexts.
+For instance, ``graceful_exit`` does not work with IPython notebooks.
+If in doubt, just try it out.
 
 
 .. _more-about-postproc:

@@ -112,9 +112,13 @@ class TrajectoryTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
 
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter_group('test')
         self.traj.v_no_clobber = True
         y = self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
+        z = self.traj.f_add_parameter_group('test')
         self.assertEqual(y.data, x.data)
+        self.assertTrue(z is self.traj.par.test)
         self.traj.v_no_clobber = False
 
     def test_kids(self):

@@ -61,6 +61,9 @@ def main():
     # Now we can rely on the wildcards
     print(traj.res.crunset.crun.z)
     traj.v_idx = -1
+    # Or we can use the shortcuts `rts_X` (run to set) and `r_X` to get particular results
+    print('The result of run %d is: ' % 2044)
+    print(traj.res.rts_2044.r_2044.z)
 
 if __name__ == '__main__':
     main()

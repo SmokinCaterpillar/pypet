@@ -573,6 +573,9 @@ class Environment(HasLogger):
         Under Linux these usually range from 0 (highest priority)
         to 19 (lowest priority). For Windows values check the psutil_ homepage.
         Leave ``None`` if you don't care about niceness.
+        Under Linux the `niceness`` value is a minimum value, if the OS decides to
+        nice your program (maybe you are running on a server) *pypet* does not try to
+        decrease the `niceness` again.
 
     :param wrap_mode:
 

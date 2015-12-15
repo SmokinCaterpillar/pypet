@@ -1,9 +1,9 @@
 
-* Add docu about graceful exit
+* Add docu about graceful exit  *DONEÜ
 
-* Add docu about no clobber
+* Add docu about no clobber *DONE*
 
-* Add docu about rt2, runtoset
+* Add docu about rt2, runtoset *DONE*
 
 * Add docu about new map feature *DONE*
 

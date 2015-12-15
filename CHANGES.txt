@@ -61,6 +61,15 @@ pypet 0.1b.13
 *   BUG FIX: If a trajectory is loaded `as new` the explored parameters are
     now correctly loaded
 
+*   New ``graceful_exit`` mode to allow to stop your programs via `CTRL+C` while finishing
+    all your active runs first and storing all your remaining data.
+
+*   New `v_no_clobber` property that allows to ignore additions to the trajectory that
+    are already there.
+
+*   New `rts_X` abbreviation that translates a given run index into the correspondin run set,
+    e.g. ``rts_4007`` gives ``run_set_00004```.
+
 
 pypet 0.1b.12
 
