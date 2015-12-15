@@ -1620,26 +1620,27 @@ class SparseParameter(ArrayParameter):
 
         """
         matrix_format = data_list[0]
+        data = data_list[1]
+        is_empty = isinstance(data, compat.base_type) and data == '__empty__'
 
         if matrix_format == 'csc':
-            if data_list[1] == '__empty__':
-                 return spsp.csc_matrix(data_list[4])
+            if is_empty:
+                return spsp.csc_matrix(data_list[4])
             else:
                 return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'csr':
-            if data_list[1] == '__empty__':
-                 return spsp.csr_matrix(data_list[4])
+            if is_empty:
+                return spsp.csr_matrix(data_list[4])
             else:
                 return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'bsr':
-            if data_list[1] == '__empty__':
-                # We have an empty matrix, that cannot be build as in esle case
+            if is_empty:
+                # We have an empty matrix, that cannot be build as in elee case
                 return spsp.bsr_matrix(data_list[4])
             else:
                 return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'dia':
-            if data_list[1] == '__empty__':
-                # We have an empty matrix, that cannot be build as in esle case
+            if is_empty:
                 return spsp.dia_matrix(data_list[3])
             else:
                 return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])

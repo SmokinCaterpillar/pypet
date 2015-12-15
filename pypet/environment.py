@@ -2212,10 +2212,13 @@ class Environment(HasLogger):
         for n in compat.xrange(start_run_idx, total_runs):
             self._current_idx = n + 1
             if self._stop_iteration:
+                self._logger.debug('I am stopping new run iterations now!')
                 break
             if not self._traj._is_completed(n):
                 self._traj.f_set_crun(n)
                 yield n
+            else:
+                self._logger.debug('Run `%d` has already been completed, I am skipping it.' % n)
 
     def _make_iterator(self, start_run_idx, copy_data=False, **kwargs):
         """ Returns an iterator over all runs and yields the keyword arguments """
@@ -2874,6 +2877,11 @@ class Environment(HasLogger):
                                     total_runs = len(self._traj)
                                     iterator = self._make_iterator(start_run_idx,
                                                                    result_queue=result_queue)
+                            if not keep_running:
+                                self._logger.debug('All simulation runs have been started. '
+                                                   'No new runs will be started. '
+                                                   'The simulation will finish after the still '
+                                                   'active runs completed.')
                     else:
                         time.sleep(0.001)
 
