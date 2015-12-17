@@ -70,6 +70,8 @@ pypet 0.1b.13
 *   New `rts_X` abbreviation that translates a given run index into the correspondin run set,
     e.g. ``rts_4007`` gives ``run_set_00004```.
 
+*   `log_stdout` is `False` by default.
+
 
 pypet 0.1b.12
 

@@ -578,9 +578,14 @@ Logging
 *pypet* comes with a full fledged logging environment.
 
 Per default the environment will created loggers_ and stores all logged messages
-to log files. This includes also everything written to the standard stream ``stdout``,
-like ``print`` statements, for instance. To disable logging of the standard streams
-set ``log_stdout=False``. Note that you should always do this in case you use an interactive
+to log files. This can include also everything written to the standard stream ``stdout``,
+like ``print`` statements, for instance. In order to log print statements set
+``log_stdout=True``. ``log_stdout`` can also be a tuple: ``('mylogger', 10)``,
+specifying a logger name as well as a log-level.
+The log-level defines with what level ``stdout`` is logged, it is *not* a filter.
+
+Note that you should always disable this feature
+ in case you use an interactive
 console like *IPython*. Otherwise your console output will be garbled.
 
 After your experiments are finished you can disable logging to files via

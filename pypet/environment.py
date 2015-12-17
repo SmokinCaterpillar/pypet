@@ -1022,7 +1022,7 @@ class Environment(HasLogger):
                  wildcard_functions=None,
                  automatic_storing=True,
                  log_config=pypetconstants.DEFAULT_LOGGING,
-                 log_stdout=('STDOUT', logging.INFO),
+                 log_stdout=False,
                  report_progress = (5, 'pypet', logging.INFO),
                  multiproc=False,
                  ncores=1,
