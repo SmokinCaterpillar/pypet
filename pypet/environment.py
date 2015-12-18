@@ -24,13 +24,11 @@ import sys
 import logging
 import shutil
 import multiprocessing as multip
-import multiprocessing.managers as multipman
 import traceback
 import hashlib
 import time
 import datetime
 import inspect
-import signal
 
 try:
     from sumatra.projects import load_project
@@ -3135,19 +3133,6 @@ class MultiprocContext(HasLogger):
     def pipe_wrapper(self):
         return self._pipe_wrapper
 
-    @staticmethod
-    def _sync_init():
-        """Initialiser for manager to ignore Ctrl+C"""
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-    def _make_manager(self):
-        m = multipman.SyncManager()
-        if self._graceful_exit:
-            m.start(MultiprocContext._sync_init())
-        else:
-            m.start()
-        return m
-
     def __enter__(self):
         self.start()
         return self
@@ -3250,7 +3235,7 @@ class MultiprocContext(HasLogger):
         if self._lock is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = self._make_manager()
+                    self._manager = multip.Manager()
                 # We need a lock that is shared by all processes.
                 self._lock = self._manager.Lock()
             else:
@@ -3298,7 +3283,7 @@ class MultiprocContext(HasLogger):
         if self._queue is None:
             if self._use_manager:
                 if self._manager is None:
-                    self._manager = self._make_manager()
+                    self._manager = multip.Manager()
                 self._queue = self._manager.Queue(maxsize=self._queue_maxsize)
             else:
                 self._queue = multip.Queue(maxsize=self._queue_maxsize)

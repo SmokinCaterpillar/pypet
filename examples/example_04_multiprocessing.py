@@ -36,9 +36,11 @@ def main():
                       ncores=4,
                       use_pool=True,  # Our runs are inexpensive we can get rid of overhead
                       # by using a pool
-                      freeze_input=True, # We can avoid some
+                      freeze_input=True,  # We can avoid some
                       # overhead by freezing the input to the pool
                       wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
+                      graceful_exit=True,  # We want to exit in a data friendly way
+                      # that safes all results after hitting CTRL+C, try it ;-)
                       overwrite_file=True)
 
     # Get the trajectory from the environment
