@@ -1135,9 +1135,6 @@ class Environment(HasLogger):
                                                   pypetconstants.WRAP_MODE_NETQUEUE):
             raise ValueError('You can only specify a port for the `NETLOCK` wrapping.')
 
-        if (compat.python_major == 2 and compat.python_minor == 6) and graceful_exit:
-            raise ValueError('You can only gracefully exit with Python 2.7 or higher.')
-
         if use_scoop and graceful_exit:
             raise ValueError('You cannot exit gracefully using SCOOP.')
 

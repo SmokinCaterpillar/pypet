@@ -804,7 +804,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = False
         self.encoding='latin1'
-        self.graceful_exit = not(compat.python_major == 2 and compat.python_minor == 6)
+        self.graceful_exit = True
 
 
 
@@ -843,7 +843,7 @@ class ResultSortTest(TrajectoryComparator):
         self.use_scoop = False
         self.log_config = True
         self.port = None
-        self.graceful_exit = not(compat.python_major == 2 and compat.python_minor == 6)
+        self.graceful_exit = True
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -990,8 +990,6 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-    @unittest.skipIf(compat.python_major == 2 and compat.python_minor == 6,
-                     'Does not run under 2.6')
     def test_graceful_exit(self):
 
         ###Explore
