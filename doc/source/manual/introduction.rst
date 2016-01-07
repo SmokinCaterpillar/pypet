@@ -431,7 +431,6 @@ Here you can see the summarizing overview table discussed above.
 
 .. image:: /figures/example_01.png
 
-
 ^^^^^^^^^^^^
 Loading Data
 ^^^^^^^^^^^^
@@ -479,6 +478,17 @@ Here we chose both to be ``2``.
 or results. Accordingly, we would add parameters or results to our trajectory
 but they would not contain any data.
 Instead, ``2`` means we want to load the parameters and results including the data they contain.
+
+
+------------------------------------------
+Combining *pypet* with an Existing Project
+------------------------------------------
+
+Of course, you don't need to start from scratch. If you already have a rather sophisticated
+simulation environment and simulator, there are ways to integrate or wrap *pypet* around
+your project. You may want to look at :ref:`wrap-project` and
+example :ref:`example-17` shows you how to do that.
+
 
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
 a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants

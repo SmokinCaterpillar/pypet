@@ -585,7 +585,7 @@ specifying a logger name as well as a log-level.
 The log-level defines with what level ``stdout`` is logged, it is *not* a filter.
 
 Note that you should always disable this feature
- in case you use an interactive
+in case you use an interactive
 console like *IPython*. Otherwise your console output will be garbled.
 
 After your experiments are finished you can disable logging to files via
@@ -1482,3 +1482,58 @@ You are not obliged to use a trajectory with an environment. If you still want t
 distinction between single runs but manually schedule them, take a look at
 the :func:`pypet.utils.decorators.manual_run` decorator. An example of how to use it
 is given here :ref:`example-20`.
+
+
+.. _wrap-project:
+
+------------------------------------------
+Combining *pypet* with an Existing Project
+------------------------------------------
+
+If you already have a rather evolved simulator yourself, there are ways
+to combine it with *pypet* instead of starting from scratch. Usually,
+the only thing you need is a wrapper function that passes parameters
+from the :class:`~pypet.trajectory.Trajectory` to your simulator and puts
+your results back into it. Finally, you need some boilerplate like code to
+create an :class:`~pypet.environment.Environment`, add some parameters and exploration,
+and start the wrapping function instead of your simulation directly.
+A full fledged example is given here: :ref:`example-17`.
+Or take this script for instance where ``my_simulator`` is your original simulation:
+
+.. code-block:: python
+
+    from pypet import Environment
+
+
+    def my_simulator(a,b,c):
+        # Do some serious stuff and compute a `result`
+        result = 42  # What else?
+        return result
+
+
+    def my_pypet_wrapper(traj):
+        result = my_simulator(traj.a, traj.b, traj.c)
+        traj.f_add_result('my_result', result, comment='Result from `my_simulator`')
+
+
+    def main():
+        # Boilerplate main code:
+
+        # Create the environment
+        env = Environment()
+        traj = env.v_traj
+
+        # Now add the parameters and some exploration
+        traj.f_add_parameter('a', 0)
+        traj.f_add_parameter('b', 0)
+        traj.f_add_parameter('c', 0)
+        traj.f_explore({'a': [1,2,3,4,5]})
+
+        # Run your wrapping function instead of your simulator
+        env.run(my_pypet_wrapper)
+
+
+    if __name__ == '__main__':
+        # Let's make the python evangelists happy and encapsulate
+        # the main function as you always should ;-)
+        main()

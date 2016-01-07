@@ -132,3 +132,12 @@ Other Problems
     **A:** Probably, you use an older HDF5 version (``< 1.8.7``) that does not allow
     simultaneous openings of a single HDF5 file. Either install a newer version or switch to
     queue wrapping.
+
+
+**Q:** I already have a rather evolved simulator can I integrate it with pypet or do I need to
+start from scratch?
+
+   **A:** No, of course you don't neet to start from scratch. T
+   here are ways to integrate or wrap *pypet* around
+   your project. Example :ref:`example-17` shows you how to do that or
+   take a look at section :ref:`wrap-project`.

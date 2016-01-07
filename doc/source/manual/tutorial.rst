@@ -972,7 +972,7 @@ To restore everything back to normal simply call
 This concludes our small tutorial. If you are interested in more advance concepts
 look into the cookbook or check out the code snippets in the example section.
 Notably, if you consider using *pypet* with an already existing project of yours, you might
-want to pay attention to :ref:`example-17`.
+want to pay attention to :ref:`example-17` and :ref:`wrap-project`.
 
 Cheers,
     Robert
