@@ -55,6 +55,24 @@ class ParameterTest(TrajectoryComparator):
         new_traj.f_load(load_data=2)
         self.compare_trajectories(traj, new_traj)
 
+    def test_store_load_with_hdf5_no_data(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + 'nodata.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
+
+        for param in self.param.values():
+            param._data = None
+            traj.f_add_parameter(param)
+
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
+
     def test_type_error_for_exploring_if_range_does_not_match(self):
 
         param = self.param['val1']
@@ -97,7 +115,7 @@ class ParameterTest(TrajectoryComparator):
 
     def test_equal_values(self):
         for param in self.param.values():
-            self.assertTrue(param._equal_values(param.f_get(),param.f_get()))
+            self.assertTrue(param._equal_values(param.f_get(), param.f_get()))
 
             self.assertFalse(param._equal_values(param.f_get(),23432432432))
 
@@ -268,10 +286,12 @@ class ParameterTest(TrajectoryComparator):
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
+            old_data = self.param[key]._data
+            self.param[key]._data = None
+            with self.assertRaises(TypeError):
+                self.param[key]._explore(vallist)
+            self.param[key]._data = old_data
             self.param[key]._explore(vallist)
-
-
-
 
     def test_the_insertion_made_implicetly_in_setUp(self):
         for key, val in self.data.items():

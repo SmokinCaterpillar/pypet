@@ -318,9 +318,9 @@ class BaseParameter(NNLeafNode):
             return False
 
         if not self.f_supports(val1) and not self.f_supports(val2):
-            raise TypeError('I do not support the types of both inputs (`%s` and `%s`),'
-                            ' therefore I cannot judge whether the two are equal.' %
-                            str(type(val1)), str(type(val2)))
+            raise TypeError('I do not support the types of both inputs (`%s` and `%s`), '
+                            'therefore I cannot judge whether '
+                            'the two are equal.' % (str(type(val1)), str(type(val2))))
 
         if not self._values_of_same_type(val1, val2):
             return False
@@ -1049,8 +1049,12 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
         if self.f_has_range():
-            raise TypeError('Your Parameter %s is already explored, cannot _explore it further!' %
-                            self._name)
+            raise TypeError('Your parameter `%s` is already explored, '
+                            'cannot _explore it further!' % self._name)
+
+        if self._data is None:
+            raise TypeError('Your parameter `%s` has no default value, please specify one '
+                            'via `f_set` before exploration. ' % self.v_full_name)
 
         data_list = self._data_sanity_checks(explore_iterable)
 
@@ -1132,7 +1136,8 @@ class Parameter(BaseParameter):
         :return: Dictionary containing the data and optionally the exploration range.
 
         """
-        store_dict = {'data': ObjectTable(data={'data': [self._data]})}
+        if self._data is not None:
+            store_dict = {'data': ObjectTable(data={'data': [self._data]})}
 
         if self.f_has_range():
             store_dict['explored_data'] = ObjectTable(data={'data': self._explored_range})
@@ -1152,8 +1157,12 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
-        self._data = load_dict['data']['data'][0]
-        self._default = self._data
+        if 'data' in load_dict:
+            self._data = load_dict['data']['data'][0]
+            self._default = self._data
+        else:
+            self._logger.warning('Your parameter `%s` is empty, '
+                                 'I did not find any data on disk.' % self.v_full_name)
 
         if 'explored_data' in load_dict:
             self._explored_range = [x for x in load_dict['explored_data']['data'].tolist()]
@@ -1168,7 +1177,6 @@ class Parameter(BaseParameter):
 
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._data
-
 
     @copydoc(BaseParameter._shrink)
     def _shrink(self):
@@ -1239,7 +1247,7 @@ class ArrayParameter(Parameter):
         the order of the arrays later on.
 
         """
-        if not type(self._data) in (np.ndarray, tuple, np.matrix, list):
+        if type(self._data) not in (np.ndarray, tuple, np.matrix, list):
             return super(ArrayParameter, self)._store()
         else:
             store_dict = {'data' + ArrayParameter.IDENTIFIER: self._data}
@@ -1773,9 +1781,11 @@ class PickleParameter(Parameter):
 
         """
         store_dict = {}
-        dump = pickle.dumps(self._data, protocol=self.v_protocol)
-        store_dict['data'] = dump
-        store_dict[PickleParameter.PROTOCOL] = self.v_protocol
+
+        if self._data is not None:
+            dump = pickle.dumps(self._data, protocol=self.v_protocol)
+            store_dict['data'] = dump
+            store_dict[PickleParameter.PROTOCOL] = self.v_protocol
 
         if self.f_has_range():
 
@@ -1826,9 +1836,12 @@ class PickleParameter(Parameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
-        dump = load_dict['data']
-
-        self._data = pickle.loads(dump)
+        if 'data' in load_dict:
+            dump = load_dict['data']
+            self._data = pickle.loads(dump)
+        else:
+            self._logger.warning('Your parameter `%s` is empty, '
+                                 'I did not find any data on disk.' % self.v_full_name)
 
         try:
             self.v_protocol = load_dict[PickleParameter.PROTOCOL]

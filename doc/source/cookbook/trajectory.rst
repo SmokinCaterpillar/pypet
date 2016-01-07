@@ -172,7 +172,7 @@ the first positional argument followed by the name as the second argument:
 
     >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', data=42, comment='I am an example')
 
-Note that you always have to specify a default data value of a parameter,
+Note that you always should specify a default data value of a parameter,
 even if you want to explore it later.
 
 Derived parameters, config and results work analogously.
