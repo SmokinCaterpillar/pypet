@@ -3446,7 +3446,7 @@ class ParameterGroup(NNGroupNode):
         Or by passing the values directly to the function, with the name being the first
         (non-keyword!) argument:
 
-        >>> traj.f_add_parameter('group1.group2.myparam', data=42, comment='Example!')
+        >>> traj.f_add_parameter('group1.group2.myparam', 42, comment='Example!')
 
         If you want to create a different parameter than the standard parameter, you can
         give the constructor as the first (non-keyword!) argument followed by the name
@@ -3456,6 +3456,12 @@ class ParameterGroup(NNGroupNode):
 
         The full name of the current node is added as a prefix to the given parameter name.
         If the current node is the trajectory the prefix `'parameters'` is added to the name.
+
+        Note, all non-keyword and keyword parameters apart from the optional constructor
+        are passed on as is to the constructor.
+
+        Moreover, you always should specify a default data value of a parameter,
+        even if you want to explore it later.
 
         """
         return self._nn_interface._add_generic(self, type_name=PARAMETER,

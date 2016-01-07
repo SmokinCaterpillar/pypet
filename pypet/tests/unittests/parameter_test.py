@@ -357,7 +357,7 @@ class ParameterTest(TrajectoryComparator):
             param.f_unlock()
             param.f_empty()
 
-            param = constructor('')
+            param = constructor('', 42)
 
             param._load(store_dict)
 

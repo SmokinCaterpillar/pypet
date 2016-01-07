@@ -154,10 +154,11 @@ this is analogous.
 There are two ways to use the above functions,
 either you already have an instantiation of the object, i.e. you add a given parameter:
 
-    >>> my_param = Parameter('subgroup1.subgroup2.myparam',42, comment='I am an example')
+    >>> my_param = Parameter('subgroup1.subgroup2.myparam', 42, comment='I am an example')
     >>> traj.f_add_parameter(my_param)
 
-Or you let the trajectory create the parameter, where the name is the first positional argument:
+Or you let the trajectory create the parameter using your specifications.
+Note in this case the name is the first positional argument:
 
     >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', 42, comment='I am an example')
 
@@ -169,7 +170,10 @@ If you only want to add a different type of parameter once, but not change the s
 constructor in general, you can add the constructor as
 the first positional argument followed by the name as the second argument:
 
-    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', 42, comment='I am an example')
+    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', data=42, comment='I am an example')
+
+Note that you always have to specify a default data value of a parameter,
+even if you want to explore it later.
 
 Derived parameters, config and results work analogously.
 
@@ -179,6 +183,53 @@ that is added to the subbranch ``parameters``. This will also automatically crea
 the subgroups ``traffic`` and inside there the group ``mobiles``.
 If you add the parameter ``traj.f_add_parameter('traffic.mobiles.ncycles', data = 11)`` afterwards,
 you will find this parameter also in the group ``traj.parameters.traffic.ncycles``.
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Caveat of Passing Arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are not interested in some nitty-gritty details, skip this section, but just
+**remember that for passing comments always use the keyword argument** ``comment=``.
+
+
+Let's take another look on how *pypet* actually handles the creation of parameters:
+
+    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')
+
+In this case all arguments and keyword arguments
+(here 1 positional and 2 keyword
+arguments: ``'subgroup1.subgroup2.myparam', data=42, comment='I am an example'``)
+are always passed on to the :class:`~pypet.parameter.Parameter` constructor as you provide them.
+So internally *pypet* just calls
+``Parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')``.
+For parameters, the keyword arguments ``data=`` and ``comment=`` are optional.
+You could instead be using positional arguments, as in:
+
+    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', 42, 'I am an example')
+
+Internally *pypet* calls
+``Parameter('subgroup1.subgroup2.myparam', 42, 'I am an example')`` which is equivalent to
+the keyword argument version
+``Parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')``.
+
+Note that we also got rid of the ``comment=`` keyword. But you are advised
+to **always** use the keyword argument ``comment=`` if you want to provide a comment.
+Leaving it out does **not** work for results.
+To stress this again,
+**for results you cannot leave out the keyword argument ``comment=``if you want to provide a comment.**
+The reason is that results can keep more than a single data item; as we will see later.
+So here the keyword argument ``comment=`` is necessary to stress that the string you provide
+is indeed a comment and not just data.
+
+   >>> traj.f_add_result('myresult', 125, comment='I am an example result')
+
+is **not** equivalent to
+
+   >>> traj.f_add_result('myresult', 125, 'I am an example result')
+
+because in the first case ``'I am an example result'`` is a comment, whereas in the
+second ``'I am an example result'`` is interpreted as a data item.
 
 
 ^^^^^^^^^^^^^^^^^^^^^
@@ -240,7 +291,8 @@ This does work for results as well, but you **cannot** pass comments, because
     >>> traj.results.myresult = 42, 'I am NOT a comment!'
 
 will create a result with two data items, first being the value ``42`` and the second one
-a string ``'I am NOT a comment'``. Comments can be passed to the standard results only as
+a string ``'I am NOT a comment'``. As you might have noticed, this is related to the
+caveat discussed in the previous section. Comments can be passed to the standard results only as
 keyword arguments and all *lazy* values are passed as positional arguments.
 Yet, you can pass as many items to a result as you want. This, for instance, is legit:
 
@@ -262,6 +314,7 @@ Yet, after turning it off, it works again:
    43
 
 The different ways of adding data are also explained in example :ref:`example-15`.
+
 
 
 ^^^^^^^^^^^
