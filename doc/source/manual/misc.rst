@@ -103,7 +103,7 @@ Running all tests can take up to 20 minutes and might temporarily take up to
 1 GB of disk space. The test suite encompasses more than **900** tests
 and has a code coverage of about **90%**!
 
-*pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+*pypet* is constantly tested with Python 2.6, 2.7, 3.3, 3.4, and 3.5 for **Linux** using
 Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
 The source code is available at `github.com/SmokinCaterpillar/pypet`_.
 

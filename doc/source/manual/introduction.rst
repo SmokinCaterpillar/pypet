@@ -64,7 +64,7 @@ Main Features
 
 * **Analyse** your data on-the-fly during multiprocessing
 
-* **Adaptively** explore tha parameter space combining *pypet* with optimization
+* **Adaptively** explore the parameter space combining *pypet* with optimization
   tools like the evolutionary algorithms framework DEAP_
 
 * **Dynamic Loading**, load only the parts of your data you currently need
@@ -90,7 +90,7 @@ Getting Started
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, or 3.4 [#pythonversion]_, and
+Python 2.6, 2.7, 3.3, 3.4, or 3.5 [#pythonversion]_, and
 
 * numpy_ >= 1.6.1
 
