@@ -2867,10 +2867,11 @@ class HDF5StorageService(StorageService, HasLogger):
             to_link_hdf5_group = ptcompat.get_node(self._hdf5file,
                                                    where=linking_name)
         except pt.NoSuchNodeError:
-            self._logger.info('Could not store link `%s` under `%s` immediately, '
-                                 'need to store `%s` first.' % (link,
-                                                            node_in_traj.v_full_name,
-                                                            linked_traj_node.v_full_name))
+            self._logger.debug('Could not store link `%s` under `%s` immediately, '
+                               'need to store `%s` first. '
+                               'Will store the link right after.' % (link,
+                                                                     node_in_traj.v_full_name,
+                                                                     linked_traj_node.v_full_name))
             root = node_in_traj._nn_interface._root_instance
             self._tree_store_sub_branch(root, linked_traj_node.v_full_name,
                                         store_data=pypetconstants.STORE_DATA_SKIPPING,
