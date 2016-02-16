@@ -149,7 +149,7 @@ you also need to include these following steps.
         the *pre run* for every stimulus input.
 
     *   Pass the :func:`~pypet.brian.network.NetworkManger.run_network` to
-        your environment's :func:`~pypet.environment.f_run` to start parameter exploration.
+        your environment's :func:`~pypet.environment.run` to start parameter exploration.
         This will automatically initiate the ``build(traj)`` method for all your components,
         analysers and your runner in every single run. Subsequently, your network will be
         simulated with he help of your network runner.

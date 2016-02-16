@@ -101,7 +101,7 @@ def _frozen_pool_single_run(kwargs):
     """Single run wrapper for the frozen pool, makes a single run and passes kwargs"""
     idx = kwargs.pop('idx')
     frozen_kwargs = _frozen_pool_single_run.kwargs
-    frozen_kwargs.update(kwargs)  # in case of `f_run_map`
+    frozen_kwargs.update(kwargs)  # in case of `run_map`
     # we need to update job's args and kwargs
     traj = frozen_kwargs['traj']
     traj.f_set_crun(idx)
@@ -512,7 +512,7 @@ class Environment(HasLogger):
         Can be set to ``True`` if the run function as well as all additional arguments
         are immutable. This will prevent the trajectory from getting pickled again and again.
         Thus, the run function, the trajectory, as well as all arguments are passed to the pool
-        or SCOOP workers at initialisation. Works also under `f_run_map`.
+        or SCOOP workers at initialisation. Works also under `run_map`.
         In this case the iterable arguments are, of course, not frozen but passed for every run.
 
     :param timeout:
@@ -718,7 +718,7 @@ class Environment(HasLogger):
         (see below).
         Using this data you can resume crashed trajectories.
 
-        In order to resume trajectories use :func:`~pypet.environment.Environment.f_resume`.
+        In order to resume trajectories use :func:`~pypet.environment.Environment.resume`.
 
         Be aware that your individual single runs must be completely independent of one
         another to allow continuing to work. Thus, they should **NOT** be based on shared data
@@ -1878,13 +1878,13 @@ class Environment(HasLogger):
     def run_map(self, runfunc, *iter_args, **iter_kwargs):
         """Calls runfunc with different args and kwargs each time.
 
-        Similar to `:func:`~pypet.environment.Environment.f_run`
+        Similar to `:func:`~pypet.environment.Environment.run`
         but all ``iter_args`` and ``iter_kwargs`` need to be iterables,
         iterators, or generators that return new arguments for each run.
 
         """
         if len(iter_args) == 0 and len(iter_kwargs) == 0:
-            raise ValueError('Use `f_run` if you don`t have any other arguments.')
+            raise ValueError('Use `run` if you don`t have any other arguments.')
         pipeline = lambda traj: ((runfunc, iter_args, iter_kwargs),
                                  (self._postproc, self._postproc_args, self._postproc_kwargs))
 
@@ -2379,7 +2379,7 @@ class Environment(HasLogger):
             self._start_timestamp = time.time()
 
         if self._map_arguments and self._resumable:
-            raise ValueError('You cannot use `f_run_map` or `f_pipeline_map` in combination '
+            raise ValueError('You cannot use `run_map` or `pipeline_map` in combination '
                              'with continuing option.')
 
         if self._sumatra_project is not None:
@@ -2429,8 +2429,8 @@ class Environment(HasLogger):
             conf1 = self._traj.f_add_config(Parameter, config_name, self._start_timestamp,
                                     comment='Timestamp of starting of experiment '
                                             '(when the actual simulation was '
-                                            'started (either by calling `f_run`, '
-                                            '`f_continue`, or `f_pipeline`).')
+                                            'started (either by calling `run`, '
+                                            '`resume`, or `pipeline`).')
             conf_list.append(conf1)
 
         config_name = 'environment.%s.finish_timestamp' % self.name

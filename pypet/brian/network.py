@@ -16,7 +16,7 @@ components, analyser and your runner to the manager.
 
 Pass the :func:`~pypet.brian.network.run_network` function together with a
 :class:`~pypet.brian.network.NetworkManager` to your main environment function
-:func:`~pypet.environment.Environment.f_run` to start a simulation and parallel
+:func:`~pypet.environment.Environment.run` to start a simulation and parallel
 parameter exploration. Be aware that in case of a *pre-built* network,
 successful parameter exploration
 requires parallel processing (see :class:`~pypet.brian.network.NetworkManager`).
@@ -34,12 +34,12 @@ from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
 
 
-@deprecated('Please use `environment.f_run(manager.run_network)` instead of '
-            '`environment.f_run(run_network, manager)`.')
+@deprecated('Please use `environment.run(manager.run_network)` instead of '
+            '`environment.run(run_network, manager)`.')
 def run_network(traj, network_manager):
     """Top-level simulation function, pass this together with a NetworkManager to the environment.
 
-    DEPRECATED: Please pass `network_manager.run_network` to the environment's `f_run` function
+    DEPRECATED: Please pass `network_manager.run_network` to the environment's `run` function
 
     :param traj: Trajectory container
 

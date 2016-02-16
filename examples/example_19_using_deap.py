@@ -84,7 +84,7 @@ def main():
     toolbox.register("mutate", tools.mutFlipBit, indpb=traj.indpb)
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
     toolbox.register("evaluate", eval_one_max)
-    toolbox.register("map", env.run_map)  # Important to use `f_run_map` instead of `f_run`
+    toolbox.register("map", env.run_map)  # Important to use `run_map` instead of `run`
     # because we pass an iterable argument to our fitness function
 
 

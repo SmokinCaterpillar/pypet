@@ -240,7 +240,7 @@ class TestPostProc(TrajectoryComparator):
         traj2.f_explore(exp_dict2)
 
 
-        res1 = env1.f_pipeline(pipeline=mypipeline)
+        res1 = env1.pipeline(pipeline=mypipeline)
 
         self.are_results_in_order(res1)
 
@@ -280,7 +280,7 @@ class TestPostProc(TrajectoryComparator):
         traj2.f_explore(exp_dict2)
 
 
-        res1 = env1.f_pipeline_map(pipeline=mypipelin_with_iter_args)
+        res1 = env1.pipeline_map(pipeline=mypipelin_with_iter_args)
 
         self.are_results_in_order(res1)
 

@@ -82,7 +82,7 @@ def main():
     toolbox.register("select", tools.selTournament, tournsize=traj.tournsize)
     toolbox.register("evaluate", eval_one_max)
     toolbox.register("map", env.run)  # We pass the individual as part of traj, so
-    # we no longer need the `f_run_map` but just `f_run`
+    # we no longer need the `run_map` but just `run`
 
 
     # ------- Initialize Population -------- #

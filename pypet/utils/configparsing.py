@@ -23,7 +23,7 @@ def parse_config(init_func):
         new_kwargs = config_interpreter.interpret()
         init_func(env, *args, **new_kwargs)
         # Add parameters and config data from the `.ini` file
-        config_interpreter.add_parameters(env.v_traj)
+        config_interpreter.add_parameters(env.traj)
     return new_func
 
 
