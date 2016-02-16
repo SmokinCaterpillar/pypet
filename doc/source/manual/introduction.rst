@@ -365,7 +365,7 @@ You can pass many more (or less) arguments
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
-the property ``v_trajectory``.
+the property ``trajectory``.
 
 .. code-block:: python
 

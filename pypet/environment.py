@@ -1202,8 +1202,8 @@ class Environment(HasLogger):
                                     wildcard_functions=wildcard_functions,
                                     comment=comment)
 
-            self._timestamp = self.v_trajectory.v_timestamp  # Timestamp of creation
-            self._time = self.v_trajectory.v_time  # Formatted timestamp
+            self._timestamp = self.trajectory.v_timestamp  # Timestamp of creation
+            self._time = self.trajectory.v_time  # Formatted timestamp
         else:
             self._traj = trajectory
             # If no new trajectory is created the time of the environment differs
@@ -1225,9 +1225,9 @@ class Environment(HasLogger):
 
         if not new_commit:
             # Otherwise we need to create a novel hexsha
-            self._hexsha = hashlib.sha1(compat.tobytes(self.v_trajectory.v_name +
-                                                       str(self.v_trajectory.v_timestamp) +
-                                                       str(self.v_timestamp) +
+            self._hexsha = hashlib.sha1(compat.tobytes(self.trajectory.v_name +
+                                                       str(self.trajectory.v_timestamp) +
+                                                       str(self.timestamp) +
                                                            VERSION)).hexdigest()
 
         # Create the name of the environment
@@ -1262,7 +1262,7 @@ class Environment(HasLogger):
             # Use the service of the trajectory
             self._logger.info('Found storage service attached to Trajectory. Will use '
                               'this storage service.')
-            self._storage_service = self.v_trajectory.v_storage_service
+            self._storage_service = self.trajectory.v_storage_service
         else:
             # Create a new service
             self._storage_service, unused_factory_kwargs = storage_factory(storage_service,
@@ -1354,29 +1354,29 @@ class Environment(HasLogger):
         # Add config data to the trajectory
         if self._do_single_runs:
             # Only add parameters if we actually want single runs to be performed
-            config_name = 'environment.%s.multiproc' % self.v_name
+            config_name = 'environment.%s.multiproc' % self.name
             self._traj.f_add_config(Parameter, config_name, self._multiproc,
                                     comment='Whether or not to use multiprocessing.').f_lock()
 
             if self._multiproc:
-                config_name = 'environment.%s.use_pool' % self.v_name
+                config_name = 'environment.%s.use_pool' % self.name
                 self._traj.f_add_config(Parameter, config_name, self._use_pool,
                                         comment='Whether to use a pool of processes or '
                                                 'spawning individual processes for '
                                                 'each run.').f_lock()
 
-                config_name = 'environment.%s.use_scoop' % self.v_name
+                config_name = 'environment.%s.use_scoop' % self.name
                 self._traj.f_add_config(Parameter, config_name, self._use_scoop,
                                         comment='Whether to use scoop to launch single '
                                                 'runs').f_lock()
 
                 if self._niceness is not None:
-                    config_name = 'environment.%s.niceness' % self.v_name
+                    config_name = 'environment.%s.niceness' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._niceness,
                                         comment='Niceness value of child processes.').f_lock()
 
                 if self._use_pool:
-                    config_name = 'environment.%s.freeze_input' % self.v_name
+                    config_name = 'environment.%s.freeze_input' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._freeze_input,
                                         comment='If inputs to each run are static and '
                                                 'are not mutated during each run, '
@@ -1385,36 +1385,36 @@ class Environment(HasLogger):
                 elif self._use_scoop:
                     pass
                 else:
-                    config_name = 'environment.%s.cpu_cap' % self.v_name
+                    config_name = 'environment.%s.cpu_cap' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._cpu_cap,
                                             comment='Maximum cpu usage beyond '
                                                     'which no new processes '
                                                     'are spawned.').f_lock()
 
-                    config_name = 'environment.%s.memory_cap' % self.v_name
+                    config_name = 'environment.%s.memory_cap' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._memory_cap,
                                             comment='Tuple, first entry: Maximum RAM usage beyond '
                                                     'which no new processes are spawned; '
                                                     'second entry: Estimated usage per '
                                                     'process in MB. 0 if not estimated.').f_lock()
 
-                    config_name = 'environment.%s.swap_cap' % self.v_name
+                    config_name = 'environment.%s.swap_cap' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._swap_cap,
                                             comment='Maximum Swap memory usage beyond '
                                                     'which no new '
                                                     'processes are spawned').f_lock()
 
-                    config_name = 'environment.%s.immediate_postprocessing' % self.v_name
+                    config_name = 'environment.%s.immediate_postprocessing' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._immediate_postproc,
                                             comment='Whether to use immediate '
                                                     'postprocessing.').f_lock()
 
-                config_name = 'environment.%s.ncores' % self.v_name
+                config_name = 'environment.%s.ncores' % self.name
                 self._traj.f_add_config(Parameter, config_name, self._ncores,
                                         comment='Number of processors in case of '
                                                 'multiprocessing').f_lock()
 
-                config_name = 'environment.%s.wrap_mode' % self.v_name
+                config_name = 'environment.%s.wrap_mode' % self.name
                 self._traj.f_add_config(Parameter, config_name, self._wrap_mode,
                                         comment='Multiprocessing mode (if multiproc),'
                                                 ' i.e. whether to use QUEUE'
@@ -1423,19 +1423,19 @@ class Environment(HasLogger):
 
                 if (self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                                 self._wrap_mode == pypetconstants.WRAP_MODE_PIPE):
-                    config_name = 'environment.%s.queue_maxsize' % self.v_name
+                    config_name = 'environment.%s.queue_maxsize' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._queue_maxsize,
                                         comment='Maximum size of Storage Queue/Pipe in case of '
                                                 'multiprocessing and QUEUE/PIPE wrapping').f_lock()
 
                 if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK:
-                    config_name = 'environment.%s.url' % self.v_name
+                    config_name = 'environment.%s.url' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._url,
                                         comment='URL of lock distribution server, including '
                                                 'protocol and port.').f_lock()
 
                 if self._wrap_mode == pypetconstants.WRAP_MODE_NETLOCK or self._use_scoop:
-                    config_name = 'environment.%s.timeout' % self.v_name
+                    config_name = 'environment.%s.timeout' % self.name
                     timeout = self._timeout
                     if timeout is None:
                         timeout = -1.0
@@ -1447,7 +1447,7 @@ class Environment(HasLogger):
                         (self._wrap_mode == pypetconstants.WRAP_MODE_LOCAL or
                             self._wrap_mode == pypetconstants.WRAP_MODE_QUEUE or
                                 self._wrap_mode == pypetconstants.WRAP_MODE_PIPE)):
-                    config_name = 'environment.%s.gc_interval' % self.v_name
+                    config_name = 'environment.%s.gc_interval' % self.name
                     self._traj.f_add_config(Parameter, config_name, self._gc_interval,
                                         comment='Intervals with which ``gc.collect()`` '
                                                 'is called.').f_lock()
@@ -1472,37 +1472,37 @@ class Environment(HasLogger):
                                     comment='Whether or not to allow graceful handling '
                                             'of `SIGINT` (`CTRL+C`).').f_lock()
 
-        config_name = 'environment.%s.trajectory.name' % self.v_name
-        self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_name,
+        config_name = 'environment.%s.trajectory.name' % self.name
+        self._traj.f_add_config(Parameter, config_name, self.trajectory.v_name,
                                 comment='Name of trajectory').f_lock()
 
-        config_name = 'environment.%s.trajectory.timestamp' % self.v_name
-        self._traj.f_add_config(Parameter, config_name, self.v_trajectory.v_timestamp,
+        config_name = 'environment.%s.trajectory.timestamp' % self.name
+        self._traj.f_add_config(Parameter, config_name, self.trajectory.v_timestamp,
                                 comment='Timestamp of trajectory').f_lock()
 
-        config_name = 'environment.%s.timestamp' % self.v_name
-        self._traj.f_add_config(Parameter, config_name, self.v_timestamp,
+        config_name = 'environment.%s.timestamp' % self.name
+        self._traj.f_add_config(Parameter, config_name, self.timestamp,
                                 comment='Timestamp of environment creation').f_lock()
 
-        config_name = 'environment.%s.hexsha' % self.v_name
-        self._traj.f_add_config(Parameter, config_name, self.v_hexsha,
+        config_name = 'environment.%s.hexsha' % self.name
+        self._traj.f_add_config(Parameter, config_name, self.hexsha,
                                 comment='SHA-1 identifier of the environment').f_lock()
 
-        config_name = 'environment.%s.automatic_storing' % self.v_name
+        config_name = 'environment.%s.automatic_storing' % self.name
         if not self._traj.f_contains('config.' + config_name):
             self._traj.f_add_config(Parameter, config_name, self._automatic_storing,
                                     comment='If trajectory should be stored automatically in the '
                                             'end.').f_lock()
 
         try:
-            config_name = 'environment.%s.script' % self.v_name
+            config_name = 'environment.%s.script' % self.name
             self._traj.f_add_config(Parameter, config_name, main.__file__,
                                     comment='Name of the executed main script').f_lock()
         except AttributeError:
             pass  # We end up here if we use pypet within an ipython console
 
         for package_name, version in pypetconstants.VERSIONS_TO_STORE.items():
-            config_name = 'environment.%s.versions.%s' % (self.v_name, package_name)
+            config_name = 'environment.%s.versions.%s' % (self.name, package_name)
             self._traj.f_add_config(Parameter, config_name, version,
                                     comment='Particular version of a package or distribution '
                                             'used during experiment. N/A if package could not '
@@ -1513,8 +1513,8 @@ class Environment(HasLogger):
 
     def __repr__(self):
         """String representation of environment"""
-        repr_string = '<%s %s for Trajectory %s>' % (self.__class__.__name__, self.v_name,
-                                          self.v_trajectory.v_name)
+        repr_string = '<%s %s for Trajectory %s>' % (self.__class__.__name__, self.name,
+                                          self.trajectory.v_name)
         return repr_string
 
     def __enter__(self):
@@ -1628,7 +1628,7 @@ class Environment(HasLogger):
 
         """
         if trajectory_name is None:
-            self._trajectory_name = self.v_trajectory.v_name
+            self._trajectory_name = self.trajectory.v_name
         else:
             self._trajectory_name = trajectory_name
 
@@ -1648,7 +1648,7 @@ class Environment(HasLogger):
 
     @property
     def traj(self):
-        """ Equivalent to env.v_trajectory"""
+        """ Equivalent to env.trajectory"""
         return self.trajectory
 
     @property
@@ -2012,14 +2012,14 @@ class Environment(HasLogger):
         traj = resume_dict['trajectory']
 
         # We need to update the information about the trajectory name
-        config_name = 'config.environment.%s.trajectory.name' % self.v_name
+        config_name = 'config.environment.%s.trajectory.name' % self.name
         if self._traj.f_contains(config_name, shortcuts=False):
             param = self._traj.f_get(config_name, shortcuts=False)
             param.f_unlock()
             param.f_set(traj.v_name)
             param.f_lock()
 
-        config_name = 'config.environment.%s.trajectory.timestamp' % self.v_name
+        config_name = 'config.environment.%s.trajectory.timestamp' % self.name
         if self._traj.f_contains(config_name, shortcuts=False):
             param = self._traj.f_get(config_name, shortcuts=False)
             param.f_unlock()
@@ -2027,7 +2027,7 @@ class Environment(HasLogger):
             param.f_lock()
 
         # Merge the information so that we keep a record about the current environment
-        if not traj.config.environment.f_contains(self.v_name, shortcuts=False):
+        if not traj.config.environment.f_contains(self.name, shortcuts=False):
             traj._merge_config(self._traj)
         self._traj = traj
 
@@ -2195,7 +2195,7 @@ class Environment(HasLogger):
                     # Remember the full copy setting for the frozen input to
                     # change this back once the trajectory is received by
                     # each process
-                    result_dict['full_copy'] = self.v_traj.v_full_copy
+                    result_dict['full_copy'] = self.traj.v_full_copy
                     if self._map_arguments:
                         del result_dict['runargs']
                         del result_dict['runkwargs']
@@ -2424,7 +2424,7 @@ class Environment(HasLogger):
         self._runtime = str(findatetime - startdatetime)
 
         conf_list = []
-        config_name = 'environment.%s.start_timestamp' % self.v_name
+        config_name = 'environment.%s.start_timestamp' % self.name
         if not self._traj.f_contains('config.' + config_name):
             conf1 = self._traj.f_add_config(Parameter, config_name, self._start_timestamp,
                                     comment='Timestamp of starting of experiment '
@@ -2433,7 +2433,7 @@ class Environment(HasLogger):
                                             '`f_continue`, or `f_pipeline`).')
             conf_list.append(conf1)
 
-        config_name = 'environment.%s.finish_timestamp' % self.v_name
+        config_name = 'environment.%s.finish_timestamp' % self.name
         if not self._traj.f_contains('config.' + config_name):
             conf2 = self._traj.f_add_config(Parameter, config_name, self._finish_timestamp,
                                             comment='Timestamp of finishing of an experiment.')
@@ -2443,7 +2443,7 @@ class Environment(HasLogger):
             conf2.f_set(self._finish_timestamp)
         conf_list.append(conf2)
 
-        config_name = 'environment.%s.runtime' % self.v_name
+        config_name = 'environment.%s.runtime' % self.name
         if not self._traj.f_contains('config.' + config_name):
             conf3 = self._traj.f_add_config(Parameter, config_name, self._runtime,
                                             comment='Runtime of whole experiment.')
@@ -2483,26 +2483,26 @@ class Environment(HasLogger):
             wildcards, wc_function = pair
             for jdx, wildcard in enumerate(wildcards):
                 config_name = ('environment.%s.wildcards.function_%d.wildcard_%d' %
-                                (self.v_name, idx, jdx))
+                                (self.name, idx, jdx))
                 if not self._traj.f_contains('config.' + config_name):
                     self._traj.f_add_config(Parameter, config_name, wildcard,
                                     comment='Wildcard symbol for the wildcard function').f_lock()
             if hasattr(wc_function, '__name__'):
                 config_name = ('environment.%s.wildcards.function_%d.name' %
-                                (self.v_name, idx))
+                                (self.name, idx))
                 if not self._traj.f_contains('config.' + config_name):
                     self._traj.f_add_config(Parameter, config_name, wc_function.__name__,
                                     comment='Nme of wildcard function').f_lock()
             if wc_function.__doc__:
                 config_name = ('environment.%s.wildcards.function_%d.doc' %
-                                (self.v_name, idx))
+                                (self.name, idx))
                 if not self._traj.f_contains('config.' + config_name):
                     self._traj.f_add_config(Parameter, config_name, wc_function.__doc__,
                                     comment='Docstring of wildcard function').f_lock()
             try:
                 source = inspect.getsource(wc_function)
                 config_name = ('environment.%s.wildcards.function_%d.source' %
-                            (self.v_name, idx))
+                            (self.name, idx))
                 if not self._traj.f_contains('config.' + config_name):
                     self._traj.f_add_config(Parameter, config_name, source,
                                 comment='Source code of wildcard function').f_lock()
@@ -2570,7 +2570,7 @@ class Environment(HasLogger):
             shutil.rmtree(self._resume_path)
 
         if expanded_by_postproc:
-            config_name = 'environment.%s.postproc_expand' % self.v_name
+            config_name = 'environment.%s.postproc_expand' % self.name
             if not self._traj.f_contains('config.' + config_name):
                 self._traj.f_add_config(Parameter, config_name, True,
                                         comment='Added if trajectory was expanded '
@@ -2726,7 +2726,7 @@ class Environment(HasLogger):
                     self._traj.v_full_copy = True
                     init_kwargs = self._make_kwargs()
 
-                    scoop_rev = self.v_name + '_' + str(time.time()).replace('.','_')
+                    scoop_rev = self.name + '_' + str(time.time()).replace('.','_')
                     shared.setConst(**{scoop_rev: init_kwargs})
 
                     iterator = self._make_iterator(start_run_idx,

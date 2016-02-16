@@ -29,8 +29,8 @@ env2 = Environment(trajectory='Traj2',
                    comment = 'I am going to be merged into some other trajectory!')
 
 # Get the trajectories from the environment
-traj1 = env1.v_trajectory
-traj2 = env2.v_trajectory
+traj1 = env1.trajectory
+traj2 = env2.trajectory
 
 # Add both parameters
 traj1.f_add_parameter('x', 1.0, comment='I am the first dimension!')
@@ -45,8 +45,8 @@ traj2.f_explore(cartesian_product({'x':[3.0,4.0,5.0,6.0], 'y':[7.0,8.0,9.0]}))
 
 
 # Run the simulations with all parameter combinations
-env1.f_run(multiply)
-env2.f_run(multiply)
+env1.run(multiply)
+env2.run(multiply)
 
 # Now we merge them together into traj1
 # We want to remove duplicate entries
@@ -89,4 +89,4 @@ traj1.f_restore_default()
 # the experiments/example_03/HDF5 directory
 
 # Finally, disable logging and close log files
-env1.f_disable_logging()
+env1.disable_logging()

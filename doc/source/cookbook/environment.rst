@@ -26,7 +26,7 @@ because most of the time the default settings are sufficient.
 
     The first argument ``trajectory`` can either be a string or a given trajectory object. In case of
     a string, a new trajectory with that name is created. You can access the new trajectory
-    via ``v_trajectory`` property. If a new trajectory is created,
+    via ``trajectory`` property. If a new trajectory is created,
     the comment and dynamically imported classes are added to the trajectory.
 
 * ``add_time``
@@ -1521,7 +1521,7 @@ Or take this script for instance where ``my_simulator`` is your original simulat
 
         # Create the environment
         env = Environment()
-        traj = env.v_traj
+        traj = env.traj
 
         # Now add the parameters and some exploration
         traj.f_add_parameter('a', 0)
