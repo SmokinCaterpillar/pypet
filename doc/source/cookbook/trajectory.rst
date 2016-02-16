@@ -707,7 +707,7 @@ Parameter Exploration
 Exploration can be prepared with the function :func:`~pypet.trajectory.Trajectory.f_explore`.
 This function takes a dictionary with parameter names
 (not necessarily the full names, they are searched) as keys and iterables specifying
-how the parameter values for each single run. Note that all iterables
+the parameter ranges as values. Note that all iterables
 need to be of the same length. For example:
 
 >>> traj.f_explore({'ncars':[42,44,45,46], 'ncycles' :[1,4,6,6]})
@@ -1042,7 +1042,7 @@ For instance:
     # Stating `results` here is important. We removed the results node above, so
     # we have to explicitly name it here to reload it, too. There are no shortcuts allowed
     # for nodes that have to be loaded on the fly and that did not exist in memory before.
-    answer= traj.results.mygroupA,mygroupB.myresult
+    answer= traj.results.mygroupA.mygroupB.myresult
     # And answer will be 42
 
 
