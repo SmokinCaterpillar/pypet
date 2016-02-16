@@ -15,7 +15,7 @@ except ImportError:
 import shutil
 import getopt
 import tempfile
-import socket
+import time
 try:
     import zmq
 except ImportError:
@@ -216,11 +216,15 @@ def remove_data():
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name based on the current `testcase`"""
-    randintstr = str(random.randint(0, 10 ** 4))
+
     testid = testcase.id()
     split_names = testid.split('.')
     #name = 'T__' + '__'.join(split_names[-2:]) + '__' + randintstr
+    seed = len(testid) + int(10*time.time())
+    random.seed(seed)
+    randintstr = str(random.randint(0, 10 ** 5))
     name = 'T__' + split_names[-1] + '__' + randintstr
+
     maxlen = pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH - 22
 
     if len(name) > maxlen:
