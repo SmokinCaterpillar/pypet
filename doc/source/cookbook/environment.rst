@@ -868,45 +868,66 @@ multiprocessing. You can find an example here: :ref:`example-16`.
 Multiprocessing with a Cluster or a Multi-Server Framework
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-*pypet* can be used on computing clusters as well as multiple servers shearing a
+*pypet* can be used on computing clusters as well as multiple servers sharing a
 home directory via SCOOP_.
 
 Simply create your environment as follows
 
 .. code-block:: python
 
-    env = Environment(self, trajectory='trajectory',
-                 filename='../experiments.h5',
-                 multiproc=True,
-                 use_scoop=True
-                 use_pool=False,
-                 wrap_mode='LOCAL')
+    env = Environment(multiproc=True,
+                      use_scoop=True
+                      wrap_mode='LOCAL')
 
 
 and start your script via ``python -m scoop my_script.py``.
 If using SCOOP_, the only multiprocessing wrap modes currently supported are
 ``'LOCAL'``, ``'NETLOCK'``, and ``'NETQUEUE'``. That is in the former case
 all your data is actually stored by your local main python process and
-results are collected from all workers. The latter means locks are shared across
-the computer network to allow only one process to write data at a time. This requires
-a shared home directory across all hosts.
+results are collected from all workers. ``'NETLOCK'`` means locks are shared across
+the computer network to allow only one process to write data at a time.
+Lastly, ``'NETQUEUE'`` starts queue process that collects data stores it.
 
 In case SCOOP_ is configured correctly, you can easily use
 *pypet* in a multi-server or cluster framework. :ref:`example-21` shows how to
 combine *pypet* and SCOOP_. For instance, if you have multiple servers sharing the
 same home directory you can distribute your runs on all of them via
-``python -m --hostfile hosts -vv -n 16 my_script.py`` to start 16 workers on your ``hosts``
+``python -m scoop --hostfile hosts -vv -n 16 my_script.py`` to start 16 workers on your ``hosts``
 which is a file specifying the servers to use. It has the format
 
-   | ip_or_hostname_or_ip 8
-   | other_hostname
-   | third_hostname 4
+   | some_host 10
+   | 130.148.250.11
+   | another_host 4
 
-with the name of the host followed by the number of workers you want to launch (optional).
+with the name or IP of the host followed by the number of workers you want to launch (optional).
+
+To use *pypet* and SCOOP_ on a computing cluster one additional needs a bash start-up script.
+For instance, for a sun grid engine (SGE), the bash script might look like the following:
+
+    | #!/bin/bash
+    | #$ -l h_rt=3600
+    | #$ -N mysimulation
+    | #$ -pe mp 4
+    | #$ -cwd
+    |
+    | # Launch the simulation with SCOOP
+    | python -m scoop -vv mysimulation.py
+
+Most important is the ``-pe`` parallel environment flag to let the computer grid
+and SCOOP know how many workers to spawn (here 4).
+Other options may be parameters like ``-l h_rt`` defining the maximum runtime,
+``-N`` assigning a name, or ``-cwd`` using the the current folder as the working directory.
+The particular options depend on your cluster environment and
+requirements of the grid provider. This job script, let's name it ``mybash.sh``,
+can be submitted via
+
+    $ qsub mybash.sh
+
+Accordingly, the simulation ``mysimulation.py`` gets queued and eventually executed
+in parallel on the computer grid as soon as resources are available.
+
 See also the `SCOOP docs`_ and the `example start up scripts`_
-on how to set up multiple hosts and scripts for cluster grid engines, respectively.
-By the way, on SGE you need to use a parallel environment via the ``#$ -pe`` flag.
-This is also important to let SCOOP_ know how many workers it can start on the cluster.
+on how to set up multiple hosts and scripts for other grid engines.
 
 To avoid overhead of re-pickling the trajectory,
 SCOOP_ mode also supports setting ``freeze_input=True`` (see :ref:`more-on-multiprocessing`).
