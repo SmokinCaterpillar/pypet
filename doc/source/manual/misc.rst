@@ -63,6 +63,8 @@ Acknowledgments
     Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project
 
+* Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature.
+
 *
 
     Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
