@@ -1162,7 +1162,7 @@ code snippet will iterate over all four runs and print the result of each run:
 .. code-block:: python
 
     for run_name in traj.f_get_run_names():
-        traj.f_as_run(run_name)
+        traj.f_set_crun(run_name)
         x=traj.x
         y=traj.y
         z=traj.z

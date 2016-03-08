@@ -48,9 +48,9 @@ idx_iterator = traj.f_find_idx(['x','y'], my_filter_predicate)
 # Now we can print the corresponding results:
 print('The run names and results for parameter combinations with x==2 or y==8:')
 for idx in idx_iterator:
-    # We focus on one particular run. This is equivalent to calling `traj.f_as_run(idx)`.
+    # We focus on one particular run. This is equivalent to calling `traj.f_set_crun(idx)`.
     traj.v_idx=idx
-    run_name = traj.v_as_run
+    run_name = traj.v_crun
     # and print everything nicely
     print('%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.crun.z))
 

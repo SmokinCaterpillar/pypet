@@ -2899,7 +2899,7 @@ class MultiprocContext(HasLogger):
         In case the trajectory gets pickled (sending over a queue or a pool of processors)
         if the full trajectory should be copied each time (i.e. all parameter points) or
         only a particular point. A particular point can be chosen beforehand with
-        :func:`~pypet.trajectory.Trajectory.f_as_run`.
+        :func:`~pypet.trajectory.Trajectory.f_set_crun`.
 
         Leave ``full_copy=None`` if the setting from the passed trajectory should be used.
         Otherwise ``v_full_copy`` of the trajectory is changed to your chosen value.
