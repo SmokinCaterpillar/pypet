@@ -192,7 +192,7 @@ class ContinueTest(TrajectoryComparator):
         self._remove_nresults(self.trajs[1], 3, continue_folder)
 
         self.envs[1].v_current_idx = 0
-        results = self.envs[1].f_continue(trajectory_name = traj_name)
+        results = self.envs[1].resume(trajectory_name = traj_name)
 
 
         for irun in range(len(self.filenames)):
@@ -417,7 +417,7 @@ class ContinueMPTest(ContinueTest):
         self.trajs[1].f_load(load_data=pypetconstants.LOAD_NOTHING)
         self._remove_nresults(self.trajs[1], 3, continue_folder)
 
-        results = self.envs[1].f_continue(trajectory_name = traj_name)
+        results = self.envs[1].resume(trajectory_name = traj_name)
         results = sorted(results, key = lambda x: x[0])
 
         for irun in range(len(self.filenames)):
@@ -467,7 +467,7 @@ class ContinueMPTest(ContinueTest):
         self._remove_nresults(self.trajs[1], 3, continue_folder)
 
         self.envs[1].v_current_idx = 0
-        results = self.envs[1].f_continue(trajectory_name = traj_name)
+        results = self.envs[1].resume(trajectory_name = traj_name)
         results = sorted(results, key = lambda x: x[0])
 
         for irun in range(len(self.filenames)):
