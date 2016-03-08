@@ -16,12 +16,8 @@ traj.parameters.t = Parameter('', 1, comment='Third dimension')
 # See:
 print('t=' + str(traj.t))
 
-# What happens if our new parameter's name does not match the name passed to the constructor?
-traj.parameters.subgroup = Parameter('v', 2, comment='Fourth dimension')
-# Well, since 'subgroup' != 'v', 'subgroup' becomes just another group node created on the fly
-print(traj.parameters.subgroup)
-# This even works for already existing groups and with the well known *dot* notation:
-traj.parameters = Parameter('subgroup.subsubgroup.w', 2)
+# This also works for adding groups on the fly and with the well known *dot* notation:
+traj.parameters.subgroup = Parameter('subgroup.subsubgroup.w', 2)
 # See
 print('w='+str(traj.par.subgroup.subsubgroup.w))
 

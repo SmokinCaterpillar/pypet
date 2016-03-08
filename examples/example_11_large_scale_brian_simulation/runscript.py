@@ -11,7 +11,7 @@ import numpy as np
 import os # To allow path names work under Windows and Linux
 
 from pypet.environment import Environment
-from pypet.brian.network import NetworkManager, run_network
+from pypet.brian.network import NetworkManager
 
 from clusternet import CNMonitorAnalysis, CNNeuronGroup, CNNetworkRunner, CNConnections,\
     CNFanoFactorComputer
