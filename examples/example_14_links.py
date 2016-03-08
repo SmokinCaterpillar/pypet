@@ -16,7 +16,7 @@ def multiply(traj):
     """
     z=traj.mylink1*traj.mylink2 # And again we now can also use the different names
     # due to the creation of links
-    traj.res = Result('runs.$.z', z, 'Result of our simulation!')
+    traj.f_add_result('runs.$.z', z, comment='Result of our simulation!')
 
 
 # Create an environment that handles running

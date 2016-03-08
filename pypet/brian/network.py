@@ -34,29 +34,6 @@ from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
 
 
-@deprecated('Please use `environment.run(manager.run_network)` instead of '
-            '`environment.run(run_network, manager)`.')
-def run_network(traj, network_manager):
-    """Top-level simulation function, pass this together with a NetworkManager to the environment.
-
-    DEPRECATED: Please pass `network_manager.run_network` to the environment's `run` function
-
-    :param traj: Trajectory container
-
-    :param network_manager: :class:`~pypet.brian.network.NetworkManager` instance
-
-        *   Creates a `BRIAN network`_.
-
-        *   Manages all :class:`~pypet.brian.network.NetworkComponent` instances,
-            all :class:`~pypet.brian.network.NetworkAnalyser` and a single
-            :class:`~pypet.brian.network.NetworkRunner`.
-
-        .. _`BRIAN network`: http://briansimulator.org/docs/reference-network.html
-
-    """
-    network_manager.run_network(traj)
-
-
 class NetworkComponent(HasLogger):
     """Abstract class to define a component of a BRIAN network.
 

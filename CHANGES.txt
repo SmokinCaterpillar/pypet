@@ -1,12 +1,9 @@
-pypet 0.1b.13
+pypet 0.2b.0
 
 *   ENH: Pypet can now apply fast merging if trajectories reside in different files.
     If one still wants to apply slow merging, one can set `slow_merge=True`.
 
 *   ENH: New `merge_all_in_folder` function
-
-*   ENH: One can now add groups on the fly via `traj['new_group.on.the.fly'] = 42`
-    in case lazy adding is turned on.
 
 *   The range is now a list that is by default copied upon request. To avoid
     quadratic complexity with multiple calls to `f_expand`.
@@ -71,6 +68,12 @@ pypet 0.1b.13
     e.g. ``rts_4007`` gives ``run_set_00004```.
 
 *   `log_stdout` is `False` by default.
+
+*   *pypet* can now be combined with DEAP optimization.
+
+*   All deprecated functions have been removed!
+
+*   Lazy adding is no longer supported!
 
 
 pypet 0.1b.12

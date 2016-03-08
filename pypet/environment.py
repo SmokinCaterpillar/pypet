@@ -1534,65 +1534,6 @@ class Environment(HasLogger):
         """
         self._logging_manager.finalize(remove_all_handlers)
 
-    @deprecated('Please use assignment in environment constructor.')
-    def switch_off_large_overview(self):
-        """ Switches off the tables consuming the most memory.
-
-            * Single Run Result Overview
-
-            * Single Run Derived Parameter Overview
-
-            * Explored Parameter Overview in each Single Run
-
-
-        DEPRECATED: Please pass whether to use the tables to the environment constructor.
-
-        """
-        self.set_large_overview(0)
-
-    @deprecated('Please use assignment in environment constructor.')
-    def switch_off_all_overview(self):
-        """Switches all tables off.
-
-        DEPRECATED: Please pass whether to use the tables to the environment constructor.
-
-        """
-        self.set_summary(0)
-        self.set_small_overview(0)
-        self.set_large_overview(0)
-
-    @deprecated('Please use assignment in environment constructor.')
-    def switch_off_small_overview(self):
-        """ Switches off small overview tables and switches off `purge_duplicate_comments`.
-
-        DEPRECATED: Please pass whether to use the tables to the environment constructor.
-
-        """
-        self.set_small_overview(0)
-
-    @deprecated('Please use assignment in environment constructor.')
-    def set_large_overview(self, switch):
-        """Switches large overview tables on (`switch=True`) or off (`switch=False`). """
-        switch = switch
-        self._traj.config.hdf5.overview.results_overview = switch
-        self._traj.config.hdf5.overview.derived_parameters_overview = switch
-
-    @deprecated('Please use assignment in environment constructor.')
-    def set_summary(self, switch):
-        """Switches summary tables on (`switch=True`) or off (`switch=False`). """
-        switch = switch
-        self._traj.config.hdf5.overview.derived_parameters_summary = switch
-        self._traj.config.hdf5.overview.results_summary = switch
-        self._traj.config.hdf5.purge_duplicate_comments = switch
-
-    @deprecated('Please use assignment in environment constructor.')
-    def set_small_overview(self, switch):
-        """Switches small overview tables on (`switch=True`) or off (`switch=False`). """
-        switch = switch
-        self._traj.config.hdf5.overview.parameters_overview = switch
-        self._traj.config.hdf5.overview.config_overview = switch
-        self._traj.config.hdf5.overview.explored_parameters_overview = switch
-
     @kwargs_api_change('continue_folder', 'resume_folder')
     def resume(self, trajectory_name=None, resume_folder=None):
         """Resumes crashed trajectories.
@@ -1637,10 +1578,6 @@ class Environment(HasLogger):
 
         return self._execute_runs(None)
 
-    @deprecated('Please use `resume` instead')
-    def f_continue(self, *args, **kwargs):
-        return self.resume(*args, **kwargs)
-
     @property
     def trajectory(self):
         """ The trajectory of the Environment"""
@@ -1663,12 +1600,6 @@ class Environment(HasLogger):
     @current_idx.setter
     def current_idx(self, idx):
         self._current_idx = idx
-
-    @property
-    @deprecated('No longer supported, please don`t use it anymore.')
-    def log_path(self):
-        """The full path to the (sub) folder where log files are stored"""
-        return ''
 
     @property
     def hexsha(self):

@@ -262,18 +262,6 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
                         time=time, length=length, fmt_string=fmt_string, reset=reset)
 
 
-@deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
-def nested_equal(a, b):
-    """
-    Compare two objects recursively by element, handling numpy objects.
-
-    Assumes hashable items are not mutable in a way that affects equality.
-
-    DEPRECATED: Use `pypet.utils.comparisons.nested_equal` instead.
-    """
-    return nested_equal_new(a, b)
-
-
 def get_matching_kwargs(func, kwargs):
     """Takes a function and keyword arguments and returns the ones that can be passed."""
     if inspect.isclass(func):

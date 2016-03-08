@@ -407,7 +407,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_result('x.y.y')
 
-        self.traj.f_as_run(1)
+        self.traj.v_crun(1)
 
         all_nodes=self.traj.f_get_all('x.y')
 

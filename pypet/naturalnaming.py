@@ -236,16 +236,6 @@ class NNTreeNode(WithAnnotations):
         return self._depth
 
     @property
-    @deprecated(msg='Please use `v_is_leaf` instead.')
-    def v_leaf(self):
-        """Whether node is a leaf or not (i.e. it is a group node)
-
-        DEPRECATED: Please use v_is_leaf!
-
-        """
-        return self.v_is_leaf
-
-    @property
     def v_is_leaf(self):
         """Whether node is a leaf or not (i.e. it is a group node)"""
         return self._is_leaf
@@ -254,15 +244,6 @@ class NNTreeNode(WithAnnotations):
     def v_is_group(self):
         """Whether node is a group or not (i.e. it is a leaf node)"""
         return not self._is_leaf
-
-    @deprecated(msg='Please use property `v_is_root` instead.')
-    def f_is_root(self):
-        """Whether the group is root (True for the trajectory and a single run object)
-
-        DEPRECATED: Please use property v_is_root!
-
-        """
-        return self.v_is_root
 
     @property
     def v_is_root(self):
@@ -362,26 +343,6 @@ class NNLeafNode(NNTreeNode):
 
         """
         return False
-
-    @property
-    @deprecated(msg='Please use function `f_supports_fast_access()` instead.')
-    def v_fast_accessible(self):
-        """Whether or not fast access can be supported by the Parameter or Result
-
-        DEPRECATED: Please use function `f_supports_fast_access` instead!
-
-        """
-        return self.f_supports_fast_access()
-
-    @property
-    @deprecated(msg='Please use `v_is_parameter` instead.')
-    def v_parameter(self):
-        """Whether the node is a parameter or not (i.e. a result)
-
-        DEPRECATED: Please use `v_is_parameter` instead!
-
-        """
-        return self.v_is_parameter
 
     @property
     def v_is_parameter(self):
@@ -2972,15 +2933,6 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
     @property
     def v_root(self):
         """Link to the root of the tree, i.e. the trajectory"""
-        return self._nn_interface._root_instance
-
-    @deprecated('Please use `v_root` instead`')
-    def f_get_root(self):
-        """Returns the root node of the tree.
-
-        Either a full trajectory or a single run container.
-
-        """
         return self._nn_interface._root_instance
 
     def f_iter_nodes(self, recursive=True, with_links=True, max_depth=None, predicate=None):

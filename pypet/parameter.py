@@ -229,15 +229,6 @@ class BaseParameter(NNLeafNode):
         val = bool(val)
         self._full_copy = val
 
-    @deprecated(msg='Please use `f_has_range()` instead.')
-    def f_is_array(self):
-        """Returns true if the parameter is explored and contains a range array.
-
-        DEPRECATED: Use `f_has_range()` instead.
-
-        """
-        return self.f_has_range()
-
     def f_has_range(self):
         """Returns true if the parameter contains a range array.
 
@@ -491,29 +482,6 @@ class BaseParameter(NNLeafNode):
         """Returns the default value of the parameter and locks it.
         """
         raise NotImplementedError("Should have implemented this.")
-
-    @deprecated(msg='Please use `f_get_range()` instead!')
-    def f_get_array(self):
-        """Returns an iterable to iterate over the values of the exploration range.
-
-        Note that the returned values should be either a copy of the exploration range
-        or the array must be immutable, for example a python tuple.
-
-        :return: Immutable sequence
-
-        :raises: TypeError if the parameter is not explored
-
-        Example usage:
-
-        >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
-        >>> param._explore([42,43,43])
-        >>> param.f_get_array()
-        (42,43,44)
-
-        DEPRECATED: Use `f_get_range()` instead!
-
-        """
-        return self.f_get_range()
 
     def f_get_range(self, copy=True):
         """Returns an iterable to iterate over the values of the exploration range.
@@ -2014,31 +1982,6 @@ class Result(BaseResult):
         if self._data_ is not None:
             result.extend(self._data.keys())
         return result
-
-    @property
-    @deprecated('No longer supported')
-    def v_no_data_string(self):
-        """Whether or not to give a short summarizing string when calling
-         :func:`~pypet.parameter.Result.f_val_to_str` or `__str__`.
-
-        Can be set to `False` if the evaluation of stored data into string is too costly.
-
-        DEPRECATED! Does not change anything. Data will always be printed.
-
-        """
-        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
-                             'longer have an effect. Data will always be printed.')
-        return False
-
-    @v_no_data_string.setter
-    def v_no_data_string(self, boolean):
-        """Sets the no_data_string property
-
-        DEPRECATED! Does not change anything. Data will always be printed.
-
-        """
-        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
-                             'longer have an effect. Data will always be printed.')
 
     def f_translate_key(self, key):
         """Translates integer indices into the appropriate names"""

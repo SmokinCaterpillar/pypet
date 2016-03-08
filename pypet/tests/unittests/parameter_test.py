@@ -96,22 +96,6 @@ class ParameterTest(TrajectoryComparator):
                 with self.assertRaises(TypeError):
                     param._explore([12,33])
 
-    def test_deprecated_methods_that_have_new_names(self):
-        for param in self.param.values():
-            with warnings.catch_warnings(record=True) as warnings_list:
-                # Cause all warnings to always be triggered.
-                warnings.simplefilter("always")
-                # Trigger a warning.
-                self.assertEqual(param.v_parameter, param.v_is_parameter)
-                self.assertEqual(param.vars.leaf, param.v_is_leaf)
-                self.assertEqual(param.f_is_root(), param.v_is_root)
-                self.assertEqual(param.v_fast_accessible, param.f_supports_fast_access())
-                # Verify some things
-                assert len(warnings_list) == 4
-                for warning in warnings_list:
-                    assert issubclass(warning.category, DeprecationWarning)
-                    assert "deprecated" in str(warning.message)
-
 
     def test_equal_values(self):
         for param in self.param.values():
@@ -178,23 +162,6 @@ class ParameterTest(TrajectoryComparator):
             if not isinstance(param, PickleParameter):
                 with self.assertRaises(TypeError):
                      self.assertFalse(param._equal_values(ChainMap(),ChainMap()))
-
-    def test_deprecated_range_methods_that_have_new_names(self):
-        for param in self.param.values():
-            with warnings.catch_warnings(record=True) as warnings_list:
-                # Cause all warnings to always be triggered.
-                warnings.simplefilter("always")
-                # Trigger a warning.
-                self.assertEqual(param.f_is_array(), param.f_has_range())
-                if param.f_has_range():
-                    self.assertEqual(id(param.f_get_array()),id(param.f_get_range()))
-                # Verify some things
-                assert len(warnings_list) == 1 or len(warnings_list)==2
-                for warning in warnings_list:
-                    assert issubclass(warning.category, DeprecationWarning)
-                    assert "deprecated" in str(warning.message)
-
-
 
     def test_meta_settings(self):
         for key, param in self.param.items():

@@ -228,15 +228,3 @@ class WithAnnotations(HasLogger):
 
         """
         return self._annotations.f_ann_to_str()
-
-    @deprecated('Please use `f_ann_to_str.')
-    def f_ann_to_string(self):
-        """Returns annotations as string
-
-        Equivalent to `v_annotations.f_ann_to_str()`
-
-        DEPRECATED: Please use `f_ann_to_str()` instead.
-
-        """
-        return self._annotations.f_ann_to_str()
-

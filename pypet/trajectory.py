@@ -425,15 +425,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                  children_string)
 
     @property
-    @deprecated('No longer supported, please refer to the storage service instead.')
-    def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF4StorageService"""
-        try:
-            return self.v_storage_serivce.filename
-        except AttributeError:
-            return None
-
-    @property
     def v_version(self):
         """The version of *pypet* that was used to create the trajectory"""
         return self._version
@@ -500,18 +491,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_idx(self, idx):
         """Changes the index to make the trajectory behave as a single run"""
         self.f_set_crun(idx)
-
-    @property
-    @deprecated(msg='Please use `v_crun` instead')
-    def v_as_run(self):
-        return self.v_crun
-
-    @v_as_run.setter
-    @not_in_run
-    @deprecated(msg='Please use `v_crun` instead')
-    def v_as_run(self, run_name):
-        """Changes the run name to make the trajectory behave as a single run"""
-        self.v_crun = run_name
 
     @property
     def v_crun_(self):
@@ -615,11 +594,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                 str(item))
 
         self._dynamic_imports.extend(dynamic_imports)
-
-    @not_in_run
-    @deprecated(msg='Please use `pypet.trajectory.Trajectory.f_set_crun` instead.')
-    def f_as_run(self, name_or_idx):
-        return self.f_set_crun(name_or_idx)
 
     @not_in_run
     def f_set_crun(self, name_or_idx):
@@ -1521,10 +1495,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self.f_set_crun(None)
         if store_meta_data:
             self.f_store(only_init=True)
-
-    @deprecated('Please use `f_load_skeleton` instead.')
-    def f_update_skeleton(self):
-        return self.f_load_skeleton()
 
     @not_in_run
     def f_load_skeleton(self):
@@ -3275,11 +3245,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._shortcuts = bool(shortcuts)
 
     @property
-    @deprecated('No longer supported, please don`t use it anymore.')
-    def v_backwards_search(self):
-        return False
-
-    @property
     def v_max_depth(self):
         """The maximum depth the tree should be searched if shortcuts are allowed.
 
@@ -3462,24 +3427,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 resdict[key] = val
 
             return resdict
-
-    @property
-    @deprecated(msg='Please use `v_name`.')
-    def v_trajectory_name(self):
-        """Name of the (parent) trajectory"""
-        return self.v_name
-
-    @property
-    @deprecated(msg='Please use `v_time`.')
-    def v_trajectory_time(self):
-        """Time (parent) trajectory was created"""
-        return self.v_time
-
-    @property
-    @deprecated(msg='Please use `v_timestamp`.')
-    def v_trajectory_timestamp(self):
-        """Float timestamp when (parent) trajectory was created"""
-        return self.v_timestamp
 
     def _finalize_run(self):
         """Called by the environment after storing to perform some rollback operations.
@@ -3768,7 +3715,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         you want to load must already exist in your trajectory (in RAM), probably they
         are just empty skeletons waiting desperately to handle data.
         If they do not exist in RAM yet, but have been stored to disk before,
-        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
+        you can call :func:`~pypet.trajectory.Trajectory.f_load_skeleton` in order to
         bring your trajectory tree skeleton up to date. In case of a single run you can
         use the :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` method to recursively
         load a subtree without any data.

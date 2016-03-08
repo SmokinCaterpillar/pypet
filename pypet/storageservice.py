@@ -676,21 +676,6 @@ class HDF5StorageService(StorageService, HasLogger):
         self._filters = None
 
     @property
-    @deprecated('No longer supported, please use shared data instead')
-    def pandas_append(self):
-        """ If pandas should create storage in append mode.
-
-        DEPRECATED. No longer used, please use shared data instead!
-
-        """
-        return False
-
-    @pandas_append.setter
-    @deprecated('No longer supported, please use shared data instead')
-    def pandas_append(self, pandas_append):
-        pass
-
-    @property
     def pandas_format(self):
         """Format of pandas data. Applicable formats are 'table' (or 't') and 'fixed' (or 'f')"""
         return self._pandas_format

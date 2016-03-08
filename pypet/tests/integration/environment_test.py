@@ -45,7 +45,7 @@ from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
 
 
 def add_one_particular_item(traj, store_full):
-    traj.hi = 42, 'hi!'
+    traj.hi = Result('hi', 42, 'hi!')
     traj.f_store()
     traj.f_remove_child('hi')
 
@@ -516,7 +516,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.assertTrue(self.traj.f_is_completed())
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
+        self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj, newtraj)
@@ -604,7 +604,8 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_set_large_overview(True)
+        self.env._traj.config.hdf5.overview.results_overview = 1
+        self.env._traj.config.hdf5.overview.derived_parameters_overview = 1
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)
@@ -624,7 +625,14 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_add_parameter('TEST', 'test_switch_off_ALL_tables')
         self.explore(self.traj)
 
-        self.env.f_switch_off_all_overview()
+        self.env._traj.config.hdf5.overview.results_overview = 0
+        self.env._traj.config.hdf5.overview.derived_parameters_overview = 0
+        self.env._traj.config.hdf5.overview.derived_parameters_summary = 0
+        self.env._traj.config.hdf5.overview.results_summary = 0
+        self.env._traj.config.hdf5.purge_duplicate_comments = 0
+        self.env._traj.config.hdf5.overview.parameters_overview = 0
+        self.env._traj.config.hdf5.overview.config_overview = 0
+        self.env._traj.config.hdf5.overview.explored_parameters_overview = 0
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)

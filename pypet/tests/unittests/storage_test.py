@@ -586,7 +586,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_result('results.wctest.run_00000001.jjj', 43)
         traj.f_add_result('results.wctest.%s.jjj' % traj.f_wildcard('$', -1), 43)
 
-        traj.v_as_run = 1
+        traj.v_crun = 1
 
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)

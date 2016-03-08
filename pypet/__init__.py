@@ -45,7 +45,6 @@ __all__ = [
     ResultGroup.__name__,
     NNGroupNode.__name__,
     NNLeafNode.__name__,
-    'new_group',
     BaseParameter.__name__,
     Parameter.__name__,
     ArrayParameter.__name__,
