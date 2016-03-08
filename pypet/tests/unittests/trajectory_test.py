@@ -14,7 +14,7 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory
-from pypet.naturalnaming import NaturalNamingInterface
+from pypet.naturalnaming import NaturalNamingInterface, ParameterGroup, NNGroupNode
 from pypet.storageservice import LazyStorageService
 import pickle
 import logging
@@ -69,9 +69,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.par.FloatParam=4.0
 
-        self.traj.v_lazy_adding = True
-        self.traj.par.expexp = 42, 'another param to explore'
-        self.traj.v_lazy_adding = False
+        self.traj.par.expexp = Parameter('', 42, 'another param to explore')
 
         self.explore_dict = {'FloatParam':[1.0, 1.1, 1.2, 1.3]}
 
@@ -161,14 +159,13 @@ class TrajectoryTest(unittest.TestCase):
                 raise
 
     def test_lazy_setitem(self):
-        self.traj.v_lazy_adding = True
-        self.traj['r_1.very.very.new'] = 4
-        self.traj['r_1.new'] = 5
+        self.traj['r_1'] = NNGroupNode('')
+        with self.assertRaises(AttributeError):
+            self.traj['r_1.new'] = Result('', 5)
+        self.traj['r_1.new'] = Result('new', 5)
         with self.assertRaises(AttributeError):
             self.traj['mistake.mistake']
-        self.traj.v_very_lazy_adding = False
         self.assertEqual(self.traj.run_00000001.new, 5)
-        self.assertEqual(self.traj['very.new'], 4)
 
     def test_no_prefixes(self):
         self.assertEqual(self.traj.vars.name, self.traj.v_name)
@@ -351,9 +348,8 @@ class TrajectoryTest(unittest.TestCase):
         filename = make_temp_dir('dummy.h5')
         with Environment(trajectory=self.traj,
                         log_config=get_log_config(), filename=filename,
-                        lazy_adding=True, v_auto_load=False, with_links=False) as env:
+                        v_auto_load=False, with_links=False) as env:
 
-            self.assertTrue(self.traj.v_lazy_adding)
             self.assertFalse(self.traj.v_auto_load)
             self.assertFalse(self.traj.v_with_links)
 
@@ -1050,17 +1046,15 @@ class TrajectoryTest(unittest.TestCase):
     def test_remove_of_all_type(self):
         traj = Trajectory()
 
-        traj.v_lazy_adding = True
+        traj.par.x = Parameter('', 42, 'param')
 
-        traj.par.x = 42, 'param'
+        traj.dpar.y = Parameter('', 43, 'dpar')
 
-        traj.dpar.y = 43, 'dpar'
+        traj.conf.z = Parameter('', 44, 'conf')
 
-        traj.conf.z = 44, 'conf'
+        traj.res.k = Result('k', 44, 'jj')
 
-        traj.res.k = 44, 'jj'
-
-        traj.l = 111, 'kkkk'
+        traj.l =Result('l', 111, 'kkkk')
 
         self.assertTrue(len(traj._parameters) == 1)
         self.assertTrue(len(traj._derived_parameters) == 1)
@@ -1180,8 +1174,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_dir(self):
 
-        self.traj.v_lazy_adding = True
-        self.traj.par.ggg = 444, 'Hey'
+        self.traj.par.ggg = Parameter('', 444, 'Hey')
         self.assertTrue('(' in str(self.traj.f_get('ggg')))
 
 
@@ -1203,9 +1196,8 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_short_names_to_dict_failure(self):
 
-        self.traj.v_lazy_adding = True
         self.traj.f_add_parameter('lll.ggg' , 44)
-        self.traj.par.ggg = 444, 'Hey'
+        self.traj.par.ggg = Parameter('', 444, 'Hey')
 
         with self.assertRaises(ValueError):
             self.traj.f_to_dict(short_names=True)
@@ -1222,11 +1214,24 @@ class TrajectoryTest(unittest.TestCase):
             len(self.traj._other_leaves)
         self.assertTrue(count == all_leaves)
 
+    def test_changing_of_result(self):
+
+        traj = Trajectory()
+
+        traj.res.x = Result('x', 42)
+
+        traj.res.x=44
+        self.assertEqual(traj.x, 44)
+
+        traj.res.y = Result('', a=1, b=2)
+        with self.assertRaises(AttributeError):
+            traj.res.y = 44
+
     def test_new_grouping(self):
 
         traj = Trajectory()
 
-        traj.par = Parameter('x', 42)
+        traj.par.x = Parameter('x', 42)
 
         therange = range(2001)
         traj.f_explore({'x':therange})
@@ -1296,13 +1301,11 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_copy_tree_simple(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
 
 
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
 
 
         traj1._copy_from(traj2)
@@ -1314,15 +1317,13 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
     def test_overwrite(self):
 
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
         traj1.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 42, 'hui')
 
         traj1.my.v_annotations['test'] = 2
 
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.parameter'] = 43, 'Another'
+        traj2.par['hi'] = Parameter('hi.my.name.is.parameter', 43, 'Another')
         traj2.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 77, 'buh')
 
         traj1._copy_from(traj2, overwrite=True)
@@ -1336,8 +1337,7 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_copy_custom_parameter(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
 
         traj2 = Trajectory()
         traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
@@ -1351,11 +1351,9 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_not_copy_leaves(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
+        traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
         traj1._copy_from(traj2, copy_leaves=False)
 
         self.assertTrue('another' in traj1)
@@ -1364,17 +1362,15 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_copy_tree_annotations(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj1.res['ha.my3.name3.is3.res'] = 555, 55, 5
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj1.res['ha'] = Result('ha.my3.name3.is3.res', 555, 55, 5)
         traj1.hi.v_annotations['test'] = 'ddd'
 
         traj2 = Trajectory()
 
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
         traj2.hi.v_annotations['test'] = 'jjj'
-        traj2.res['ha.my3.name3.is3.res'] = 555, 55, 7
+        traj2.res['ha'] = Result('ha.my3.name3.is3.res', 555, 55, 7)
         traj2.hi.name.v_annotations['test'] = 'lll'
 
         traj1._copy_from(traj2)
@@ -1384,12 +1380,10 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_copy_links(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj2['ands.moreover'] = 43, 'Another'
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
         traj2.ands.test = traj2.name
 
         traj1._copy_from(traj2, with_links=False)
@@ -1401,12 +1395,10 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_not_copy_from_node(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.par['hi.my.name.is.another'] = 43, 'Another'
-        traj2['ands.moreover'] = 43, 'Another'
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
         traj2.ands.test = traj2.name
 
         traj1._copy_from(traj2.ands, with_links=False)
@@ -1420,12 +1412,13 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_copy_explored(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj1.par['hi.my.name.is.parameter2'] = 44, 'A second parameter'
-        traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.another'] = 43, 'Another'
-        traj1['ands.moreover'] = 43, 'Another'
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+        traj1.par['hi.my.name.is.parameter2'] = Parameter('',44, 'A second parameter')
+
+
+        traj1['hi.my.name.is.another'] = Parameter('',43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
         traj1.ands.test = traj1.name
 
         traj1.f_explore({'parameter':[1,2,3,4]})
@@ -1468,11 +1461,11 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_shallow_copy_not_full_copy(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.another'] = 43, 'Another'
-        traj1['ands.moreover'] = 43, 'Another'
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+
+        traj1['hi.my.name.is.another'] = Parameter('', 43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
         traj1.ands.test = traj1.name
 
         traj1.f_explore({'parameter':[1,2,3,4]})
@@ -1490,11 +1483,13 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_shallow_copy(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.par['hi.my.name.is.parameter'] = 42, 'A parameter'
-        traj1.v_lazy_adding = True
-        traj1['hi.my.name.is.another'] = 43, 'Another'
-        traj1['ands.moreover'] = 43, 'Another'
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+
+        traj1['hi.my.name.is.another'] = Parameter('', 43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
+
+
         traj1.ands.test = traj1.name
 
         traj1.f_explore({'parameter':[1,2,3,4]})
@@ -1532,12 +1527,11 @@ class TrajectoryCopyTreeTest(TrajectoryComparator):
 
     def test_overwrite_leaves(self):
         traj1 = Trajectory()
-        traj1.v_lazy_adding = True
-        traj1.res['hi.my.name.is.resr'] = 42, 'resr'
+        traj1.res['hi'] = Result('hi.my.name.is.resr', 42, 'resr')
         traj2 = Trajectory()
-        traj2.v_lazy_adding = True
-        traj2.res['hi.my.name.is.resr'] = 43, 'resr'
-        traj2['ands.moreover'] = 43, 'Another'
+
+        traj2.res['hi'] = Result('hi.my.name.is.resr', 43, 'resr')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
         traj2.ands.test = traj2.name
 
         traj1._copy_from(traj2)

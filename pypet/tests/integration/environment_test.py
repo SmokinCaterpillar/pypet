@@ -67,9 +67,7 @@ class FullStorageTest(TrajectoryComparator):
 
             traj = env.v_trajectory
 
-            traj.v_lazy_adding = True
-
-            traj.par.x = 3, 'jj'
+            traj.par.x = Parameter('x', 3, 'jj')
 
             traj.f_explore({'x': [1,2,3]})
 

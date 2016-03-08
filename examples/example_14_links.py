@@ -2,7 +2,7 @@ __author__ = 'Robert Meyer'
 
 import os # To allow file paths working under Windows and Linux
 
-from pypet import Environment, Result
+from pypet import Environment, Result, Parameter
 
 def multiply(traj):
     """Example of a sophisticated simulation that involves multiplying two values.
@@ -31,9 +31,8 @@ env = Environment(trajectory='Multiplication',
 traj = env.trajectory
 
 # Add both parameters
-traj.v_lazy_adding = True
-traj.par.x = 1, 'I am the first dimension!'
-traj.par.y = 1, 'I am the second dimension!'
+traj.par.x = Parameter('x', 1, 'I am the first dimension!')
+traj.par.y = Parameter('y', 1, 'I am the second dimension!')
 
 # Explore just two points
 traj.f_explore({'x': [3, 4]})

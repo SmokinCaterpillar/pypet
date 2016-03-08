@@ -260,58 +260,13 @@ If the names match (``.myparam`` and ``'myparam'``) as above,
 or if your parameter has the empty string as a name
 (``traj.parameters.myparam = Parameter('', 42)``), the parameter will be added
 and named as the generic attribute, here ``myparam``.
-However, if the names disagree or if the parameter or result name contains groups,
-the generic attribute will become also a group node.
-For instance,
+However, if the names disagree an AttributeError is thrown.
+Yet, you can still create groups on the fly
 
-    >>> traj.parameters.mygroup = Parameter('myparam', 42)
+    >>> traj.parameters.mygroup = Parameter('mygroup.mysubgroup.myparam', 42)
 
-creates a new parameter at ``traj.parameters.mygroup.myparam`` and ``mygroup`` is a new
-group node, respectively.
-Likewise
-
-    >>> traj.parameters.mygroup = Parameter('mysubgroup.myparam', 42)
-
-adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
-
-Finally, there's an even simpler way to add a parameter or result, so called lazy adding.
-You have to turn it on to via `traj.v_lazy_adding=True`
-
-    >>> traj.v_lazy_adding=True
-    >>> traj.parameters.myparam = 42, 'I am a useful comment'
-
-Accordingly, this is internally translated into
-
-    >>> traj.parameters.f_add_leaf('myparam', 42, 'I am a useful comment')
-
-Where :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf` is a generic addition function,
-see :ref:`generic-addition` below.
-This does work for results as well, but you **cannot** pass comments, because
-
-    >>> traj.results.myresult = 42, 'I am NOT a comment!'
-
-will create a result with two data items, first being the value ``42`` and the second one
-a string ``'I am NOT a comment'``. As you might have noticed, this is related to the
-caveat discussed in the previous section. Comments can be passed to the standard results only as
-keyword arguments and all *lazy* values are passed as positional arguments.
-Yet, you can pass as many items to a result as you want. This, for instance, is legit:
-
-    >>> traj.results.another_result = 42, 43, 44
-    >>> traj.results.another_result.v_comment = 'Result containing 3 integer values'
-    >>> traj.results.another_result[2]
-    44
-
-As long as *lazy adding* is turned on, you cannot change existing values. Thus,
-
-    >>> traj.parameters.myparam = 43
-
-will throw an ``AttributeError`` because ``myparam`` already exists, and has the value ``42``.
-Yet, after turning it off, it works again:
-
-   >>> traj.v_lazy_adding = False
-   >>> traj.par.myparam = 43
-   >>> traj.myparam
-   43
+creates a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam`` and ``mygroup`` and
+ ``mysubgroup`` are new group nodes, respectively.
 
 The different ways of adding data are also explained in example :ref:`example-15`.
 

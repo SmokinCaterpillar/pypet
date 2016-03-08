@@ -15,7 +15,7 @@ __author__ = 'Robert Meyer'
 import os
 import logging
 
-from pypet import Environment, cartesian_product, progressbar
+from pypet import Environment, cartesian_product, progressbar, Parameter
 
 # Lets import the stuff we already have:
 from original import cellular_automaton_1D, make_initial_state, plot_pattern
@@ -71,13 +71,11 @@ def main():
     # extract the trajectory
     traj = env.traj
 
-    traj.v_lazy_adding = True
-    traj.par.ncells = 400, 'Number of cells'
-    traj.par.steps = 250, 'Number of timesteps'
-    traj.par.rule_number = 30, 'The ca rule'
-    traj.par.initial_name = 'random', 'The type of initial state'
-    traj.par.seed = 100042, 'RNG Seed'
-
+    traj.par.ncells = Parameter('ncells', 400, 'Number of cells')
+    traj.par.steps = Parameter('steps', 250, 'Number of timesteps')
+    traj.par.rule_number = Parameter('rule_number', 30, 'The ca rule')
+    traj.par.initial_name = Parameter('initial_name', 'random', 'The type of initial state')
+    traj.par.seed = Parameter('seed', 100042, 'RNG Seed')
 
     # Explore
     exp_dict = {'rule_number' : [10, 30, 90, 110, 184],

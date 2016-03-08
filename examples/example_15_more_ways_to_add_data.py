@@ -26,40 +26,6 @@ traj.parameters = Parameter('subgroup.subsubgroup.w', 2)
 print('w='+str(traj.par.subgroup.subsubgroup.w))
 
 
-# There's a lazy version which does not require a constructor.
-# This can be turned on via
-traj.v_lazy_adding = True
-# And you can add a new parameter via
-traj.parameters.u = 1, 'Fourth dimension'
-print('u=' + str(traj.u))
-# However, now you can no longer change values of existing parameters,
-# because this is interpreted as a new parameter addition, so this fails:
-try:
-    traj.parameters.u = 2
-    print('I won`t be reached')
-except AttributeError as exc:
-    print('Told you: `%s`' % repr(exc))
-# See:
-print('u=' + str(traj.par.u))
-
-# But disabling the new adding method makes this work again
-traj.v_lazy_adding = False
-traj.f_get('u').f_unlock()
-traj.parameters.u = 3
-# now we simply change `u` to be 3
-
-# There's also a lazy version to add new group nodes:
-from pypet import new_group
-traj.v_lazy_adding=True
-traj.i_am_new = new_group
-# And `im_new` is a new group node:
-print(traj.i_am_new)
-
-# Moreover, if lazy adding is turned on, you can create missing groups on the fly
-# with the square bracket notation:
-traj['i_am_also.new.param'] = 42
-print(traj.i_am_also.new)
-
 # Finally, there's one more thing. Using this notation we can also add links.
 # Simply use the `=` assignment with objects that already exist in your trajectory:
 traj.mylink = traj.f_get('x')

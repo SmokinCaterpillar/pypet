@@ -24,7 +24,6 @@ from pypet.tests.testutils.ioutils import make_temp_dir, get_root_logger, \
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
-from pypet import new_group as a_new_group
 
 
 class FakeResult(Result):
@@ -58,7 +57,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('newassignment.hdf5')
         traj = Trajectory(filename=filename, overwrite_file=True)
 
-        traj.par = Parameter('d1.d2.d3.d4.d5', 55)
+        traj.par.d1 = Parameter('d1.d2.d3.d4.d5', 55)
         traj.f_store(max_depth=4)
 
         traj = load_trajectory(index=-1, filename=filename)
@@ -71,7 +70,7 @@ class StorageTest(TrajectoryComparator):
         self.assertFalse('d3' in traj)
 
         traj.par.f_remove(recursive=True)
-        traj.dpar = Parameter('d1.d2.d3.d4.d5', 123)
+        traj.dpar.d1 = Parameter('d1.d2.d3.d4.d5', 123)
 
         traj.dpar.f_store_child('d1', recursive=True, max_depth=3)
         traj.dpar.f_remove_child('d1', recursive=True)
@@ -89,7 +88,7 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('d2' in traj)
         self.assertTrue('d3' not in traj)
 
-        traj.dpar = Parameter('l1.l2.l3.l4.l5', 123)
+        traj.dpar.l1 = Parameter('l1.l2.l3.l4.l5', 123)
         traj.dpar.f_store(recursive=True, max_depth=0)
         self.assertFalse(traj.dpar.l1._stored)
 
@@ -192,33 +191,24 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('newassignment.hdf5')
         traj = Trajectory(filename=filename, add_time=True)
 
-        traj.v_lazy_adding = True
         comment = 'A number'
-        traj.par.x = 44, comment
+        traj.par.x = Parameter('', 44, comment)
 
         self.assertTrue(traj.f_get('x').v_comment == comment)
 
-        traj.par.iamgroup = a_new_group
-
-        self.assertTrue(isinstance(traj.iamgroup, ParameterGroup))
-
-        traj.v_lazy_adding = False
         traj.x = 45
         self.assertTrue(traj.par.f_get('x').f_get() == 45)
 
         self.assertTrue(isinstance(traj.f_get('x'), Parameter))
 
-        traj.f = Parameter('lll', 444, 'lll')
+        with self.assertRaises(AttributeError):
+            traj.f = Parameter('lll', 444, 'lll')
+
+
+        traj.f = Parameter('', 444, 'lll')
 
         self.assertTrue(traj.f_get('f').v_name == 'f')
 
-        traj.v_lazy_adding = True
-        traj.res.k = 22, 'Hi'
-        self.assertTrue(isinstance(traj.f_get('k'), Result))
-        self.assertTrue(traj.f_get('k')[1] == 'Hi')
-
-        with self.assertRaises(AttributeError):
-            traj.res.k = 33, 'adsd'
 
         conf = traj.conf
         with self.assertRaises(AttributeError):
@@ -226,8 +216,8 @@ class StorageTest(TrajectoryComparator):
         traj.f_set_properties(fast_access=True)
 
 
-        traj.crun = 43, 'JJJ'
-        self.assertTrue(traj.run_A[0] == 43)
+        traj.crun = Result('', k=43, m='JJJ')
+        self.assertTrue(traj.run_A['k'] == 43)
 
         with self.assertRaises(AttributeError):
             traj.f_set_properties(j=7)
@@ -235,14 +225,12 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(AttributeError):
             traj.f_set_properties(depth=7)
 
-        traj.hui = (('444', 'kkkk',), 'l')
+        traj.hui = Result('hui', ('444', 'kkkk',), 'l')
 
 
 
         self.assertTrue(traj.f_get('hui')[1] == 'l')
 
-        with self.assertRaises(AttributeError):
-            traj.hui = ('445', 'kkkk',)
 
         traj.f_get('hui').f_set(('445', 'kkkk',))
 
@@ -253,62 +241,62 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_link('klkikju', traj.par) # for shizzle
 
 
-        traj.meee = Result('h', 43, hui = 3213, comment='du')
+        traj.meee = Result('meee.h', 43, hui = 3213, comment='du')
 
         self.assertTrue(traj.meee.h.h == 43)
 
         with self.assertRaises(TypeError):
-            traj.par.mu = NNGroupNode('jj', comment='mi')
+            traj.par.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = NNGroupNode('jj', comment='mi')
+            traj.res.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = NNGroupNode('jj', comment='mi')
+            traj.conf.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = NNGroupNode('jj', comment='mi')
+            traj.dpar.jj = NNGroupNode('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = ResultGroup('jj', comment='mi')
+            traj.par.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ResultGroup('jj', comment='mi')
+            traj.dpar.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = ResultGroup('jj', comment='mi')
+            traj.conf.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ResultGroup('jj', comment='mi')
+            traj.jj = ResultGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = ConfigGroup('jj', comment='mi')
+            traj.par.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ConfigGroup('jj', comment='mi')
+            traj.dpar.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = ConfigGroup('jj', comment='mi')
+            traj.res.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ConfigGroup('jj', comment='mi')
+            traj.jj = ConfigGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.par.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.conf.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.res.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.jj = DerivedParameterGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ParameterGroup('jj', comment='mi')
+            traj.dpar.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = ParameterGroup('jj', comment='mi')
+            traj.res.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = ParameterGroup('jj', comment='mi')
+            traj.conf.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ParameterGroup('jj', comment='mi')
+            traj.jj = ParameterGroup('jj', comment='mi')
 
-        traj.par.mu = ParameterGroup('jj', comment='mi')
-        traj.res.mus = ResultGroup('jj', comment='mi')
-        traj.mu = NNGroupNode('jj')
+        traj.par.jj = ParameterGroup('jj', comment='mi')
+        traj.res.jj = ResultGroup('jj', comment='mi')
+        traj.jj = NNGroupNode('jj')
         cg = ConfigGroup('a.g')
         traj.conf.a = cg
 
-        self.assertTrue(traj.f_get('conf.a.a.g', shortcuts=False) is cg)
+        self.assertTrue(traj.f_get('conf.a.g', shortcuts=False) is cg)
 
         dg = DerivedParameterGroup('ttt')
         traj.dpar.ttt = dg
@@ -323,9 +311,9 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.vvv.v_full_name == 'vvv')
 
-        self.assertTrue(traj.par.mu.v_name == 'mu')
+        self.assertTrue(traj.par.jj.v_name == 'jj')
 
-        traj.rrr = MyParamGroup('ff')
+        traj.ff = MyParamGroup('ff')
 
         traj.par.g = MyParamGroup('')
 
@@ -336,12 +324,11 @@ class StorageTest(TrajectoryComparator):
 
         traj = load_trajectory(index=-1, filename=filename, dynamic_imports=MyParamGroup)
 
-        self.assertTrue(isinstance(traj.rrr, NNGroupNode))
-        self.assertTrue(isinstance(traj.rrr.ff, MyParamGroup))
+        self.assertTrue(isinstance(traj.ff, MyParamGroup))
         self.assertTrue(isinstance(traj.par.g, MyParamGroup))
 
-        traj.par = Parameter('hiho', 42, comment='you')
-        traj.par = Parameter('g1.g2.g3.g4.g5', 43)
+        traj.par.hiho = Parameter('hiho', 42, comment='you')
+        traj.par.g1 = Parameter('g1.g2.g3.g4.g5', 43)
 
         self.assertTrue(traj.hiho == 42)
         self.assertTrue(isinstance(traj.par.g1, ParameterGroup ))
@@ -774,8 +761,7 @@ class StorageTest(TrajectoryComparator):
                           add_time=True)
 
         length = 100000
-        traj.v_lazy_adding = True
-        traj.par.x = 42
+        traj.par.x = Parameter('', 42)
         traj.f_explore({'x': range(length)})
 
         traj.f_store()

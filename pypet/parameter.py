@@ -2162,6 +2162,8 @@ class Result(BaseResult):
         'String!'
 
         """
+        if args and self.v_name is None:
+            raise AttributeError('Cannot set positional value because I do not have a name!')
         for idx, arg in enumerate(args):
             valstr = self.f_translate_key(idx)
             self.f_set_single(valstr, arg)

@@ -14,7 +14,7 @@ from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, make_temp_dir,\
     make_trajectory_name,  get_log_config, get_log_path
-from pypet import Environment, rename_log_file, Trajectory
+from pypet import Environment, rename_log_file, Trajectory, Parameter
 import pypet.pypetlogging
 
 
@@ -110,8 +110,7 @@ class LoggingTest(TrajectoryComparator):
 
     def add_params(self, traj):
 
-        traj.v_lazy_adding = True
-        traj.par.p1 = 42, 'Hey'
+        traj.par.p1 = Parameter('', 42, 'Hey')
         traj.f_apar('g1.p2', 145, comment='Test')
 
 

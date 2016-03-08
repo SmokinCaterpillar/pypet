@@ -14,7 +14,7 @@ from pypet.environment import Environment, MultiprocContext
 from pypet.trajectory import Trajectory, load_trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
 from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
-    ResultGroup, NNGroupNode, NNLeafNode, KnowsTrajectory, new_group
+    ResultGroup, NNGroupNode, NNLeafNode, KnowsTrajectory
 from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
     PickleParameter, Result, SparseResult, PickleResult, ObjectTable, BaseParameter, BaseResult
 from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\

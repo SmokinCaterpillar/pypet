@@ -103,10 +103,6 @@ SHORTCUT_SET = set(['dpar', 'par', 'conf', 'res'])
 CHECK_REGEXP = re.compile(r'^[A-Za-z0-9_-]+$')
 
 
-class _NEW_GROUP(object): pass
-new_group = _NEW_GROUP()  # Dummy for lazy adding of new group nodes
-
-
 class NNTreeNodeKids(HasSlots):
 
     __slots__ = ('_node',)
@@ -2899,20 +2895,14 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         split_key = key.split('.')
         last_key = split_key.pop()
         current = self
-        lazy = self.v_root.v_lazy_adding
         for key_ in split_key:
-            try:
-                current = self._nn_interface._get(current, key_,
-                                       fast_access=self.v_root.v_fast_access,
-                                       shortcuts=self.v_root.v_shortcuts and not lazy,
-                                       max_depth=self.v_root.v_max_depth,
-                                       auto_load=self.v_root.v_auto_load and not lazy,
-                                       with_links=self.v_root.v_with_links and not lazy)
-            except AttributeError:
-                if lazy:
-                    current = current.f_add_group(key_)
-                else:
-                    raise
+            current = self._nn_interface._get(current, key_,
+                                   fast_access=self.v_root.v_fast_access,
+                                   shortcuts=self.v_root.v_shortcuts,
+                                   max_depth=self.v_root.v_max_depth,
+                                   auto_load=self.v_root.v_auto_load,
+                                   with_links=self.v_root.v_with_links)
+
         setattr(current, last_key, value)
 
     def __setattr__(self, key, value):
@@ -2929,31 +2919,31 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         elif isinstance(value, (NNGroupNode, NNLeafNode)):
             old_name = value.v_full_name
             try:
+                _, key = self._nn_interface._translate_shortcut(key)
                 if self.v_root.f_contains(value, shortcuts=False, with_links=False):
                     self.f_add_link(key, value)
                 else:
                     name = value.v_full_name
                     if name == '':
                         value._rename(key)
-                    elif name != key:
-                        value._rename(key + '.' + name)
+                    elif name != key and not name.startswith(key + '.'):
+                        raise AttributeError('The name of your element and the key do not match: '
+                                             '`%s` != `%s`' % (name, key))
                     if isinstance(value, NNGroupNode):
                         self.f_add_group(value)
                     else:
                         self.f_add_leaf(value)
             except:
-                value._set_details(old_name)
+                value._set_details(old_name, None, None)
                 raise
-        elif self.v_root.v_lazy_adding:
-            if value is new_group:
-                self.f_add_group(key)
-            else:
-                if not isinstance(value, tuple):
-                    value = (value,)
-                self.f_add_leaf(key, *value)
         else:
             instance = self.f_get(key)
-            instance.f_set(value)
+            if instance.v_is_parameter or instance.f_supports_fast_access():
+                instance.f_set(value)
+            else:
+                raise AttributeError('Cannot change the value of the result `%s` because '
+                                     'it contains more than one data '
+                                     'item.' % instance.v_full_name)
 
     def __getitem__(self, item):
         """Equivalent to calling `__getattr__`.

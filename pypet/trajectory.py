@@ -295,7 +295,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._max_depth = None
         self._auto_load = False
         self._with_links = True
-        self._lazy_adding = False
 
         self._environment_hexsha = None
         self._environment_name = None
@@ -555,18 +554,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         return self._full_copy
-
-    @property
-    def v_lazy_adding(self):
-        """If lazy additions are allowed.
-
-        I.e. `traj.par.x = 42` which adds a new parameter with value 42"""
-        return self._lazy_adding
-
-    @v_lazy_adding.setter
-    def v_lazy_adding(self, val):
-        """Sets lazy adding"""
-        self._lazy_adding = bool(val)
 
     @v_full_copy.setter
     @not_in_run
@@ -1181,7 +1168,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         new_traj._max_depth = self._max_depth
         new_traj._auto_load = self._auto_load
         new_traj._with_links = self._with_links
-        new_traj._lazy_adding = self._lazy_adding
 
         new_traj._environment_hexsha = self._environment_hexsha
         new_traj._environment_name = self._environment_name
