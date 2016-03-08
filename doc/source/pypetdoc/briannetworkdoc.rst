@@ -17,7 +17,6 @@ These function can directly be called or used by the user.
 .. autosummary::
     :nosignatures:
 
-    run_network
     NetworkManager.add_parameters
     NetworkManager.pre_run_network
     NetworkManager.pre_build
@@ -47,14 +46,6 @@ in order to add :class:`~pypet.brian.parameter.BrianDurationParameter` instances
 `traj.parameters.simulation.durations` or `traj.parameters.simulation.pre_durations`
 to define the length and order of individual subruns.
 
-For a description of the structure and different phases of an individual simulation run see
-:func:`~pypet.brian.network.NetworkManager.run_network`.
-
-------------------------------
-Top-Level run_network Function
-------------------------------
-
-.. autofunction:: pypet.brian.network.run_network
 
 --------------
 NetworkManager
