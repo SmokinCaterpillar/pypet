@@ -14,9 +14,9 @@ In the meantime you can cite the software as given below. For *bibtex* you can u
 
 ::
 
-    @misc{rmeyer2015,
+    @misc{rmeyer2016,
         author = {Robert Meyer and Klaus Obermayer},
-        year = {2015},
+        year = {2016},
         title = {pypet: {T}he {P}ython {P}arameter {E}xploration {T}oolkit},
         note = {\url{http://pypet.readthedocs.org/}},
         institution = {Technische Universität Berlin, Neural Information Processing Group}
