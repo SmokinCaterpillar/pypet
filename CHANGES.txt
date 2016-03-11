@@ -1,4 +1,4 @@
-pypet 0.2b.0
+pypet 0.2b1
 
 *   ENH: Pypet can now apply fast merging if trajectories reside in different files.
     If one still wants to apply slow merging, one can set `slow_merge=True`.
@@ -74,6 +74,11 @@ pypet 0.2b.0
 *   All deprecated functions have been removed!
 
 *   Lazy adding is no longer supported!
+
+
+pypet 0.2b.0
+
+*   Erroneous Release due to PyPy fault :/
 
 
 pypet 0.1b.12
