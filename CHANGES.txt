@@ -78,7 +78,7 @@ pypet 0.2b1
 
 pypet 0.2b.0
 
-*   Erroneous Release due to PyPy fault :/
+*   Erroneous Release due to PyPi fault :/
 
 
 pypet 0.1b.12
