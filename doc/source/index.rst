@@ -21,7 +21,7 @@ thereby storing your data into HDF5_ files for you.
 Moreover, *pypet* offers a new data container which
 lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
-analyses becomes a piece of cake!
+analyses become a piece of cake!
 
 Latest version: `0.2b.0`_
 
