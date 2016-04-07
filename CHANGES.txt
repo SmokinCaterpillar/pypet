@@ -1,3 +1,7 @@
+pypet 0.2.0
+
+*   No longer beta
+
 pypet 0.2b1
 
 *   ENH: Pypet can now apply fast merging if trajectories reside in different files.
@@ -78,7 +82,7 @@ pypet 0.2b1
 
 pypet 0.2b.0
 
-*   Erroneous Release due to PyPy fault :/
+*   Erroneous Release due to PyPI fault :/
 
 
 pypet 0.1b.12
