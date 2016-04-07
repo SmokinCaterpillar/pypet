@@ -23,9 +23,9 @@ lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
 analyses become a piece of cake!
 
-Latest version: `0.2b1`_
+Latest version: `0.2.0`_
 
-.. _`0.2b1`: https://pypi.python.org/pypi/pypet
+.. _`0.2.0`: https://pypi.python.org/pypi/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 

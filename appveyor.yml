@@ -62,7 +62,7 @@ environment:
 install:
     # this installs the appropriate Miniconda (Py2/Py3, 32/64 bit),
     # and all required packages
-    - powershell .\\ciscripts\\appveyor\\install.ps1
+    - appveyor-retry powershell .\\ciscripts\\appveyor\\install.ps1
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     # Install non-conda packages
     - pip install psutil
