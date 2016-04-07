@@ -1,4 +1,4 @@
-__author__ = 'Henri Bunting'
+__author__ = ['Henri Bunting', 'Robert Meyer']
 
 from pypet.brian2.parameter import Brian2MonitorResult
 from pypet.parameter import ObjectTable
@@ -30,55 +30,19 @@ class Brian2MonitorTest(ResultTest):
     def check_spike_monitor(self, res, monitor):
         self.assertTrue(comp.nested_equal(monitor.num_spikes, res.num_spikes))
         self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
+        self.assertTrue(comp.nested_equal(monitor.t[:], res.t))
+        self.assertTrue(comp.nested_equal(monitor.i[:], res.i))
+        for idx, varname in enumerate(monitor.record_variables):
+            self.assertTrue(comp.nested_equal(getattr(monitor, varname)[:], res.f_get(varname)))
 
-        self.assertEqual('second', res.spiketimes_unit)
-
-        if res.v_storage_mode == Brian2MonitorResult.TABLE_MODE:
-            spike_frame = res.spikes
-            spiked_list = sorted(list(set(spike_frame['neuron'].to_dict().values())))
-            self.assertEqual(spiked_list, res.neurons_with_spikes)
-
-            for idx, val_tuple in enumerate(zip(monitor.i, monitor.t_)):
-                neuron = val_tuple[0]
-                time = val_tuple[1]
-
-                self.assertEqual(neuron, spike_frame['neuron'][idx])
-
-                self.assertEqual(float(time), spike_frame['spiketimes'][idx])
-
-
-        elif res.v_storage_mode == Brian2MonitorResult.ARRAY_MODE:
-
-            self.assertTrue('%0' in res.format_string and 'd' in res.format_string)
-
-            dataframe = pd.DataFrame(data=list(zip(monitor.i, monitor.t_)))
-            neurons = [spike_num for spike_num in range(0, len(monitor.count))]
-            spikes_by_neuron = dict()
-            for neuron_num in neurons:
-                spikes_by_neuron[neuron_num] = dataframe[dataframe[0] == neuron_num][1].tolist()
-
-            spiked_set=set()
-            for item_name in res:
-
-                if item_name.startswith('spiketimes') and not item_name.endswith('unit'):
-                    neuron_id = int(item_name.split('_')[-1])
-                    spiked_set.add(neuron_id)
-
-                    times = spikes_by_neuron[neuron_id]
-                    self.assertTrue(comp.nested_equal(times, res[item_name]))
-
-            spiked_list = sorted(list(spiked_set))
-            self.assertEqual(spiked_list, res.neurons_with_spikes)
-        else:
-            raise RuntimeError('You shall not pass!')
 
 
     def check_state_monitor(self, res, monitor):
-        self.assertEqual(monitor.record_variables, res.vars)
+        self.assertEqual(monitor.record_variables, res.record_variables)
 
-        times=np.array(monitor.t_)
+        times=np.array(monitor.t)
         if len(times)>0:
-            self.assertTrue(comp.nested_equal(times, res.times))
+            self.assertTrue(comp.nested_equal(times, res.t))
 
 
         for idx, varname in enumerate(monitor.record_variables):
@@ -86,28 +50,21 @@ class Brian2MonitorTest(ResultTest):
             self.assertTrue(comp.nested_equal(monitor.when, res.when))
             self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
 
-            self.assertTrue(comp.nested_equal(getattr(monitor, varname), res.f_get(varname+'_values')))
+            self.assertTrue(comp.nested_equal(getattr(monitor, varname), res.f_get(varname)))
 
     def check_population_rate_monitor(self, res, monitor):
         self.assertEqual(str(monitor.source),res.source)
         #self.assertTrue(comp.nested_equal(monitor._bin,res.bin))
-        self.assertTrue(comp.nested_equal('second',res.times_unit))
-        self.assertTrue(comp.nested_equal('Hz',res.rate_unit))
-        self.assertTrue(comp.nested_equal(np.array(monitor.rate),res.rate))
-        self.assertTrue(comp.nested_equal(np.array(monitor.t),res.times))
+        self.assertTrue(comp.nested_equal(monitor.rate[:],res.rate))
+        self.assertTrue(comp.nested_equal(monitor.t[:],res.t))
         #self.assertTrue(comp.nested_equal(monitor.delay,res.delay))
 
-
-
-    def test_failing_adding_another_monitor_or_changing_the_mode(self):
+    def test_failing_adding_another_monitor(self):
 
         for res in self.results.values():
             with self.assertRaises(TypeError):
                 res.f_set(monitor=self.monitors.values()[0])
 
-        for res in self.results.values():
-            with self.assertRaises(TypeError):
-                res.v_storage_mode=Brian2MonitorResult.ARRAY_MODE
 
     def test_the_insertion_made_implicetly_in_setUp(self):
 
@@ -129,12 +86,10 @@ class Brian2MonitorTest(ResultTest):
             else:
                 raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
 
-
-
     def test_dir(self):
         res = self.results['SpikeMonitor']
-        self.assertTrue('spikes' in res)
-        self.assertTrue('spikes' in dir(res))
+        self.assertTrue('i' in res)
+        self.assertTrue('i' in dir(res))
 
     def test_set_item_via_number(self):
         res = self.results['SpikeMonitor']
@@ -160,10 +115,6 @@ class Brian2MonitorTest(ResultTest):
     def make_results(self):
         self.results={}
         for key,monitor in self.monitors.items():
-            if key.endswith('Ar'):
-                self.results[key]=Brian2MonitorResult(key,monitor,
-                                                     storage_mode=Brian2MonitorResult.ARRAY_MODE)
-            else:
-                self.results[key]=Brian2MonitorResult(key,monitor)
+            self.results[key]=Brian2MonitorResult(key,monitor)
 
             self.results[key].f_set(testtestextra=42)

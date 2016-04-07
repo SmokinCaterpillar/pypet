@@ -40,7 +40,7 @@ def run_network():
 
     #run(25*msecond,report='text') # we discard the first spikes
 
-    MSpike=SpikeMonitor(neuron) # record Vr and w at spike times
+    MSpike=SpikeMonitor(neuron, variables=['vm']) # record Vr and w at spike times
     MPopRate = PopulationRateMonitor(neuron)
 
     MMultiState = StateMonitor(neuron, ['w','vm'], record=[6,7,8,9])
@@ -50,7 +50,6 @@ def run_network():
 
 
     monitor_dict['SpikeMonitor']=MSpike
-    monitor_dict['SpikeMonitorAr']=MSpike
     monitor_dict['MultiState']=MMultiState
     monitor_dict['PopulationRateMonitor']=MPopRate
 

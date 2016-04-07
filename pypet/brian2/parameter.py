@@ -1,4 +1,4 @@
-__author__ = 'Henri Bunting'
+__author__ = ['Henri Bunting', 'Robert Meyer']
 
 # import brian2
 import brian2.numpy_ as np
@@ -165,7 +165,7 @@ class Brian2Result(Result):
                 value = val/unit
                 # Potentially the results are very big in contrast to small parameters
                 # Accordingly, an ObjectTable might not be the best choice after all for a result
-                if not value.shape:
+                if isinstance(val, np.ndarray) and len(val.shape) == 0:
                     # Convert 0-dimensional arrays to regular numpy floats
                     value = np.float(value)
                 store_dict[key + Brian2Result.IDENTIFIER + 'value'] = value
@@ -197,22 +197,10 @@ class Brian2Result(Result):
 
 class Brian2MonitorResult(Brian2Result):
 
-    TABLE_MODE = 'TABLE'
-    '''Table storage mode for SpikeMonitor and StateSpikeMonitor'''
-
-    ARRAY_MODE = 'ARRAY'
-    '''Array storage mode, not recommended if you have many neurons!'''
-
-    #keywords=set(['data','values','spikes','times','rate','count','mean_var',])
-    __slots__ = ('_storage_mode', '_monitor_type')
+    __slots__ = ('_monitor_type',)
 
     def __init__(self, full_name, *args, **kwargs):
-
-        self._storage_mode = None
         self._monitor_type = None
-        storage_mode = kwargs.pop('storage_mode', Brian2MonitorResult.TABLE_MODE)
-        self.v_storage_mode = storage_mode
-
         super(Brian2MonitorResult, self).__init__(full_name, *args, **kwargs)
 
     def _store(self):
@@ -220,43 +208,13 @@ class Brian2MonitorResult(Brian2Result):
 
         if self._monitor_type is not None:
             store_dict['monitor_type'] = self._monitor_type
-        if self._monitor_type in ['SpikeMonitor']:
-            store_dict['storage_mode'] = self.v_storage_mode
 
         return store_dict
 
     def _load(self, load_dict):
         if 'monitor_type' in load_dict:
             self._monitor_type = load_dict.pop('monitor_type')
-        if self._monitor_type in ['SpikeMonitor', 'StateSpikeMonitor']:
-            self._storage_mode = load_dict.pop('storage_mode')
-
         super(Brian2MonitorResult, self)._load(load_dict)
-
-    @property
-    def v_storage_mode(self):
-        """The storage mode for SpikeMonitor and StateSpikeMonitor
-
-        There are two storage modes:
-
-        * :const:`~pypet.brian.parameter.BrianMonitorResult.TABLE_MODE`: ('TABLE')
-
-            Default, information is stored into a single table where
-            the first column is the neuron index,
-            second column is the spike time
-            following columns contain variable values (in case of the StateSpikeMonitor)
-            This is a very compact storage form.
-
-        * :const:`~pypet.brian.parameter.BrianMonitorResult.ARRAY_MODE`: ('ARRAY')
-
-            For each neuron there will be a new hdf5 array,
-            i.e. if you have many neurons your result node will have many entries.
-            Note that this mode does sort everything according to the neurons but
-            reading and writing of data might take muuuuuch longer compared to
-            the other mode.
-
-        """
-        return self._storage_mode
 
     @property
     def v_monitor_type(self):
@@ -264,27 +222,12 @@ class Brian2MonitorResult(Brian2Result):
         """
         return self._monitor_type
 
-    @v_storage_mode.setter
-    def v_storage_mode(self, storage_mode):
-
-        if self._monitor_type is not None:
-            raise TypeError('Cannot change the storage mode if you already extracted a monitor.')
-
-        if (storage_mode != Brian2MonitorResult.ARRAY_MODE and
-                storage_mode != Brian2MonitorResult.TABLE_MODE):
-            raise ValueError('Your storage mode %s is not understood.' % str(storage_mode))
-
-        self._storage_mode = storage_mode
-
     def f_set_single(self, name, item):
         """ To add a monitor use `f_set_single('monitor', brian_monitor)`.
 
         Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
         """
-
-        #self._logger.error("Brian2MonitorResult f_set_single name:"+str(name)+" item:"+str(item))
         if type(item) in [SpikeMonitor, StateMonitor, PopulationRateMonitor]:
-
             if self.v_stored:
                 self._logger.warning('You are changing an already stored result. If '
                                      'you not explicitly overwrite the data on disk, '
@@ -316,84 +259,39 @@ class Brian2MonitorResult(Brian2Result):
 
     def _extract_state_monitor(self, monitor):
 
-        self.f_set(vars=monitor.record_variables)
+        self.f_set(record_variables=monitor.record_variables)
+        self.f_set(record=monitor.record)
+        self.f_set(when=monitor.when)
+        self.f_set(source=str(monitor.source))
 
-        times=np.array(monitor.t)
+        times=np.array(monitor.t[:])
         if len(times) > 0:
-            # We can handle brian quantities, there's no need to transfer them!
-            self.f_set(times=times)
+            self.f_set(t=times)
 
-            ### Store recorded values ###
-            for idx, varname in enumerate(monitor.record_variables):
-                if idx == 0:
-                    self.f_set(record=monitor.record)
-                    self.f_set(when=monitor.when)
-                    self.f_set(source=str(monitor.source))
-
+            for varname in monitor.record_variables:
                 val = getattr(monitor, varname)
-                self.f_set(**{varname + '_values' : val})
-
-    @staticmethod
-    def _get_format_string(monitor):
-        digits = len(str(len(monitor.source)))
-        format_string = '%0' + str(digits) + 'd'
-        return format_string
+                self.f_set(**{varname: val})
 
     def _extract_spike_monitor(self, monitor):
+
         self.f_set(source=str(monitor.source))
-
-        self.f_set(record=monitor.record)
-
         self.f_set(num_spikes=monitor.num_spikes)
+        self.f_set(when=monitor.when)
 
-        self.f_set(spiketimes_unit='second')
+        times = monitor.t[:]
 
-        neurons_list = [x.tolist() for x in monitor.i]
-        neurons_with_spikes = sorted(set(neurons_list))
-        self.f_set(neurons_with_spikes=neurons_with_spikes)
-        if self._storage_mode == Brian2MonitorResult.TABLE_MODE:
+        if len(times) > 0:
+            self.f_set(t=times)
+            self.f_set(i=monitor.i[:])
 
-            times_list = [x.tolist() for x in monitor.t_]
-            spikeframe = pd.DataFrame(data={'neuron':neurons_list,
-                                            'spiketimes':times_list})
-            #spikeframe['neuron']=spikeframe['neuron']
-            #spikeframe['neuron']=spikeframe['neuron'].astype(np.int32)
-            #spikeframe['spiketimes']=spikeframe['spiketimes'].astype(np.float64)
-
-            self.f_set(spikes=spikeframe)
-
-        elif self._storage_mode == Brian2MonitorResult.ARRAY_MODE:
-            format_string = self._get_format_string(monitor)
-            self.f_set(format_string=format_string)
-
-            spikes_dict = {}
-            for idx, time in zip(*monitor.it):
-                idx = np.int(idx)
-                time = np.float(time)
-                try:
-                    spikes_dict[idx].append(time)
-                except KeyError:
-                    spikes_dict[idx] = [time]
-
-            result_dict = {}
-            for idx in spikes_dict:
-                key = 'spiketimes_' + format_string % idx
-                result_dict[key] = []
-            if result_dict:
-                self.f_set(**result_dict)
-
-        else:
-            raise RuntimeError('You shall not pass!')
-
+            for varname in monitor.record_variables:
+                val = getattr(monitor, varname)
+                self.f_set(**{varname: val[:]})
 
     def _extract_population_rate_monitor(self, monitor):
-        assert isinstance(monitor, PopulationRateMonitor)
 
-
+        times = monitor.t[:]
         self.f_set(source=str(monitor.source))
-        self.f_set(times_unit='second', rate_unit='Hz')
-        self.f_set(times=np.array(monitor.t))
-        #print monitor.rate
-        self.f_set(rate=np.array(monitor.rate))
-        #self.f_set(delay=monitor.delay)
-        #self.f_set(bin=monitor._bin)
+        if len(times) > 0:
+            self.f_set(t=times)
+            self.f_set(rate=monitor.rate[:])
