@@ -838,6 +838,7 @@ class ResultTest(TrajectoryComparator):
         self.make_results()
 
 
+
     def test_store_load_with_hdf5(self):
         traj_name = 'test_%s' % self.__class__.__name__
         filename = make_temp_dir(traj_name + '.hdf5')

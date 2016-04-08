@@ -1,17 +1,25 @@
 __author__ = ['Henri Bunting', 'Robert Meyer']
 
-from pypet.brian2.parameter import Brian2MonitorResult
-from pypet.parameter import ObjectTable
+
+import numpy as np
+
+try:
+    import brian2
+    from brian2.monitors.spikemonitor import SpikeMonitor
+    from brian2.monitors.statemonitor import StateMonitor
+    from brian2.monitors.ratemonitor import PopulationRateMonitor
+    from pypet.brian2.parameter import Brian2MonitorResult
+except ImportError:
+    brian2 = None
+
+from pypet.tests.testutils.ioutils import unittest
 from pypet.tests.unittests.parameter_test import ResultTest
 from pypet.tests.unittests.brian2tests.run_a_brian2_network import run_network
 import pypet.utils.comparisons as comp
-from brian2.monitors.spikemonitor import SpikeMonitor
-from brian2.monitors.statemonitor import StateMonitor
-from brian2.monitors.ratemonitor import PopulationRateMonitor
-import numpy as np
-import pandas as pd
 
 
+
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class Brian2MonitorTest(ResultTest):
 
     tags = 'unittest', 'brian2', 'result', 'monitor', 'henri'
@@ -25,6 +33,10 @@ class Brian2MonitorTest(ResultTest):
         self.monitors = Brian2MonitorResult.monitors
         self.make_results()
         self.make_constructor()
+
+    def make_constructor(self):
+        self.Constructor=Brian2MonitorResult
+        self.dynamic_imports = [Brian2MonitorResult]
 
 
     def check_spike_monitor(self, res, monitor):

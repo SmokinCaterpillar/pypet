@@ -1,19 +1,24 @@
 __author__ = 'Henri Bunting'
 
-from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_log_config, parse_args, run_suite
-from pypet import Environment, load_trajectory
-from pypet.brian2.parameter import Brian2Parameter, Brian2Result, Brian2MonitorResult
-from brian2.units.stdunits import mvolt, mV, mA, ms, kHz
 import numpy as np
-from brian2.units.fundamentalunits import Quantity
-from pypet.pypetlogging import HasLogger
-from pypet.storageservice import HDF5StorageService, StorageService
-
 import os
 
+try:
+    import brian2
+    from brian2.units.stdunits import mvolt, mV, mA, ms, kHz
+    from brian2.units.fundamentalunits import Quantity
+    from pypet.brian2.parameter import Brian2Parameter, Brian2Result, Brian2MonitorResult
+except ImportError:
+    brian2 = None
+
+from pypet.tests.testutils.data import TrajectoryComparator
+from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_log_config, \
+    parse_args, run_suite, unittest
+from pypet import Environment, load_trajectory
+from pypet.storageservice import HDF5StorageService
 
 
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class Brian2hdf5Test(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'monitor', 'hdf5', 'henri'

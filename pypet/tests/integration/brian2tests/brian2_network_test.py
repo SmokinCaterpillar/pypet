@@ -4,15 +4,55 @@ __author__ = ['Henri Bunting', 'Robert Meyer']
 import numpy as np
 import time
 import os
-from brian2 import NeuronGroup, Synapses, SpikeMonitor, StateMonitor, mV, ms, Network, second, \
-    PopulationRateMonitor
+
+try:
+    import brian2
+    from brian2 import NeuronGroup, Synapses, SpikeMonitor, StateMonitor, mV, ms, Network, second, \
+        PopulationRateMonitor
+    from pypet.brian2.parameter import Brian2Parameter, Brian2MonitorResult
+    from brian2 import prefs
+    prefs.codegen.target = 'numpy'
+except ImportError:
+    brian2 = None
+
 from pypet import Environment
-from pypet.brian2.parameter import Brian2Parameter, Brian2MonitorResult
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, get_log_config, \
-    parse_args, run_suite
+    parse_args, run_suite, unittest
 
 
+def run_network(traj):
+    """Runs brian network consisting of
+        200 inhibitory IF neurons"""
+
+    eqs = '''
+    dv/dt=(v0-v)/(5*ms) : volt (unless refractory)
+    v0 : volt
+    '''
+    group = NeuronGroup(100, model=eqs, threshold='v>10 * mV',
+                        reset='v = 0*mV', refractory=5*ms)
+    group.v0 = traj.par.v0
+    group.v = np.random.rand(100) * 10.0 * mV
+
+    syn = Synapses(group, group, pre='v-=1*mV')
+    syn.connect('i != j', p=0.2)
+
+    spike_monitor = SpikeMonitor(group, variables=['v'])
+    voltage_monitor = StateMonitor(group, 'v', record=True)
+    pop_monitor = PopulationRateMonitor(group, name='pop' + str(traj.v_idx))
+
+    net = Network(group, syn, spike_monitor, voltage_monitor, pop_monitor)
+    net.run(0.25*second, report='text')
+
+    traj.f_add_result(Brian2MonitorResult, 'spikes',
+                      spike_monitor)
+    traj.f_add_result(Brian2MonitorResult, 'v',
+                      voltage_monitor)
+    traj.f_add_result(Brian2MonitorResult, 'pop',
+                      pop_monitor)
+
+
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class BrianFullNetworkTest(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'network', 'hdf5', 'henri'
@@ -40,37 +80,6 @@ class BrianFullNetworkTest(TrajectoryComparator):
         #plt.show()
 
 
-    def run_network(self, traj):
-        """Runs brian network consisting of
-            200 inhibitory IF neurons"""
-
-        eqs = '''
-        dv/dt=(v0-v)/(5*ms) : volt (unless refractory)
-        v0 : volt
-        '''
-        group = NeuronGroup(100, model=eqs, threshold='v>10 * mV',
-                            reset='v = 0*mV', refractory=5*ms)
-        group.v0 = traj.par.v0
-        group.v = np.random.rand(100) * 10.0 * mV
-
-        syn = Synapses(group, group, pre='v-=1*mV')
-        syn.connect('i != j', p=0.2)
-
-        spike_monitor = SpikeMonitor(group, variables=['v'])
-        voltage_monitor = StateMonitor(group, 'v', record=True)
-        pop_monitor = PopulationRateMonitor(group, name='pop' + str(traj.v_idx))
-
-        net = Network(group, syn, spike_monitor, voltage_monitor, pop_monitor)
-        net.run(0.25*second, report='text')
-
-        traj.f_add_result(Brian2MonitorResult, 'spikes',
-                          spike_monitor)
-        traj.f_add_result(Brian2MonitorResult, 'v',
-                          voltage_monitor)
-        traj.f_add_result(Brian2MonitorResult, 'pop',
-                          pop_monitor)
-
-
     def test_net(self):
         env = Environment(trajectory='Test_'+repr(time.time()).replace('.','_'),
                           filename=make_temp_dir(os.path.join(
@@ -81,14 +90,14 @@ class BrianFullNetworkTest(TrajectoryComparator):
                                'briantest.hdf5')),
                           file_title='test',
                           log_config=get_log_config(),
-                          dynamic_imports=['pypet.brian.parameter.BrianParameter',
+                          dynamic_imports=['pypet.brian2.parameter.Brian2Parameter',
                                                         Brian2MonitorResult],
                           multiproc=False)
         traj = env.v_traj
         traj.f_add_parameter(Brian2Parameter, 'v0', 0.0*mV,
                              comment='Input bias')
         traj.f_explore({'v0': [11*mV, 13*mV, 15*mV]})
-        env.f_run(self.run_network)
+        env.f_run(run_network)
         self.get_data(traj)
 
 

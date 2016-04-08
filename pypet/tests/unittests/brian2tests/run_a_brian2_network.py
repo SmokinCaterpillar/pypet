@@ -1,11 +1,12 @@
 __author__ = 'Henri Bunting'
 
-'''
-from numpy import linspace
-from brian2.units.stdunits import *
-from brian2.groups import NeuronGroup
-'''
-from brian2 import *
+
+try:
+    import brian2
+    from brian2 import pF, mV, defaultclock, ms, NeuronGroup, linspace, SpikeMonitor, \
+        PopulationRateMonitor, StateMonitor, run, msecond, nS, nA
+except ImportError:
+    brian2 = None
 
 
 def run_network():

@@ -11,27 +11,59 @@ BRIAN2 Monitors.
 
 """
 
-
 __author__ = ['Henri Bunting', 'Robert Meyer']
 
+import ast
 
 import brian2.numpy_ as np
-from brian2.units.fundamentalunits import Quantity, get_unit_fast
+from brian2.units.fundamentalunits import Quantity, get_unit_fast, have_same_dimensions
 from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
+from brian2.equations.unitcheck import parse_expression_unit
 import brian2.units.allunits as allunits
 
 import pypet.pypetexceptions as pex
 from pypet.parameter import Parameter, Result, ObjectTable
+import pypet.compat as compat
 
+
+ALLUNITS = {}
+for name in allunits.__all__:
+    ALLUNITS[name] =  getattr(allunits, name)
 
 
 def unit_from_expression(expr):
-    """Takes a unit string like ``'1. * volt'`` and return the BRIAN2 unit."""
+    """Takes a unit string like ``'1. * volt'`` and returns the BRIAN2 unit."""
     if expr == '1':
-        return Quantity(1)
-    unitstr = expr.split(' * ')[1]
-    unit = getattr(allunits, unitstr)
-    return unit
+        return get_unit_fast(1)
+    elif isinstance(expr, compat.base_type):
+        mod = ast.parse(expr, mode='eval')
+        expr = mod.body
+        return unit_from_expression(expr)
+    elif expr.__class__ is ast.Name:
+        return ALLUNITS[expr.id]
+    elif expr.__class__ is ast.Num:
+        return expr.n
+    elif expr.__class__ is ast.BinOp:
+        op = expr.op.__class__.__name__
+        left = unit_from_expression(expr.left)
+        right = unit_from_expression(expr.right)
+        if op=='Add' or op=='Sub':
+            u = left+right
+        elif op=='Mult':
+            u = left*right
+        elif op=='Div':
+            u = left/right
+        elif op=='Pow':
+            n = unit_from_expression(expr.right)
+            u = left**n
+        elif op=='Mod':
+            u = left % right
+        else:
+            raise SyntaxError("Unsupported operation "+op)
+        return u
+    else:
+        raise RuntimeError('You shall not pass')
+
 
 
 
@@ -84,12 +116,12 @@ class Brian2Parameter(Parameter):
 
     def _store(self):
 
-        if type(self._data) not in [Quantity, list]:
+        if not isinstance(self._data, Quantity):
             return super(Brian2Parameter, self)._store()
         else:
             store_dict = {}
-
             unit = get_unit_fast(self._data)
+
             value = self._data/unit
             store_dict['data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
 

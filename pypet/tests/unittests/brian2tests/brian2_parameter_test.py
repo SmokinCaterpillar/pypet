@@ -10,17 +10,23 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
+try:
+    import brian2
+    from brian2.units.stdunits import mV, mA, kHz, ms
+    from pypet.brian2.parameter import Brian2Parameter, Brian2Result
+except ImportError:
+    brian2 = None
+
 from pypet.parameter import PickleParameter, ArrayParameter, SparseParameter
-from brian2.units.stdunits import mV, mA, kHz, ms
 from pypet.tests.unittests.parameter_test import ParameterTest, ResultTest
 from pypet.tests.testutils.ioutils import parse_args, run_suite
-from pypet.brian2.parameter import Brian2Parameter, Brian2Result
 from pypet.utils.explore import cartesian_product
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class Brian2ParameterTest(ParameterTest):
 
     tags = 'unittest', 'brian2', 'parameter', 'henri'
@@ -36,8 +42,10 @@ class Brian2ParameterTest(ParameterTest):
         #self.data['kHz05'] = 0.5*kHz
         self.data['nested_array'] = np.array([[6.,7.,8.],[9.,10.,11.]]) * ms
         self.data['b2a'] = np.array([1., 2.]) * mV
+        self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**2.73
 
         super(Brian2ParameterTest, self).setUp()
+        self.dynamic_imports = [Brian2Parameter]
 
     def make_params(self):
         self.param = {}
@@ -68,6 +76,7 @@ class Brian2ParameterTest(ParameterTest):
         self.assertFalse(self.param[list(self.param.keys())[0]]._values_of_same_type(11, 99*mV))
 
 
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
 
     tags = 'unittest', 'brian2', 'parameter', 'store', 'henri'
@@ -169,12 +178,14 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
             self.assertEqual(param.v_location, self.location)
 
 
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
 class Brian2ResultTest(ResultTest):
 
     tags = 'unittest', 'brian2', 'result', 'henri'
 
     def make_constructor(self):
         self.Constructor = Brian2Result
+        self.dynamic_imports = [Brian2Result]
 
     def test_illegal_naming(self):
         for res in self.results.values():
@@ -195,6 +206,7 @@ class Brian2ResultTest(ResultTest):
 
         self.data['mV_array'] = np.ones(20) * mV
         self.data['integer'] = 444
+        self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**2.7343
 
         super(Brian2ResultTest, self).setUp()
 
