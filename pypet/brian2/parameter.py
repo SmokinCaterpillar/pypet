@@ -1,312 +1,123 @@
-__author__ = 'Henri Bunting'
+"""Module containing results and parameters that can be used to store `BRIAN2 data`_.
 
-# import brian2
+Parameters handling BRIAN2 data are instantiated by the
+:class:`~pypet.brian.parameter.Brian2Parameter` class for any BRIAN2 Quantity.
+
+The :class:`~pypet.brian.parameter.Brian2Result` can store BRIAN2 Quantities
+and the :class:`~pypet.brian.parameter.Brian2MonitorResult` extracts data from
+BRIAN2 Monitors.
+
+.. _`BRIAN2 data`: http://brian2.readthedocs.org/
+
+"""
+
+
+__author__ = ['Henri Bunting', 'Robert Meyer']
+
+
 import brian2.numpy_ as np
-from pypet.parameter import Parameter, ObjectTable
 from brian2.units.fundamentalunits import Quantity, get_unit_fast
-from pypet.utils.helpful_classes import HashArray
-#from brian2.units.fundamentalunits import is_dimensionless, get_dimensions
-#from brian2.core.variables import get_value_with_unit
+from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
+import brian2.units.allunits as allunits
 
 import pypet.pypetexceptions as pex
+from pypet.parameter import Parameter, Result, ObjectTable
 
-try:
-    from brian2.units.allunits import *
-except TypeError:
-    pass
+
+
+def unit_from_expression(expr):
+    """Takes a unit string like ``'1. * volt'`` and return the BRIAN2 unit."""
+    if expr == '1':
+        return Quantity(1)
+    unitstr = expr.split(' * ')[1]
+    unit = getattr(allunits, unitstr)
+    return unit
+
+
 
 class Brian2Parameter(Parameter):
+    """A Parameter class that supports BRIAN2 Quantities.
+
+    Note that only scalar BRIAN2 quantities are supported, lists, tuples or dictionaries
+    of BRIAN2 quantities cannot be handled.
+
+    Supports data for the standard :class:`~pypet.parameter.Parameter`, too.
+
+    """
 
     IDENTIFIER = '__brn2__'
     ''' Identification string stored into column title of hdf5 table'''
 
-    FLOAT_MODE = 'FLOAT'
-    '''Float storage mode'''
+    __slots__ = ()
 
-    __slots__ = ('_storage_mode',)
-
-    def __init__(self, full_name, data=None, comment='', storage_mode=FLOAT_MODE):
+    def __init__(self, full_name, data=None, comment=''):
         super(Brian2Parameter, self).__init__(full_name, data, comment)
-
-        self._storage_mode = None
-        self.v_storage_mode = storage_mode
-
-    @property
-    def v_storage_mode(self):
-        """
-        There is one storage mode:
-
-
-        * :const:`~pypet.brian.parameter.BrianParameter.FLOAT_MODE`: ('FLOAT')
-
-            The value is stored as a float and the unit as a sting.
-
-            i.e. `12 mV` is stored as `12.0` and `'1.0 * mV'`
-
-        """
-        return self._storage_mode
-
-    @v_storage_mode.setter
-    def v_storage_mode(self, storage_mode):
-        assert (storage_mode == Brian2Parameter.FLOAT_MODE)
-        self._storage_mode = storage_mode
 
     def f_supports(self, data):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        if super(Brian2Parameter, self).f_supports(data):
+        elif super(Brian2Parameter, self).f_supports(data):
             return True
         return False
 
     def _values_of_same_type(self, val1, val2):
-        #print("--------------------")
-        #print("_values_of_same_type", val1, val2)
 
         if isinstance(val1, Quantity):
-            #print("iiv1 - val1", val1, is_dimensionless(val1))
-            #print("iiv1 - val2", val2, is_dimensionless(val2))
-            #print("iiv1 - isinstance(val1, Quantity)", isinstance(val1, Quantity))
-            #print("iiv1 - isinstance(val2, Quantity)", isinstance(val2, Quantity))
             try:
-                # Trigger AttributeError (it isn't caught in the if)
-                #val1_dimensions = get_dimensions(val1)
-                #print("iiv1 - val1 dimensions", val1_dimensions)
-                #val2_dimensions = get_dimensions(val2)
-                #print("iiv1 - val2 dimensions", val2_dimensions)
                 if not val1.has_same_dimensions(val2):
                     return False
-            #except AttributeError:
-            #    print("iiv1 - caught attribute error 1")
-            #    print("--------------------F")
-            #    return False
             except TypeError:
-                #print("iiv1 - caught type error 1")
-                #print("--------------------F")
                 return False
 
         elif isinstance(val2, Quantity):
-            #print("iiv2 - val1", val1, is_dimensionless(val1))
-            #print("iiv2 - val2", val2, is_dimensionless(val2))
-            #print("iiv2 - isinstance(val1, Quantity)", isinstance(val1, Quantity))
-            #print("iiv2 - isinstance(val2, Quantity)", isinstance(val2, Quantity))
             try:
-                # Trigger AttributeError (it isn't caught in the if)
-                #val1_dimensions = get_dimensions(val1)
-                #print("iiv2 - val1 dimensions", val1_dimensions)
-                #val2_dimensions = get_dimensions(val2)
-                #print("iiv2 - val2 dimensions", val2_dimensions)
                 if not val2.has_same_dimensions(val1):
                     return False
-            #except AttributeError:
-            #    print("iiv2 - caught attribute error 2")
-            #    print("--------------------F")
-            #    return False
             except TypeError:
-                #print("iiv2 - caught type error 1")
-                #print("--------------------F")
                 return False
 
         elif not super(Brian2Parameter, self)._values_of_same_type(val1, val2):
-            #print("--------------------F")
             return False
 
-
-        #print("--------------------T")
         return True
 
     def _store(self):
-        """Creates a storage dictionary for the storage service.
 
-        If the data is not a numpy array, a numpy matrix, or a tuple, the
-        :func:`~pypet.parameter.Parmater._store` method of the parent class is called.
-
-        Otherwise the array is put into the dictionary with the key 'data__rr__'.
-
-        Each array of the exploration range is stored as a separate entry named
-        'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array. Note if an array
-        is used more than once in an exploration range (for example, due to cartesian product
-        exploration), the array is stored only once.
-        Moreover, an :class:`~pypet.parameter.ObjectTable` containing the references
-        is stored under the name 'explored_data__rr__' in order to recall
-        the order of the arrays later on.
-
-        """
-        if not type(self._data) in [np.ndarray, tuple, np.matrix]:
+        if type(self._data) not in [Quantity, list]:
             return super(Brian2Parameter, self)._store()
         else:
-            store_dict = {'data' + Brian2Parameter.IDENTIFIER: self._data}
-
-            if self.f_has_range():
-                # Supports smart storage by hashable arrays
-                # Keys are the hashable arrays or tuples and values are the indices
-                smart_dict = {}
-
-                store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = ObjectTable(columns=['idx'], index=list(range(len(self))))
-
-                count = 0
-                for idx, elem in enumerate(self._explored_range):
-
-                    # First we need to distinguish between tuples and array and extract a
-                    # hashable part of the array
-                    if isinstance(elem, np.ndarray):
-                        # You cannot hash numpy arrays themselves, but if they are read only
-                        # you can hash array.data
-                        hash_elem = HashArray(elem)
-                    else:
-                        hash_elem = elem
-
-                    # Check if we have used the array before,
-                    # i.e. element can be found in the dictionary
-                    if hash_elem in smart_dict:
-                        name_idx = smart_dict[hash_elem]
-                        add = False
-                    else:
-                        name_idx = count
-                        add = True
-
-                    name = self._build_name(name_idx)
-                    # Store the reference to the array
-                    store_dict['explored_data' + Brian2Parameter.IDENTIFIER]['idx'][idx] = \
-                        name_idx
-
-                    # Only if the array was not encountered before,
-                    # store the array and remember the index
-                    if add:
-                        store_dict[name] = elem
-                        smart_dict[hash_elem] = name_idx
-                        count += 1
-
-            self._locked = True
-
-            return store_dict
-
-    def _load(self, load_dict):
-        """Reconstructs the data and exploration array.
-
-        Checks if it can find the array identifier in the `load_dict`, i.e. '__rr__'.
-        If not calls :class:`~pypet.parameter.Parameter._load` of the parent class.
-
-        If the parameter is explored, the exploration range of arrays is reconstructed
-        as it was stored in :func:`~pypet.parameter.ArrayParameter._store`.
-
-        """
-        if self.v_locked:
-            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
-
-        try:
-            self._data = load_dict['data' + Brian2Parameter.IDENTIFIER]
-
-            if 'explored_data' + Brian2Parameter.IDENTIFIER in load_dict:
-                explore_table = load_dict['explored_data' + Brian2Parameter.IDENTIFIER]
-
-                idx = explore_table['idx']
-
-                explore_list = []
-
-                # Recall the arrays in the order stored in the ObjectTable 'explored_data__rr__'
-                for name_idx in idx:
-                    arrayname = self._build_name(name_idx)
-                    explore_list.append(load_dict[arrayname])
-
-                self._explored_range = tuple([self._convert_data(x) for x in explore_list])
-                self._explored = True
-
-        except KeyError:
-            super(Brian2Parameter, self)._load(load_dict)
-
-        self._default = self._data
-        self._locked = True
-
-    @staticmethod
-    def _build_name(name_idx):
-        """Formats a name for storage
-
-        :return:
-
-            'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array
-
-        """
-        return 'xa%s%08d' % (Brian2Parameter.IDENTIFIER, name_idx)
-
-    '''
-    def _store(self):
-        #print("--- store START---")
-        if isinstance(self._data, Quantity):
             store_dict = {}
 
-            unitstr = repr(get_unit_fast(self._data))
-            #print( "store self._data:", self._data.tolist() )
-            #print( "store self._data type:", type(self._data.tolist()) )
-
-            if type(self._data.tolist()) is list:
-                is_array = True
-                values = [float(value) for value in self._data.tolist()]
-                #print("Got list")
-            else:
-                is_array = False
-                values = [float(self._data)]
-                #print("Got single")
-
-            store_dict['data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': [values],
-                                                                                'unit': [unitstr],
-                                                                                'is_array': [is_array]})
-
-            #print("store_dict: "+str(store_dict))
+            unit = get_unit_fast(self._data)
+            value = self._data/unit
+            store_dict['data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': [value], 'unit': [repr(unit)]})
 
             if self.f_has_range():
-                value_list = []
-                for val in self._explored_range:
-                    value = float(val)
-                    #print("store value:", value)
-                    value_list.append(value)
-
+                value_list = [value_with_unit/unit for value_with_unit in self._explored_range]
                 store_dict['explored_data' + Brian2Parameter.IDENTIFIER] = ObjectTable(data={'value': value_list})
-
-            print(store_dict)
 
             self._locked = True
 
-            #print("--- store ENDA ---")
             return store_dict
-        else:
-            #print("--- store ENDB ---")
-            return super(Brian2Parameter, self)._store()
 
     def _load(self, load_dict):
-        #print("--- load START ---")
         if self.v_locked:
-            #print("--- load ENDA ---")
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
         try:
             data_table = load_dict['data' + Brian2Parameter.IDENTIFIER]
 
-            # Recreate the brain units from the vale as float and unit as string:
-            #print(data_table)
-
-            #value = data_table['object_table']['value'].tolist() if data_table['is_array'] else data_table['object_table']['value'][0]
+            unitstring = data_table['unit'][0]
+            unit = unit_from_expression(unitstring)
             value = data_table['value'][0]
-            unit = eval(data_table['unit'][0])
-            is_array = data_table['is_array'][0]
-            #print("value:"+str(value))
-            #print("unit:"+str(unit))
-            #print("value*unit:"+str(value * unit))
-            if is_array:
-                self._data = value * unit
-            else:
-                self._data = value[0] * unit
-
-            #print(self._data)
+            self._data = value * unit
 
             if 'explored_data' + Brian2Parameter.IDENTIFIER in load_dict:
                 explore_table = load_dict['explored_data' + Brian2Parameter.IDENTIFIER]
 
                 value_col = explore_table['value']
-                explore_list = []
-                for value in value_col:
-                    brian_quantity = value * unit
-                    explore_list.append(brian_quantity)
+                explore_list = [value * unit for value in value_col]
 
                 self._explored_range = tuple(explore_list)
                 self._explored = True
@@ -316,5 +127,305 @@ class Brian2Parameter(Parameter):
 
         self._default = self._data
         self._locked = True
-        #print("--- load ENDB ---")
-    '''
+
+
+class Brian2Result(Result):
+    """ A result class that can handle BRIAN2 quantities.
+
+    Note that only scalar BRIAN2 quantities are supported, lists, tuples or dictionaries
+    of BRIAN2 quantities cannot be handled.
+
+    Supports also all data supported by the standard :class:`~pypet.parameter.Result`.
+
+    """
+
+    IDENTIFIER = Brian2Parameter.IDENTIFIER
+    ''' Identifier String to label brian result '''
+
+    __slots__ = ()
+
+    def __init__(self, full_name, *args, **kwargs):
+        super(Brian2Result, self).__init__(full_name, *args, **kwargs)
+
+
+    def f_set_single(self, name, item):
+        if Brian2Result.IDENTIFIER in name:
+            raise AttributeError('Your result name contains the identifier for brian data,'
+                                 ' please do not use %s in your result names.' %
+                                 Brian2Result.IDENTIFIER)
+        else:
+            super(Brian2Result, self).f_set_single(name, item)
+
+    def _supports(self, data):
+        """ Simply checks if data is supported """
+        if isinstance(data, Quantity):
+            return True
+        elif super(Brian2Result, self)._supports(data):
+            return True
+        return False
+
+    def _values_of_same_type(self, val1, val2):
+
+        if isinstance(val1, Quantity):
+            try:
+                if not val1.has_same_dimensions(val2):
+                    return False
+            except TypeError:
+                return False
+
+        elif isinstance(val2, Quantity):
+            try:
+                if not val2.has_same_dimensions(val1):
+                    return False
+            except TypeError:
+                return False
+
+        elif not super(Brian2Result, self)._values_of_same_type(val1, val2):
+            return False
+
+        return True
+
+    def _store(self):
+
+        store_dict = {}
+
+        for key in self._data:
+            val = self._data[key]
+            if isinstance(val, Quantity):
+                unit = get_unit_fast(val)
+                value = val/unit
+                # Potentially the results are very big in contrast to small parameters
+                # Accordingly, an ObjectTable might not be the best choice after all for a result
+                if isinstance(val, np.ndarray) and len(val.shape) == 0:
+                    # Convert 0-dimensional arrays to regular numpy floats
+                    value = np.float(value)
+                store_dict[key + Brian2Result.IDENTIFIER + 'value'] = value
+                store_dict[key + Brian2Result.IDENTIFIER + 'unit'] = repr(unit)
+
+            else:
+                store_dict[key] = val
+
+        return store_dict
+
+    def _load(self, load_dict):
+
+        for key in load_dict:
+            if Brian2Result.IDENTIFIER in key:
+
+                new_key = key.split(Brian2Result.IDENTIFIER)[0]
+
+                if new_key in self._data:
+                    # We already extracted the unit/value pair
+                    continue
+
+                # Recreate the brain units from the vale as float and unit as string:
+                unitstring = load_dict[new_key + Brian2Result.IDENTIFIER + 'unit']
+                unit = unit_from_expression(unitstring)
+                value = load_dict[new_key + Brian2Result.IDENTIFIER +'value']
+                self._data[new_key] = value * unit
+            else:
+                self._data[key] = load_dict[key]
+
+
+class Brian2MonitorResult(Brian2Result):
+    """ A Result class that supports BRIAN2 monitors.
+
+    Monitor attributes are extracted and added as results with the attribute names.
+    Note the original monitors are NOT stored, only their attribute/property values are kept.
+
+    Add monitor on `__init__` via `monitor=` or via `f_set(monitor=brian_monitor)`
+
+    **IMPORTANT**: You can only use 1 result per monitor. Otherwise a 'TypeError' is thrown.
+
+
+    Example:
+
+    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor',
+                                            monitor=SpikeMonitor(...),
+                                            storage_mode='TABLE',
+                                            comment='Im a SpikeMonitor Example!')
+    >>> brian_result.num_spikes
+    1337
+
+
+    Following monitors are supported and the following values are extraced:
+
+    * PopulationRateMonitor
+
+        * t
+
+            The times of the bins.
+
+        * rate
+
+            An array of rates in Hz
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+
+    * SpikeMonitor
+
+        * t
+
+            The times of the spikes
+
+        * i
+
+            The neuron indices of the spikes
+
+        * num_spikes
+
+            Total number of spikes
+
+        * record_variables
+
+            If variables are recorded at spike time, this is the list of their names
+
+        * ``varname``
+
+            Array of variable recorded at spike time
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+
+    * StateMonitor
+
+        * t
+
+            Recording times
+
+        * record_variables
+
+            List of recorded variable names
+
+        * ``varname``
+
+            Array of variable recorded
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+    """
+
+    __slots__ = ('_monitor_type',)
+
+    def __init__(self, full_name, *args, **kwargs):
+        self._monitor_type = None
+        super(Brian2MonitorResult, self).__init__(full_name, *args, **kwargs)
+
+    def _store(self):
+        store_dict = super(Brian2MonitorResult, self)._store()
+
+        if self._monitor_type is not None:
+            store_dict['monitor_type'] = self._monitor_type
+
+        return store_dict
+
+    def _load(self, load_dict):
+        if 'monitor_type' in load_dict:
+            self._monitor_type = load_dict.pop('monitor_type')
+        super(Brian2MonitorResult, self)._load(load_dict)
+
+    @property
+    def v_monitor_type(self):
+        """ The type of the stored monitor. Each MonitorResult can only manage a single Monitor.
+        """
+        return self._monitor_type
+
+    def f_set_single(self, name, item):
+        """ To add a monitor use `f_set_single('monitor', brian_monitor)`.
+
+        Otherwise `f_set_single` works similar to :func:`~pypet.parameter.Result.f_set_single`.
+        """
+        if type(item) in [SpikeMonitor, StateMonitor, PopulationRateMonitor]:
+            if self.v_stored:
+                self._logger.warning('You are changing an already stored result. If '
+                                     'you not explicitly overwrite the data on disk, '
+                                     'this change might be lost and not propagated to disk.')
+
+            self._extract_monitor_data(item)
+        else:
+            super(Brian2MonitorResult, self).f_set_single(name, item)
+
+    def _extract_monitor_data(self, monitor):
+
+        if self._monitor_type is not None:
+            raise TypeError('Your result `%s` already extracted data from a `%s` monitor.'
+                             ' Please use a new empty result for a new monitor.')
+
+        self._monitor_type = monitor.__class__.__name__
+
+        if isinstance(monitor, SpikeMonitor):
+            self._extract_spike_monitor(monitor)
+
+        elif isinstance(monitor, StateMonitor):
+            self._extract_state_monitor(monitor)
+
+        elif isinstance(monitor, PopulationRateMonitor):
+            self._extract_population_rate_monitor(monitor)
+
+        else:
+            raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
+
+    def _extract_state_monitor(self, monitor):
+
+        self.f_set(record_variables=monitor.record_variables)
+        self.f_set(record=monitor.record)
+        self.f_set(when=monitor.when)
+        self.f_set(source=str(monitor.source))
+        self.f_set(name=monitor.name)
+
+        times=np.array(monitor.t[:])
+        if len(times) > 0:
+            self.f_set(t=times)
+
+            for varname in monitor.record_variables:
+                val = getattr(monitor, varname)
+                self.f_set(**{varname: val})
+
+    def _extract_spike_monitor(self, monitor):
+
+        self.f_set(source=str(monitor.source))
+        self.f_set(num_spikes=monitor.num_spikes)
+        self.f_set(when=monitor.when)
+        self.f_set(name=monitor.name)
+
+        if len(monitor.record_variables) > 0:
+            self.f_set(record_variables=monitor.record_variables)
+
+        times = monitor.t[:]
+
+        if len(times) > 0:
+            self.f_set(t=times)
+            self.f_set(i=monitor.i[:])
+
+            for varname in monitor.record_variables:
+                val = getattr(monitor, varname)
+                self.f_set(**{varname: val[:]})
+
+    def _extract_population_rate_monitor(self, monitor):
+
+        times = monitor.t[:]
+        self.f_set(source=str(monitor.source))
+        self.f_set(name=monitor.name)
+
+        if len(times) > 0:
+            self.f_set(t=times)
+            self.f_set(rate=monitor.rate[:])

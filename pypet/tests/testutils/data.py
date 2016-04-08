@@ -312,12 +312,16 @@ class TrajectoryComparator(unittest.TestCase):
 
         trajlength = len(traj1)
 
-        if 'results.runs' in traj1:
-            rungroups = traj1.results.runs.f_children()
-        else:
-            rungroups = 1
+        if traj1.f_get_run_information(0)['completed']:
 
-        self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
+            # We need this fix in case the trajectory was never run
+            # thus it does not contain any run groups but still has a length
+            if 'results.runs' in traj1:
+                rungroups = traj1.results.runs.f_children()
+            else:
+                rungroups = 1
+
+            self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
 
         old_items = to_dict_wo_config(traj1)
         new_items = to_dict_wo_config(traj2)

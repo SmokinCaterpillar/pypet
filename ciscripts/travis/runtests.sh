@@ -10,11 +10,11 @@ if [[ $TEST_SUITE == ON ]]
                 # try with many files, i.e. do not remove data after every test
                 # but only for one particular setting of the test matrix python = 2.7 and newest
                 # packages
-                echo "Running test suite and keeping all files"
-                python ../../pypet/tests/all_tests.py -k
+                echo "Running henri test suite and keeping all files"
+                python ../../pypet/tests/all_henri_tests.py -k
             else
-                echo "Running test suite"
-                python ../../pypet/tests/all_tests.py
+                echo "Running henri test suite"
+                python ../../pypet/tests/all_henri_tests.py
             fi
     fi
 
@@ -66,7 +66,7 @@ if [[ $GIT_TEST == ON ]]
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --source=pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py ./pypet/tests/coverage_run.py
+        coverage run --parallel-mode --source=pypet --include=*/pypet/brian2/* ./pypet/tests/henri_coverage_run.py
         coverage combine
         coveralls --verbose
         cd ciscripts/travis
