@@ -94,4 +94,5 @@ branches:
     - develop
     - master
     - removing_lazy_adding
+    - brian2
 
