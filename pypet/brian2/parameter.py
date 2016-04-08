@@ -46,7 +46,7 @@ def unit_from_expression(expr):
     elif expr.__class__ is ast.UnaryOp:
         op = expr.op.__class__.__name__
         operand = unit_from_expression(expr.operand)
-        if op=='USub' or op=='Sub':
+        if op=='USub':
             return -operand
         else:
             raise SyntaxError("Unsupported operation "+op)
@@ -54,8 +54,10 @@ def unit_from_expression(expr):
         op = expr.op.__class__.__name__
         left = unit_from_expression(expr.left)
         right = unit_from_expression(expr.right)
-        if op=='Add' or op=='Sub':
+        if op=='Add':
             u = left+right
+        elif op=='Sub':
+            u = left-right
         elif op=='Mult':
             u = left*right
         elif op=='Div':
