@@ -1,26 +1,49 @@
+"""Module containing results and parameters that can be used to store `BRIAN2 data`_.
+
+Parameters handling BRIAN2 data are instantiated by the
+:class:`~pypet.brian.parameter.Brian2Parameter` class for any BRIAN2 Quantity.
+
+The :class:`~pypet.brian.parameter.Brian2Result` can store BRIAN2 Quantities
+and the :class:`~pypet.brian.parameter.Brian2MonitorResult` extracts data from
+BRIAN2 Monitors.
+
+.. _`BRIAN2 data`: http://brian2.readthedocs.org/
+
+"""
+
+
 __author__ = ['Henri Bunting', 'Robert Meyer']
 
-# import brian2
-import brian2.numpy_ as np
-import pandas as pd
-from pypet.parameter import Parameter, Result, ObjectTable
-from brian2.units.fundamentalunits import Quantity, get_unit_fast
-from pypet.utils.helpful_classes import HashArray
-#from pypet.tests.testutils.ioutils import get_root_logger
-#from brian2.units.fundamentalunits import is_dimensionless, get_dimensions
-#from brian2.core.variables import get_value_with_unit
 
+import brian2.numpy_ as np
+from brian2.units.fundamentalunits import Quantity, get_unit_fast
 from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
+import brian2.units.allunits as allunits
 
 import pypet.pypetexceptions as pex
+from pypet.parameter import Parameter, Result, ObjectTable
 
-try:
-    from brian2.units.allunits import *
-except TypeError:
-    pass
+
+
+def unit_from_expression(expr):
+    """Takes a unit string like ``'1. * volt'`` and return the BRIAN2 unit."""
+    if expr == '1':
+        return Quantity(1)
+    unitstr = expr.split(' * ')[1]
+    unit = getattr(allunits, unitstr)
+    return unit
+
 
 
 class Brian2Parameter(Parameter):
+    """A Parameter class that supports BRIAN2 Quantities.
+
+    Note that only scalar BRIAN2 quantities are supported, lists, tuples or dictionaries
+    of BRIAN2 quantities cannot be handled.
+
+    Supports data for the standard :class:`~pypet.parameter.Parameter`, too.
+
+    """
 
     IDENTIFIER = '__brn2__'
     ''' Identification string stored into column title of hdf5 table'''
@@ -85,7 +108,8 @@ class Brian2Parameter(Parameter):
         try:
             data_table = load_dict['data' + Brian2Parameter.IDENTIFIER]
 
-            unit = eval(data_table['unit'][0])
+            unitstring = data_table['unit'][0]
+            unit = unit_from_expression(unitstring)
             value = data_table['value'][0]
             self._data = value * unit
 
@@ -105,8 +129,15 @@ class Brian2Parameter(Parameter):
         self._locked = True
 
 
-
 class Brian2Result(Result):
+    """ A result class that can handle BRIAN2 quantities.
+
+    Note that only scalar BRIAN2 quantities are supported, lists, tuples or dictionaries
+    of BRIAN2 quantities cannot be handled.
+
+    Supports also all data supported by the standard :class:`~pypet.parameter.Result`.
+
+    """
 
     IDENTIFIER = Brian2Parameter.IDENTIFIER
     ''' Identifier String to label brian result '''
@@ -188,7 +219,8 @@ class Brian2Result(Result):
                     continue
 
                 # Recreate the brain units from the vale as float and unit as string:
-                unit = eval(load_dict[new_key + Brian2Result.IDENTIFIER + 'unit'])
+                unitstring = load_dict[new_key + Brian2Result.IDENTIFIER + 'unit']
+                unit = unit_from_expression(unitstring)
                 value = load_dict[new_key + Brian2Result.IDENTIFIER +'value']
                 self._data[new_key] = value * unit
             else:
@@ -196,6 +228,101 @@ class Brian2Result(Result):
 
 
 class Brian2MonitorResult(Brian2Result):
+    """ A Result class that supports BRIAN2 monitors.
+
+    Monitor attributes are extracted and added as results with the attribute names.
+    Note the original monitors are NOT stored, only their attribute/property values are kept.
+
+    Add monitor on `__init__` via `monitor=` or via `f_set(monitor=brian_monitor)`
+
+    **IMPORTANT**: You can only use 1 result per monitor. Otherwise a 'TypeError' is thrown.
+
+
+    Example:
+
+    >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor',
+                                            monitor=SpikeMonitor(...),
+                                            storage_mode='TABLE',
+                                            comment='Im a SpikeMonitor Example!')
+    >>> brian_result.num_spikes
+    1337
+
+
+    Following monitors are supported and the following values are extraced:
+
+    * PopulationRateMonitor
+
+        * t
+
+            The times of the bins.
+
+        * rate
+
+            An array of rates in Hz
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+
+    * SpikeMonitor
+
+        * t
+
+            The times of the spikes
+
+        * i
+
+            The neuron indices of the spikes
+
+        * num_spikes
+
+            Total number of spikes
+
+        * record_variables
+
+            If variables are recorded at spike time, this is the list of their names
+
+        * ``varname``
+
+            Array of variable recorded at spike time
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+
+    * StateMonitor
+
+        * t
+
+            Recording times
+
+        * record_variables
+
+            List of recorded variable names
+
+        * ``varname``
+
+            Array of variable recorded
+
+        * source
+
+            String representation of source
+
+        * name
+
+            The name of the monitor
+
+    """
 
     __slots__ = ('_monitor_type',)
 
@@ -263,6 +390,7 @@ class Brian2MonitorResult(Brian2Result):
         self.f_set(record=monitor.record)
         self.f_set(when=monitor.when)
         self.f_set(source=str(monitor.source))
+        self.f_set(name=monitor.name)
 
         times=np.array(monitor.t[:])
         if len(times) > 0:
@@ -277,6 +405,10 @@ class Brian2MonitorResult(Brian2Result):
         self.f_set(source=str(monitor.source))
         self.f_set(num_spikes=monitor.num_spikes)
         self.f_set(when=monitor.when)
+        self.f_set(name=monitor.name)
+
+        if len(monitor.record_variables) > 0:
+            self.f_set(record_variables=monitor.record_variables)
 
         times = monitor.t[:]
 
@@ -292,6 +424,8 @@ class Brian2MonitorResult(Brian2Result):
 
         times = monitor.t[:]
         self.f_set(source=str(monitor.source))
+        self.f_set(name=monitor.name)
+
         if len(times) > 0:
             self.f_set(t=times)
             self.f_set(rate=monitor.rate[:])

@@ -30,6 +30,7 @@ class Brian2MonitorTest(ResultTest):
     def check_spike_monitor(self, res, monitor):
         self.assertTrue(comp.nested_equal(monitor.num_spikes, res.num_spikes))
         self.assertTrue(comp.nested_equal(str(monitor.source), res.source))
+        self.assertEqual(monitor.name,res.name)
         self.assertTrue(comp.nested_equal(monitor.t[:], res.t))
         self.assertTrue(comp.nested_equal(monitor.i[:], res.i))
         for idx, varname in enumerate(monitor.record_variables):
@@ -39,6 +40,7 @@ class Brian2MonitorTest(ResultTest):
 
     def check_state_monitor(self, res, monitor):
         self.assertEqual(monitor.record_variables, res.record_variables)
+        self.assertEqual(monitor.name,res.name)
 
         times=np.array(monitor.t)
         if len(times)>0:
@@ -54,6 +56,7 @@ class Brian2MonitorTest(ResultTest):
 
     def check_population_rate_monitor(self, res, monitor):
         self.assertEqual(str(monitor.source),res.source)
+        self.assertEqual(monitor.name,res.name)
         #self.assertTrue(comp.nested_equal(monitor._bin,res.bin))
         self.assertTrue(comp.nested_equal(monitor.rate[:],res.rate))
         self.assertTrue(comp.nested_equal(monitor.t[:],res.t))

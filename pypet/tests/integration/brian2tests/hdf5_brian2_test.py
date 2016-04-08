@@ -69,6 +69,8 @@ class Brian2hdf5Test(TrajectoryComparator):
         traj.f_add_result('nested_array', np.array([[6.,7.,8.],[9.,10.,11.]]) * ms)
         traj.f_add_result('b2a', np.array([1., 2.]) * mV)
 
+        traj.f_add_result('nounit', Quantity(np.array([[6.,7.,8.],[9.,10.,11.]])))
+
         traj.f_store()
 
         traj2 = load_trajectory(filename=file_name, name=traj_name, dynamic_imports=[Brian2Result], load_data=2)
