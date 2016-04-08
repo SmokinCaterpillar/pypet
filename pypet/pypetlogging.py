@@ -3,6 +3,12 @@
 __author__ = 'Robert Meyer'
 
 try:
+    # Python3
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
+try:
     import ConfigParser as cp
 except ImportError:
     import configparser as cp
@@ -27,10 +33,12 @@ import ast
 import copy
 import multiprocessing as multip
 import functools
+import socket
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
-from pypet.utils.helpful_functions import progressbar
+from pypet.utils.helpful_functions import progressbar, racedirs
+from pypet.utils.decorators import retry
 from pypet.slots import HasSlots
 
 
@@ -38,6 +46,8 @@ FILENAME_INDICATORS = set([pypetconstants.LOG_ENV,
                            pypetconstants.LOG_PROC,
                            pypetconstants.LOG_TRAJ,
                            pypetconstants.LOG_RUN,
+                           pypetconstants.LOG_HOST,
+                           pypetconstants.LOG_SET,
                            '.log',
                            '.txt'])
 """Set of strings that mark a log file"""
@@ -85,16 +95,18 @@ LOGGING_DICT = {
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
-                                                        pypetconstants.LOG_PROC))
+                                     '%s_%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
+                                                           pypetconstants.LOG_HOST,
+                                                           pypetconstants.LOG_PROC))
         },
         'file_error': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
-                                                          pypetconstants.LOG_PROC)),
+                                     '%s_%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
+                                                             pypetconstants.LOG_HOST,
+                                                             pypetconstants.LOG_PROC)),
             'level': 'ERROR'
         }
     }
@@ -104,9 +116,12 @@ LOGGING_DICT = {
 
 def _change_logging_kwargs(kwargs):
     """ Helper function to turn the simple logging kwargs into a `log_config`."""
+    log_levels = kwargs.pop('log_level', None)
     log_folder = kwargs.pop('log_folder', 'logs')
     logger_names = kwargs.pop('logger_names', '')
-    log_levels = kwargs.pop('log_levels', logging.INFO)
+    if log_levels is None:
+        log_levels = kwargs.pop('log_levels', logging.INFO)
+    log_multiproc = kwargs.pop('log_multiproc', True)
 
     if not isinstance(logger_names, (tuple, list)):
         logger_names = [logger_names]
@@ -117,9 +132,16 @@ def _change_logging_kwargs(kwargs):
 
     # We don't want to manipulate the original dictionary
     dictionary = copy.deepcopy(LOGGING_DICT)
+    prefixes = ['']
+    if not log_multiproc:
+        for key in compat.listkeys(dictionary):
+            if key.startswith('multiproc_'):
+                del dictionary[key]
+    else:
+        prefixes.append('multiproc_')
 
     # Add all handlers to all loggers
-    for prefix in ('', 'multiproc_'):
+    for prefix in prefixes:
         for handler_dict in dictionary[prefix + 'handlers'].values():
             if 'filename' in handler_dict:
                 filename = os.path.join(log_folder, handler_dict['filename'])
@@ -138,7 +160,8 @@ def _change_logging_kwargs(kwargs):
 
 def use_simple_logging(kwargs):
     """Checks if simple logging is requested"""
-    return any([x in kwargs for x in ('log_folder', 'logger_names', 'log_levels')])
+    return any([x in kwargs for x in ('log_folder', 'logger_names',
+                                      'log_levels', 'log_multiproc', 'log_level')])
 
 
 def simple_logging_config(func):
@@ -170,15 +193,29 @@ def try_make_dirs(filename):
 
     """
     try:
-        dirname = os.path.dirname(filename)
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname)
+        dirname = os.path.dirname(os.path.normpath(filename))
+        racedirs(dirname)
     except Exception as exc:
         sys.stderr.write('ERROR during log config file handling, could not create dirs for '
                          'filename `%s` because of: %s' % (filename, repr(exc)))
 
 
-def rename_log_file(traj, filename, process_name=None):
+def get_strings(args):
+    """Returns all valid python strings inside a given argument string."""
+    string_list = []
+    for elem in ast.walk(ast.parse(args)):
+        if isinstance(elem, ast.Str):
+            string_list.append(elem.s)
+    return string_list
+
+
+def rename_log_file(filename, trajectory=None,
+                    env_name=None,
+                    traj_name=None,
+                    set_name=None,
+                    run_name=None,
+                    process_name=None,
+                    host_name=None):
     """ Renames a given `filename` with valid wildcard placements.
 
     :const:`~pypet.pypetconstants.LOG_ENV` ($env) is replaces by the name of the
@@ -196,42 +233,51 @@ def rename_log_file(traj, filename, process_name=None):
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
     current process.
 
-    :param traj:  A trajectory container
+    :const:`~pypet.pypetconstant.LOG_HOST` ($host) is replaced by the name of the current host.
+
     :param filename:  A filename string
+    :param traj:  A trajectory container, leave `None` if you provide all the parameters below
+    :param env_name: Name of environemnt, leave `None` to get it from `traj`
+    :param traj_name: Name of trajectory, leave `None` to get it from `traj`
+    :param set_name: Name of run set, leave `None` to get it from `traj`
+    :param run_name: Name of run, leave `None` to get it from `traj`
     :param process_name:
 
         The name of the desired process. If `None` the name of the current process is
         taken determined by the multiprocessing module.
 
+    :param host_name:
+
+        Name of host, leave `None` to determine it automatically with the platform module.
+
     :return: The new filename
 
     """
     if pypetconstants.LOG_ENV in filename:
-        env_name = traj.v_environment_name
+        if env_name is None:
+            env_name = trajectory.v_environment_name
         filename = filename.replace(pypetconstants.LOG_ENV, env_name)
     if pypetconstants.LOG_TRAJ in filename:
-        traj_name = traj.v_name
+        if traj_name is None:
+            traj_name = trajectory.v_name
         filename = filename.replace(pypetconstants.LOG_TRAJ, traj_name)
     if pypetconstants.LOG_RUN in filename:
-        run_name = traj.f_wildcard('$')
+        if run_name is None:
+            run_name = trajectory.f_wildcard('$')
         filename = filename.replace(pypetconstants.LOG_RUN, run_name)
     if pypetconstants.LOG_SET in filename:
-        set_name = traj.f_wildcard('$set')
+        if set_name is None:
+            set_name = trajectory.f_wildcard('$set')
         filename = filename.replace(pypetconstants.LOG_SET, set_name)
     if pypetconstants.LOG_PROC in filename:
         if process_name is None:
-            process_name = multip.current_process().name
+            process_name = multip.current_process().name + '-' + str(os.getpid())
         filename = filename.replace(pypetconstants.LOG_PROC, process_name)
+    if pypetconstants.LOG_HOST in filename:
+        if host_name is None:
+            host_name = socket.getfqdn().replace('.', '-')
+        filename = filename.replace(pypetconstants.LOG_HOST, host_name)
     return filename
-
-
-def get_strings(args):
-    """Returns all valid python strings inside a given argument string."""
-    string_list = []
-    for elem in ast.walk(ast.parse(args)):
-        if isinstance(elem, ast.Str):
-            string_list.append(elem.s)
-    return string_list
 
 
 class HasLogger(HasSlots):
@@ -301,9 +347,8 @@ class LoggingManager(object):
         How to report progress.
 
     """
-    def __init__(self, trajectory=None, log_config=None, log_stdout=False,
+    def __init__(self, log_config=None, log_stdout=False,
                  report_progress=False):
-        self.trajectory = trajectory
         self.log_config = log_config
         self._sp_config = None
         self._mp_config = None
@@ -312,7 +357,20 @@ class LoggingManager(object):
         self._tools = []
         self._null_handler = NullHandler()
         self._format_string = 'PROGRESS: Finished %d/%d runs '
+        self._stdout_to_logger = None
+
+        self.env_name = None
+        self.traj_name = None
+        self.set_name = None
+        self.run_name = None
         # Format string for the progressbar
+
+    def extract_replacements(self, trajectory):
+        """Extracts the wildcards and file replacements from the `trajectory`"""
+        self.env_name = trajectory.v_environment_name
+        self.traj_name = trajectory.v_name
+        self.set_name =  trajectory.f_wildcard('$set')
+        self.run_name = trajectory.f_wildcard('$')
 
     def __getstate__(self):
         """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
@@ -331,7 +389,7 @@ class LoggingManager(object):
             else:
                 logger = logging.getLogger(logger_name)
 
-            if n == 0:
+            if n == -1:
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
                 self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '
@@ -507,7 +565,11 @@ class LoggingManager(object):
         parser = NoInterpolationParser()
         parser.readfp(log_config)
 
-        rename_func = lambda string: rename_log_file(self.trajectory, string)
+        rename_func = lambda string: rename_log_file(string,
+                                                     env_name=self.env_name,
+                                                     traj_name=self.traj_name,
+                                                     set_name=self.set_name,
+                                                     run_name=self.run_name)
 
         sections = parser.sections()
         for section in sections:
@@ -528,7 +590,11 @@ class LoggingManager(object):
         for key in log_config.keys():
             if key == 'filename':
                 filename = log_config[key]
-                filename = rename_log_file(self.trajectory, filename)
+                filename = rename_log_file(filename,
+                                           env_name=self.env_name,
+                                           traj_name=self.traj_name,
+                                           set_name=self.set_name,
+                                           run_name=self.run_name)
                 new_dict[key] = filename
                 try_make_dirs(filename)
             elif isinstance(log_config[key], dict):
@@ -542,8 +608,8 @@ class LoggingManager(object):
         """Creates logging handlers and redirects stdout."""
 
         log_stdout = self.log_stdout
-        if multiproc and hasattr(os, 'fork'):
-            # If we allow forking and it is possible we already have a redirection of stdout
+        if sys.stdout is self._stdout_to_logger:
+            # If we already redirected stdout we don't neet to redo it again
             log_stdout = False
 
         if self.log_config:
@@ -574,6 +640,7 @@ class LoggingManager(object):
         for tool in self._tools:
             tool.finalize()
         self._tools = []
+        self._stdout_to_logger = None
         for config in (self._sp_config, self._mp_config):
             if hasattr(config, 'close'):
                 config.close()
@@ -594,7 +661,7 @@ class NoInterpolationParser(cp.ConfigParser):
             cp.ConfigParser.__init__(self)
 
 
-class DisableLogger(object):
+class DisableAllLogging(object):
     """Context Manager that disables logging"""
 
     def __enter__(self):
@@ -655,3 +722,33 @@ class StdoutToLogger(HasLogger):
             self._redirection = False
             self._original_steam = None
 
+
+# class PypetTestFileHandler(logging.FileHandler):
+#     """Takes care that data is flushed using fsync"""
+#     def flush(self):
+#         """
+#         Flushes the stream.
+#         """
+#         self.acquire()
+#         try:
+#             if self.stream and hasattr(self.stream, "flush"):
+#                 self.stream.flush()
+#                 try:
+#                     os.fsync(self.stream.fileno())
+#                 except OSError:
+#                     pass
+#         finally:
+#             self.release()
+#
+#     @retry(9, FileNotFoundError, 0.01, 'pypet.retry')
+#     def _open(self):
+#         try:
+#             return logging.FileHandler._open(self)
+#         except FileNotFoundError:
+#             old_mode = self.mode
+#             try:
+#                 self.mode = 'w'
+#                 try_make_dirs(self.baseFilename)
+#                 return logging.FileHandler._open(self)
+#             finally:
+#                 self.mode = old_mode

@@ -90,7 +90,7 @@ def find_unique_points(explored_parameters):
         containing the run position of the unique combination.
 
     """
-    ranges = [param.f_get_range() for param in explored_parameters]
+    ranges = [param.f_get_range(copy=False) for param in explored_parameters]
     zipped_tuples = list(zip(*ranges))
     try:
         unique_elements = OrderedDict()

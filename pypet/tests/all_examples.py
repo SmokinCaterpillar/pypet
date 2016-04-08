@@ -20,12 +20,15 @@ system = platform.system()
 print('*** Running under %s ***' % str(system))
 
 to_skip = set()
+to_skip.add('21')
 if brian is None:
     to_skip.add('07')
     to_skip.add('11')
 if system == 'Windows':
     # Appveyor is too slow for this example, so we skip it
     to_skip.add('13')
+    to_skip.add('19')
+    to_skip.add('20')
 
 if len(to_skip) == 0:
     print ('----- I will run all tests -----')
@@ -84,7 +87,8 @@ def main():
     os.chdir(os.path.join('..','..','examples'))
     sys.path.append(os.getcwd())
     simple_examples = glob.glob('*.py')
-    assert len(simple_examples) == 15 + 1
+    assert len(simple_examples) == 22 - 4 + 1 + 2
+    # + Number of Examples - Number of Packages +  __init__.py + 19b and 19c
 
     for simple_example in simple_examples:
         if simple_example == '__init__':

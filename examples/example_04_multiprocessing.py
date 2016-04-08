@@ -36,10 +36,15 @@ def main():
                       ncores=4,
                       use_pool=True,  # Our runs are inexpensive we can get rid of overhead
                       # by using a pool
-                      wrap_mode=pypetconstants.WRAP_MODE_QUEUE)
+                      freeze_input=True,  # We can avoid some
+                      # overhead by freezing the input to the pool
+                      wrap_mode=pypetconstants.WRAP_MODE_QUEUE,
+                      graceful_exit=True,  # We want to exit in a data friendly way
+                      # that safes all results after hitting CTRL+C, try it ;-)
+                      overwrite_file=True)
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='I am the first dimension!')
@@ -47,13 +52,13 @@ def main():
 
     # Explore the parameters with a cartesian product, but we want to explore a bit more
     traj.f_explore(cartesian_product({'x':[float(x) for x in range(20)],
-                                      'y':[float(y) for y in range(12)]}))
+                                      'y':[float(y) for y in range(20)]}))
 
     # Run the simulation
-    env.f_run(multiply)
+    env.run(multiply)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

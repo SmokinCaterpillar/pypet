@@ -62,8 +62,10 @@ Main Features
 
 * Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
-* **Analyse** your data on-the-fly during multiprocessing for adaptive
-  exploration of the parameter space
+* **Analyse** your data on-the-fly during multiprocessing
+
+* **Adaptively** explore the parameter space combining *pypet* with optimization
+  tools like the evolutionary algorithms framework DEAP_
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
@@ -76,6 +78,9 @@ Main Features
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
   Sumatra_
 
+* *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
+  the `SCOOP framework`_
+
 
 ===============
 Getting Started
@@ -85,7 +90,7 @@ Getting Started
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_ and
+Python 2.6, 2.7, 3.3, 3.4, or 3.5 [#pythonversion]_, and
 
 * numpy_ >= 1.6.1
 
@@ -93,7 +98,7 @@ Python 2.6, 2.7, 3.3, 3.4 [#pythonversion]_ and
 
 * tables_ >= 2.3.1
 
-* pandas_ >= 0.12.0 [#pandasversion]_
+* pandas_ >= 0.14.1
 
 * HDF5_ >= 1.8.9
 
@@ -106,6 +111,15 @@ If you use Python 2.6 you also need
 * logutils_ >= 0.3.3
 
 * unittest2_
+
+
+^^^^^^^^^^^^^^^^^
+Optional Packages
+^^^^^^^^^^^^^^^^^
+
+If you want to combine *pypet* with the `SCOOP framework`_ you need
+
+* scoop_ >= 0.7.1
 
 For git integration you additionally need
 
@@ -121,24 +135,13 @@ To utilize the continuing of crashed trajectories you need
 
 Automatic sumatra records are supported for
 
-* Sumatra_ >= 0.6.0
+* Sumatra_ >= 0.7.1
 
 .. rubric:: Footnotes
 
 .. [#pythonversion]
 
     *pypet* might also work under Python 3.0-3.2 but has not been tested.
-
-.. [#pandasversion]
-
-    Preferably use pandas 0.14.1 or higher or 0.12.0 since there are some
-    upcasting issues with version 0.13.x (see https://github.com/pydata/pandas/issues/6526/).
-    *pypet* works under 0.13.x but not all features are fully supported.
-    For instance, these upcasting issues may prevent you from storing
-    Trajectories containing ArrayParameters to disk.
-    These unwanted upcastings did not happen in previous pandas versions and will be, or more
-    precisely, have already been removed in the next pandas version.
-    So please up or downgrade your pandas distribution if your current installation is 0.13.x.
 
 
 -------
@@ -291,7 +294,7 @@ Let's take a look at the snippet at once:
                       large_overview_tables=True)
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
@@ -301,10 +304,10 @@ Let's take a look at the snippet at once:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 And now let's go through it one by one. At first, we have a job to do, that is multiplying
@@ -362,12 +365,12 @@ You can pass many more (or less) arguments
 if you like, check out :ref:`more-on-environment` and :class:`~pypet.environment.Environment`
 for a complete list.
 The environment will automatically generate a trajectory for us which we can access via
-the property ``v_trajectory``.
+the property ``trajectory``.
 
 .. code-block:: python
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
@@ -404,7 +407,7 @@ combinations.
 .. code-block:: python
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 
 Usually, if you let *pypet* manage logging for you, it is a good idea in the end to tell
@@ -413,7 +416,7 @@ the environment to stop logging and close all log files.
 .. code-block:: python
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
@@ -427,7 +430,6 @@ we can find our *trajectory* containing all parameters and results.
 Here you can see the summarizing overview table discussed above.
 
 .. image:: /figures/example_01.png
-
 
 ^^^^^^^^^^^^
 Loading Data
@@ -477,6 +479,17 @@ or results. Accordingly, we would add parameters or results to our trajectory
 but they would not contain any data.
 Instead, ``2`` means we want to load the parameters and results including the data they contain.
 
+
+------------------------------------------
+Combining *pypet* with an Existing Project
+------------------------------------------
+
+Of course, you don't need to start from scratch. If you already have a rather sophisticated
+simulation environment and simulator, there are ways to integrate or wrap *pypet* around
+your project. You may want to look at :ref:`wrap-project` and
+example :ref:`example-17` shows you how to do that.
+
+
 So that's it for the start. If you want to know the nitty-gritty details of *pypet* take
 a look at the :ref:`cookbook`. If you are not the type of guy who reads manuals but wants
 hands-on experience, check out the :ref:`tutorial` or the :ref:`theexamples`.
@@ -515,4 +528,11 @@ Cheers,
 .. _unittest2: https://pypi.python.org/pypi/unittest2/1.0.1
 
 .. _logutils: https://pypi.python.org/pypi/logutils
+
+.. _SCOOP framework: http://scoop.readthedocs.org/
+
+.. _scoop: https://pypi.python.org/pypi/scoop/
+
+.. _DEAP: http://deap.readthedocs.org/en/
+
 

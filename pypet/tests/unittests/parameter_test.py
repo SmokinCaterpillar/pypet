@@ -9,6 +9,7 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult, BaseParameter
+from pypet.trajectory import Trajectory
 import pickle
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
@@ -19,22 +20,13 @@ from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
 import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
-from pypet.tests.testutils.ioutils import run_suite, parse_args
+from pypet.tests.testutils.ioutils import run_suite, parse_args, make_temp_dir
+from pypet.tests.testutils.data import TrajectoryComparator
 
 
-class ParameterTest(unittest.TestCase):
+class ParameterTest(TrajectoryComparator):
 
     tags = 'unittest', 'parameter'
-
-    def test_throw_warning_if_stored_and_changed(self):
-        for param in self.param.values():
-            param._stored = True
-
-            with warnings.catch_warnings(record=True) as w:
-                param.f_unlock()
-                if param.f_has_range():
-                    param._shrink()
-                param.f_set(3)
 
     def test_type_error_for_not_supported_data(self):
 
@@ -46,8 +38,40 @@ class ParameterTest(unittest.TestCase):
                 with self.assertRaises(TypeError):
                     param._equal_values(ChainMap(),ChainMap())
 
+    def test_store_load_with_hdf5(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + '.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
 
+        for param in self.param.values():
+            traj.f_add_parameter(param)
 
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
+
+    def test_store_load_with_hdf5_no_data(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + 'nodata.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
+
+        for param in self.param.values():
+            param._data = None
+            traj.f_add_parameter(param)
+
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
 
     def test_type_error_for_exploring_if_range_does_not_match(self):
 
@@ -73,26 +97,9 @@ class ParameterTest(unittest.TestCase):
                     param._explore([12,33])
 
 
-    def test_deprecated_methods_that_have_new_names(self):
-        for param in self.param.values():
-            with warnings.catch_warnings(record=True) as warnings_list:
-                # Cause all warnings to always be triggered.
-                warnings.simplefilter("always")
-                # Trigger a warning.
-                self.assertEqual(param.v_parameter, param.v_is_parameter)
-                self.assertEqual(param.v_leaf, param.v_is_leaf)
-                self.assertEqual(param.f_is_root(), param.v_is_root)
-                self.assertEqual(param.v_fast_accessible, param.f_supports_fast_access())
-                # Verify some things
-                assert len(warnings_list) == 4
-                for warning in warnings_list:
-                    assert issubclass(warning.category, DeprecationWarning)
-                    assert "deprecated" in str(warning.message)
-
-
     def test_equal_values(self):
         for param in self.param.values():
-            self.assertTrue(param._equal_values(param.f_get(),param.f_get()))
+            self.assertTrue(param._equal_values(param.f_get(), param.f_get()))
 
             self.assertFalse(param._equal_values(param.f_get(),23432432432))
 
@@ -156,23 +163,6 @@ class ParameterTest(unittest.TestCase):
                 with self.assertRaises(TypeError):
                      self.assertFalse(param._equal_values(ChainMap(),ChainMap()))
 
-    def test_deprecated_range_methods_that_have_new_names(self):
-        for param in self.param.values():
-            with warnings.catch_warnings(record=True) as warnings_list:
-                # Cause all warnings to always be triggered.
-                warnings.simplefilter("always")
-                # Trigger a warning.
-                self.assertEqual(param.f_is_array(), param.f_has_range())
-                if param.f_has_range():
-                    self.assertEqual(id(param.f_get_array()),id(param.f_get_range()))
-                # Verify some things
-                assert len(warnings_list) == 1 or len(warnings_list)==2
-                for warning in warnings_list:
-                    assert issubclass(warning.category, DeprecationWarning)
-                    assert "deprecated" in str(warning.message)
-
-
-
     def test_meta_settings(self):
         for key, param in self.param.items():
             self.assertEqual(param.v_full_name, self.location+'.'+key)
@@ -200,8 +190,12 @@ class ParameterTest(unittest.TestCase):
         self.data['npbool']= np.array([True,False, True])
         self.data['npstr'] = np.array(['Uno', 'Dos', 'Tres'])
         self.data['npint'] = np.array([1,2,3])
+        self.data['alist'] = [1,2,3,4]
+        self.data['atuple'] = (1,2,3,4)
 
         self.location = 'MyName.Is.myParam'
+
+        self.dynamic_imports = []
 
 
         self.make_params()
@@ -255,14 +249,16 @@ class ParameterTest(unittest.TestCase):
         self.explore_dict=cartesian_product({'npstr':[np.array(['Uno', 'Dos', 'Tres']),
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
-                           'val0':[1,2,3]})
+                           'val0':[1,2,3], 'alist':[[1,2,3,4],[3,4,5,6]]})
 
         ## Explore the parameter:
         for key, vallist in self.explore_dict.items():
+            old_data = self.param[key]._data
+            self.param[key]._data = None
+            with self.assertRaises(TypeError):
+                self.param[key]._explore(vallist)
+            self.param[key]._data = old_data
             self.param[key]._explore(vallist)
-
-
-
 
     def test_the_insertion_made_implicetly_in_setUp(self):
         for key, val in self.data.items():
@@ -348,7 +344,7 @@ class ParameterTest(unittest.TestCase):
             param.f_unlock()
             param.f_empty()
 
-            param = constructor('')
+            param = constructor('', 42)
 
             param._load(store_dict)
 
@@ -454,17 +450,14 @@ class ArrayParameterTest(ParameterTest):
         if not hasattr(self,'data'):
             self.data= {}
 
+        self.data['myemptytuple'] = ()
+        self.data['myemptylist'] = []
 
         self.data['myinttuple'] = (1,2,3)
         self.data['mydoubletuple'] = (42.0,43.7,33.3)
         self.data['mystringtuple'] = ('Eins','zwei','dr3i')
 
         super(ArrayParameterTest,self).setUp()
-
-        ## For the rest of the checkings, lists are converted to tuples:
-        for key, val in self.data.items():
-            if isinstance(val, list):
-                self.data[key] = tuple(val)
 
 
     def make_params(self):
@@ -482,7 +475,9 @@ class ArrayParameterTest(ParameterTest):
                                np.array(['Cinco', 'Seis', 'Siette']),
                             np.array(['Ocho', 'Nueve', 'Diez'])],
                            'val0':[1,2,3],
-                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)]} ,(('npstr','val0'),'myinttuple'))
+                           'myinttuple':[(1,2,1),(4,5,6),(5,6,7)],
+                            'alist':[[1,2,3,4],['wooot']]} ,
+                                            (('npstr','val0'),'myinttuple', 'alist'))
 
         ### Convert the explored stuff into numpy arrays
         #for idx, val in enumerate(self.explore_dict['myinttuple']):
@@ -494,6 +489,10 @@ class ArrayParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
+    def test_store_load_with_hdf5(self):
+        return super(ArrayParameterTest, self).test_store_load_with_hdf5()
+
+
 
 
 class PickleParameterTest(ParameterTest):
@@ -501,7 +500,6 @@ class PickleParameterTest(ParameterTest):
     tags = 'unittest', 'parameter', 'pickle'
 
     def setUp(self):
-
 
         if not hasattr(self,'data'):
             self.data={}
@@ -600,8 +598,6 @@ class SparseParameterTest(ParameterTest):
         for key, val in self.data.items():
             self.param[key] = SparseParameter(self.location+'.'+key, val, comment=key)
 
-
-
     def explore(self):
 
         matrices_csr = []
@@ -656,13 +652,14 @@ class SparseParameterTest(ParameterTest):
             self.param[key]._explore(vallist)
 
 
-class ResultTest(unittest.TestCase):
+class ResultTest(TrajectoryComparator):
 
     tags = 'unittest', 'result'
 
     def make_results(self):
         self.results= {}
-        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',**self.data)
+        self.results['test.res.on_constructor']=self.Constructor('test.res.on_constructor',
+                                                                 **self.data)
         self.results['test.res.args']=self.Constructor('test.res.args')
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
@@ -704,6 +701,7 @@ class ResultTest(unittest.TestCase):
 
     def make_constructor(self):
         self.Constructor=Result
+        self.dynamic_imports = [Result]
 
     def test_warning(self):
         for res in self.results.values():
@@ -805,17 +803,19 @@ class ResultTest(unittest.TestCase):
         self.data['integer'] = 42
         self.data['float'] = 42.424242
         self.data['string'] = 'TestString! 66'
-        self.data['long'] = compat.long_type(44444444444444444444444)
-        self.data['numpy_array'] = np.array([[3232.3,232323.0,323232323232.32323232],[4,4]])
+        self.data['long'] = compat.long_type(444444444444444444)
+        self.data['numpy_array'] = np.array([[3232.3,323232323232.32323232],[4.,4.]])
         self.data['tuple'] = (444,444,443)
         self.data['list'] = ['3','4','666']
         self.data['dict'] = {'a':'b','c':42, 'd': (1,2,3)}
         self.data['object_table'] = ObjectTable(data={'characters':['Luke', 'Han', 'Spock'],
                                     'Random_Values' :[42,43,44],
-                                    'Arrays': [np.array([1,2]),np.array([3.4]), np.array([5,5])]})
+                                    'Arrays': [np.array([1,2]),np.array([3, 4]), np.array([5,5])]})
         self.data['pandas_frame'] = pd.DataFrame(data={'characters':['Luke', 'Han', 'Spock'],
                                     'Random_Values' :[42,43,44],
                                     'Doubles': [1.2,3.4,5.6]})
+
+        self.data['nested_data.hui.buh.integer'] = 42
 
         myframe = pd.DataFrame(data ={'TC1':[1,2,3],'TC2':['Waaa',np.nan,''],'TC3':[1.2,42.2,np.nan]})
 
@@ -836,6 +836,24 @@ class ResultTest(unittest.TestCase):
 
         self.make_constructor()
         self.make_results()
+
+
+    def test_store_load_with_hdf5(self):
+        traj_name = 'test_%s' % self.__class__.__name__
+        filename = make_temp_dir(traj_name + '.hdf5')
+        traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                          filename = filename, overwrite_file=True)
+
+        for res in self.results.values():
+            traj.f_add_result(res)
+
+        traj.f_store()
+
+        new_traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
+                              filename = filename)
+
+        new_traj.f_load(load_data=2)
+        self.compare_trajectories(traj, new_traj)
 
 
     def test_rename(self):
@@ -971,6 +989,7 @@ class PickleResultTest(ResultTest):
 
     def make_constructor(self):
         self.Constructor=PickleResult
+        self.dynamic_imports = [PickleResult]
 
     def test_reject_outer_data_structure(self):
         # Since it pickles everything, it does accept all sorts of objects
@@ -1002,6 +1021,7 @@ class SparseResultTest(ResultTest):
 
     def make_constructor(self):
         self.Constructor=SparseResult
+        self.dynamic_imports = [SparseResult]
 
     def setUp(self):
 

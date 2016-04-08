@@ -26,9 +26,11 @@ class FakeTraj(object):
 
 class LoggingManagerTest(unittest.TestCase):
 
+    tags = 'logging', 'unittest', 'pickle'
+
     def test_pickling(self):
-        manager = LoggingManager(log_config=get_log_config(), log_stdout=True,
-                                 trajectory=FakeTraj())
+        manager = LoggingManager(log_config=get_log_config(), log_stdout=True)
+        manager.extract_replacements(FakeTraj())
         manager.check_log_config()
         manager.make_logging_handlers_and_tools()
         dump = pickle.dumps(manager)

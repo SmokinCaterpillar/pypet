@@ -105,7 +105,7 @@ def main():
                       wrap_mode='QUEUE',
                       ncores=2)
 
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # 1st a) add the parameters
     add_params(traj)
@@ -115,12 +115,12 @@ def main():
                            traj.f_get('tauw').v_full_name:[30*ms,40*ms]}))
 
     # 2nd let's run our experiment
-    env.f_run(run_net)
+    env.run(run_net)
 
     # You can take a look at the results in the hdf5 file if you want!
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

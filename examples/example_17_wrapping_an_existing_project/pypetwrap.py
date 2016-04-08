@@ -15,7 +15,7 @@ __author__ = 'Robert Meyer'
 import os
 import logging
 
-from pypet import Environment, cartesian_product, progressbar
+from pypet import Environment, cartesian_product, progressbar, Parameter
 
 # Lets import the stuff we already have:
 from original import cellular_automaton_1D, make_initial_state, plot_pattern
@@ -69,15 +69,13 @@ def main():
                       overwrite_file=True)
 
     # extract the trajectory
-    traj = env.v_traj
+    traj = env.traj
 
-    traj.v_lazy_adding = True
-    traj.par.ncells = 400, 'Number of cells'
-    traj.par.steps = 250, 'Number of timesteps'
-    traj.par.rule_number = 30, 'The ca rule'
-    traj.par.initial_name = 'random', 'The type of initial state'
-    traj.par.seed = 100042, 'RNG Seed'
-
+    traj.par.ncells = Parameter('ncells', 400, 'Number of cells')
+    traj.par.steps = Parameter('steps', 250, 'Number of timesteps')
+    traj.par.rule_number = Parameter('rule_number', 30, 'The ca rule')
+    traj.par.initial_name = Parameter('initial_name', 'random', 'The type of initial state')
+    traj.par.seed = Parameter('seed', 100042, 'RNG Seed')
 
     # Explore
     exp_dict = {'rule_number' : [10, 30, 90, 110, 184],
@@ -92,7 +90,7 @@ def main():
 
     # Run the simulation
     logger.info('Starting Simulation')
-    env.f_run(wrap_automaton)
+    env.run(wrap_automaton)
 
     # Load all data
     traj.f_load(load_data=2)
@@ -105,7 +103,7 @@ def main():
         progressbar(idx, len(traj), logger=logger)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

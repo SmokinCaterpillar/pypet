@@ -45,7 +45,7 @@ def main():
         # are pickled and send to the pool for all function executions
 
         # Start a pool of processes manipulating the trajectory
-        iterable = (traj for x in range(20))
+        iterable = (traj for x in range(50))
         pool = mp.Pool(processes=4)
         # Pass the trajectory and the function to the pool and execute it 20 times
         pool.map_async(manipulate_multiproc_safe, iterable)

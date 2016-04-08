@@ -1,8 +1,10 @@
+import pypet.utils.mpwrappers
+
 __author__ = 'Robert Meyer'
 
 
-
 import numpy as np
+import warnings
 
 import sys
 if (sys.version_info < (2, 7, 0)):
@@ -12,20 +14,21 @@ else:
 
 from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory
-from pypet.naturalnaming import NaturalNamingInterface
+from pypet.naturalnaming import NaturalNamingInterface, ParameterGroup, NNGroupNode
 from pypet.storageservice import LazyStorageService
 import pickle
 import logging
 import scipy.sparse as spsp
 import pypet.pypetexceptions as pex
-import warnings
+from pypet.utils.mpwrappers import QueueStorageServiceSender
 import multiprocessing as multip
 import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult, Environment
+from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
 import pypet.compat as compat
 
-import copy
+import copy as cp
 
 import pypet.storageservice as stsv
 
@@ -66,9 +69,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.par.FloatParam=4.0
 
-        self.traj.v_lazy_adding = True
-        self.traj.par.expexp = 42, 'another param to explore'
-        self.traj.v_lazy_adding = False
+        self.traj.par.expexp = Parameter('', 42, 'another param to explore')
 
         self.explore_dict = {'FloatParam':[1.0, 1.1, 1.2, 1.3]}
 
@@ -90,12 +91,121 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_config('make.impossible.promises',1)
 
-
         with self.assertRaises(AttributeError):
             self.traj.markus.peter
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('Peter.  h ._hurz')
+
+    # def test_very_lazy_adding(self):
+    #     self.traj.v_very_lazy_adding = True
+    #     self.traj.Iam.very.very.new = 4
+    #     self.traj.Iam.new = 5
+    #     self.traj.v_very_lazy_adding = False
+    #     self.assertEqual(self.traj.new, 5)
+    #     self.assertEqual(self.traj.very.new, 4)
+
+    def test_no_clobber(self):
+        x = self.traj.f_add_parameter('test.test2', 42, comment='Here to stay')
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
+
+        with self.assertRaises(AttributeError):
+            self.traj.f_add_parameter_group('test')
+        self.traj.v_no_clobber = True
+        y = self.traj.f_add_parameter('test.test2', 43, comment='Here to stay')
+        z = self.traj.f_add_parameter_group('test')
+        self.assertEqual(y.data, x.data)
+        self.assertTrue(z is self.traj.par.test)
+        self.traj.v_no_clobber = False
+
+    def test_kids(self):
+        self.traj.f_add_parameter('test.test2', 42, comment='Here to stay')
+        data = self.traj.kids.parameters.kids.test.kids.test2.data
+        self.assertEqual(data, 42)
+        with self.assertRaises(AttributeError):
+            self.traj.kids.parameters.kids.test.kids.test5
+        self.assertEqual(set(self.traj._children.keys()),
+                         set(dir(self.traj._kids)))
+
+    def test_re_raise_old_wildcard_error(self):
+        self.traj.v_idx = 0
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn(self.traj.v_crun, str(exc))
+                raise
+        self.traj.f_add_result('hhh.crun.ewrrew', 42)
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn(self.traj.v_crun, str(exc))
+                raise
+        self.traj.v_idx = -1
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn('ALL', str(exc))
+                raise
+        self.traj.f_add_result('hhh.crun.ewrrew', 42)
+        with self.assertRaises(AttributeError):
+            try:
+                self.traj.par.crun.test
+            except AttributeError as exc:
+                self.assertIn('ALL', str(exc))
+                raise
+
+    def test_lazy_setitem(self):
+        self.traj['r_1'] = NNGroupNode('')
+        with self.assertRaises(AttributeError):
+            self.traj['r_1.new'] = Result('', 5)
+        self.traj['r_1.new'] = Result('new', 5)
+        with self.assertRaises(AttributeError):
+            self.traj['mistake.mistake']
+        self.assertEqual(self.traj.run_00000001.new, 5)
+
+    def test_no_prefixes(self):
+        self.assertEqual(self.traj.vars.name, self.traj.v_name)
+        res = self.traj.func.add_result('testgroup.test', k=42)
+        self.assertEqual(res.v_comment, res.vars.comment)
+        with self.assertRaises(AttributeError):
+            res.vars.k
+        with self.assertRaises(AttributeError):
+            res.func.k
+        tg = self.traj.testgroup
+        tg.func.add_result('test2', 43)
+        self.assertEqual(tg.v_location, tg.vars.location)
+        self.assertEqual(self.traj.v_crun, self.traj.vars.crun)
+        self.assertEqual(self.traj.v_crun_, self.traj.vars.crun_)
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.traj.func.add_leaf('ggg.idx', 12345)
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.traj.vars.idx = 0
+        self.assertEqual(self.traj.vars.idx, self.traj.v_idx)
+        self.assertEqual(0, self.traj.v_idx)
+
+    def test_prefixes_dir(self):
+        f_dir = dir(self.traj.func)
+        v_dir = dir(self.traj.vars)
+        t_dir = dir(self.traj)
+        for f in f_dir:
+            self.assertIn('f_' + f, t_dir)
+        for v in v_dir:
+            self.assertIn('v_' + v, t_dir)
+        for g in t_dir:
+            if g.startswith('f_'):
+                self.assertIn(g[2:], f_dir)
+            elif g.startswith('v_'):
+                self.assertIn(g[2:], v_dir)
+
+    def test_data_dir(self):
+        memberset = set(self.traj.f_dir_data())
+        memberset2 = set(self.traj.func.get_children().keys())
+        self.assertEqual(memberset, memberset2)
+
 
     def test_deletion(self):
         x = []
@@ -111,7 +221,10 @@ class TrajectoryTest(unittest.TestCase):
 
         p = self.traj.parameters
 
-        self.assertEqual(sys.getrefcount(p),7)
+        self.assertEqual(p.vars.name, p.v_name)
+        self.assertEqual(p.func.get_children, p.f_get_children)
+
+        self.assertEqual(sys.getrefcount(p),9)
         self.traj.f_remove_child('parameters', recursive=True)
         self.assertEqual(sys.getrefcount(p),2)
 
@@ -152,7 +265,7 @@ class TrajectoryTest(unittest.TestCase):
 
 
     def test_deletion_during_run(self):
-        self.traj._make_single_run(0)
+        self.traj._make_single_run()
         self.traj._stored = True
         self.traj.f_add_result('fff', 444)
         self.traj.f_add_leaf('jjj', 16)
@@ -235,10 +348,9 @@ class TrajectoryTest(unittest.TestCase):
         filename = make_temp_dir('dummy.h5')
         with Environment(trajectory=self.traj,
                         log_config=get_log_config(), filename=filename,
-                         lazy_adding=True, v_auto_load=True, with_links=False) as env:
+                        v_auto_load=False, with_links=False) as env:
 
-            self.assertTrue(self.traj.v_lazy_adding)
-            self.assertTrue(self.traj.v_auto_load)
+            self.assertFalse(self.traj.v_auto_load)
             self.assertFalse(self.traj.v_with_links)
 
 
@@ -295,7 +407,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_result('x.y.y')
 
-        self.traj.f_as_run(1)
+        self.traj.v_crun=1
 
         all_nodes=self.traj.f_get_all('x.y')
 
@@ -625,12 +737,29 @@ class TrajectoryTest(unittest.TestCase):
     def test_illegal_namings(self):
         self.traj=Trajectory('resulttest2')
 
-        with self.assertRaises(ValueError):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             self.traj.f_add_parameter('f_get')
+            self.assertEqual(len(w), 1)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('get')
+            self.assertEqual(len(w), 0)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.traj.f_add_parameter('not.for.continue')
+            self.assertEqual(len(w), 3)
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test..hh')
+
+        with self.assertRaises(ValueError):
+            self.traj.f_add_result('test.::!.h')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_result('test.$.k.$dsa')
-
 
         with self.assertRaises(ValueError):
             self.traj.f_add_parameter('e'*129)
@@ -917,17 +1046,15 @@ class TrajectoryTest(unittest.TestCase):
     def test_remove_of_all_type(self):
         traj = Trajectory()
 
-        traj.v_lazy_adding = True
+        traj.par.x = Parameter('', 42, 'param')
 
-        traj.par.x = 42, 'param'
+        traj.dpar.y = Parameter('', 43, 'dpar')
 
-        traj.dpar.y = 43, 'dpar'
+        traj.conf.z = Parameter('', 44, 'conf')
 
-        traj.conf.z = 44, 'conf'
+        traj.res.k = Result('k', 44, 'jj')
 
-        traj.res.k = 44, 'jj'
-
-        traj.l = 111, 'kkkk'
+        traj.l =Result('l', 111, 'kkkk')
 
         self.assertTrue(len(traj._parameters) == 1)
         self.assertTrue(len(traj._derived_parameters) == 1)
@@ -1025,7 +1152,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(peterpaul in self.traj)
 
-        peterpaulcopy = copy.deepcopy(peterpaul)
+        peterpaulcopy = cp.deepcopy(peterpaul)
 
         self.assertFalse(peterpaulcopy in self.traj)
 
@@ -1047,8 +1174,7 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_dir(self):
 
-        self.traj.v_lazy_adding = True
-        self.traj.par.ggg = 444, 'Hey'
+        self.traj.par.ggg = Parameter('', 444, 'Hey')
         self.assertTrue('(' in str(self.traj.f_get('ggg')))
 
 
@@ -1070,9 +1196,8 @@ class TrajectoryTest(unittest.TestCase):
 
     def test_short_names_to_dict_failure(self):
 
-        self.traj.v_lazy_adding = True
         self.traj.f_add_parameter('lll.ggg' , 44)
-        self.traj.par.ggg = 444, 'Hey'
+        self.traj.par.ggg = Parameter('', 444, 'Hey')
 
         with self.assertRaises(ValueError):
             self.traj.f_to_dict(short_names=True)
@@ -1089,11 +1214,24 @@ class TrajectoryTest(unittest.TestCase):
             len(self.traj._other_leaves)
         self.assertTrue(count == all_leaves)
 
+    def test_changing_of_result(self):
+
+        traj = Trajectory()
+
+        traj.res.x = Result('x', 42)
+
+        traj.res.x=44
+        self.assertEqual(traj.x, 44)
+
+        traj.res.y = Result('', a=1, b=2)
+        with self.assertRaises(AttributeError):
+            traj.res.y = 44
+
     def test_new_grouping(self):
 
         traj = Trajectory()
 
-        traj.par = Parameter('x', 42)
+        traj.par.x = Parameter('x', 42)
 
         therange = range(2001)
         traj.f_explore({'x':therange})
@@ -1107,6 +1245,11 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue('run_set_00004' not in traj)
         self.assertEqual(len(traj.res._children), 3)
         self.assertEqual(len(traj.run_set_00001._children), 1000)
+        self.assertTrue('rts_1000' in traj)
+        self.assertFalse('rts_4000' in traj)
+        self.assertTrue('runtoset_1000' in traj)
+        self.assertFalse('runtoset_4000' in traj)
+
 
     def test_short_cuts(self):
 
@@ -1133,7 +1276,8 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertEqual(id(self.traj.res), id(self.traj.results))
 
-        srun = self.traj._make_single_run(3)
+        self.traj.f_set_crun(3)
+        srun = self.traj._make_single_run()
 
         srun.f_add_result('sdffds',42)
 
@@ -1141,6 +1285,259 @@ class TrajectoryTest(unittest.TestCase):
         # self.assertEqual(id(srun.results.currentrun), id(srun.results.f_get(srun.v_name)))
         # self.assertEqual(id(srun.results.current_run), id(srun.results.f_get(srun.v_name)))
 
+
+class CustomParam(Parameter):
+    pass
+
+
+class GetStateFlunk(Parameter):
+    def __getstate__(self):
+        return {'haha': 42}
+
+
+class TrajectoryCopyTreeTest(TrajectoryComparator):
+
+    tags = 'unittest', 'trajectory', 'tree_copy'
+
+    def test_copy_tree_simple(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+
+
+        traj2 = Trajectory()
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+
+
+        traj1._copy_from(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+    def test_overwrite(self):
+
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj1.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 42, 'hui')
+
+        traj1.my.v_annotations['test'] = 2
+
+        traj2 = Trajectory()
+        traj2.par['hi'] = Parameter('hi.my.name.is.parameter', 43, 'Another')
+        traj2.f_apar(GetStateFlunk, 'hi.my.name.is.parameter2', 77, 'buh')
+
+        traj1._copy_from(traj2, overwrite=True)
+
+        self.assertEqual(traj1.parameter, 43)
+        self.assertEqual(traj1.f_get('parameter').v_comment, 'Another')
+
+        self.assertEqual(traj1.f_get('parameter2').haha, 42)
+
+        self.assertTrue(traj1.my.v_annotations.f_is_empty())
+
+    def test_copy_custom_parameter(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+
+        traj2 = Trajectory()
+        traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
+        traj1._copy_from(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is not traj2.f_get('another'))
+
+        self.assertTrue(traj1.f_get('another').__class__ is CustomParam)
+
+    def test_not_copy_leaves(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj2 = Trajectory()
+        traj2.f_apar(CustomParam, 'hi.my.name.is.another', 43, 'Another')
+        traj1._copy_from(traj2, copy_leaves=False)
+
+        self.assertTrue('another' in traj1)
+        self.assertTrue(traj1.another, 43)
+        self.assertTrue(traj1.f_get('another') is traj2.f_get('another'))
+
+    def test_copy_tree_annotations(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj1.res['ha'] = Result('ha.my3.name3.is3.res', 555, 55, 5)
+        traj1.hi.v_annotations['test'] = 'ddd'
+
+        traj2 = Trajectory()
+
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+        traj2.hi.v_annotations['test'] = 'jjj'
+        traj2.res['ha'] = Result('ha.my3.name3.is3.res', 555, 55, 7)
+        traj2.hi.name.v_annotations['test'] = 'lll'
+
+        traj1._copy_from(traj2)
+
+        self.assertTrue('another' in traj1)
+        self.assertEqual(traj1.hi.v_annotations['test'], 'ddd')
+
+    def test_copy_links(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj2 = Trajectory()
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
+        traj2.ands.test = traj2.name
+
+        traj1._copy_from(traj2, with_links=False)
+        with self.assertRaises(AttributeError):
+            traj1.ands.test
+
+        traj1._copy_from(traj2, with_links=True)
+        self.assertTrue(traj1.ands.test is traj1.name)
+
+    def test_not_copy_from_node(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = Parameter('hi.my.name.is.parameter', 42, 'A parameter')
+        traj2 = Trajectory()
+        traj2.par['hi'] = Parameter('hi.my.name.is.another', 43, 'Another')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
+        traj2.ands.test = traj2.name
+
+        traj1._copy_from(traj2.ands, with_links=False)
+        with self.assertRaises(AttributeError):
+            traj1.ands.test
+
+        self.assertEqual(traj1.moreover[1], 'Another')
+
+        traj1._copy_from(traj2.ands, with_links=True)
+        self.assertTrue(traj1.ands.test is traj1.name)
+
+    def test_copy_explored(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+        traj1.par['hi.my.name.is.parameter2'] = Parameter('',44, 'A second parameter')
+
+
+        traj1['hi.my.name.is.another'] = Parameter('',43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+
+        traj1.v_full_copy = True
+        traj2 = traj1.f_copy(copy_leaves='explored')
+
+        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertTrue(traj2.f_get('parameter').f_has_range())
+
+
+        traj1.v_full_copy = False
+        traj2 = traj1.f_copy(copy_leaves=True)
+
+        self.assertTrue(traj2.f_get('another') is not traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is not traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertFalse(traj2.f_get('parameter').f_has_range())
+
+        traj1.v_full_copy = False
+        traj2 = traj1.f_copy(copy_leaves=False)
+
+        self.assertTrue(traj2.f_get('another') is traj1.f_get('another'))
+        self.assertTrue(traj2.f_get('parameter2') is traj1.f_get('parameter2'))
+        self.assertTrue(traj2.f_get('parameter') is traj1.f_get('parameter'))
+
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+        self.assertTrue(traj2.f_get('parameter').f_has_range())
+
+
+    def test_shallow_copy_not_full_copy(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+
+        traj1['hi.my.name.is.another'] = Parameter('', 43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+        traj1.v_full_copy = False
+
+        traj1.f_add_result('ggg.hhh.result', 42)
+        traj1.f_add_result('lll.res32', 32, 33)
+        traj1.f_add_link('ff', traj1.res32)
+
+        traj2 = cp.copy(traj1)
+        self.assertFalse(traj2.f_get('parameter').f_has_range())
+        self.assertTrue(traj2.f_get('parameter').v_explored)
+
+
+    def test_shallow_copy(self):
+        traj1 = Trajectory()
+        traj1.par['hi'] = ParameterGroup('hi.my.name.is')
+        traj1.par['hi.my.name.is.parameter'] = Parameter('', 42, 'A parameter')
+
+        traj1['hi.my.name.is.another'] = Parameter('', 43, 'Another')
+        traj1['ands'] = Result('ands.moreover', 43, 'Another')
+
+
+        traj1.ands.test = traj1.name
+
+        traj1.f_explore({'parameter':[1,2,3,4]})
+
+        traj1.v_full_copy = True
+
+        for irun in range(4):
+            traj1.f_start_run(irun, True)
+
+            traj1.f_add_result('ggg.hhh.result', 42)
+            traj1.f_add_result('lll.res32', 32, 33)
+            traj1.f_add_link('res.runs.crun.ff', traj1.crun.res32)
+
+            traj1.f_finalize_run(store_meta_data=False, clean_up=False)
+
+        traj2 = cp.copy(traj1)
+
+        self.assertEqual(set(traj1.__dict__.keys()), set(traj2.__dict__.keys()))
+        for key in traj1.__dict__:
+            val1 = traj1.__dict__[key]
+            val2 = traj2.__dict__[key]
+            if hasattr(val1, 'keys'):
+                self.assertEqual(set(val1.keys()), set(val2.keys()))
+            else:
+                self.assertEqual(val1, val2)
+
+        self.assertTrue(traj1.r_0.res32 is not traj2.r_0.res32)
+        self.assertTrue(traj2.f_get('parameter') is not traj1.f_get('parameter'))
+
+        self.assertEqual(len(list(traj1.f_iter_nodes())), len(list(traj2.f_iter_nodes())))
+        self.assertEqual(len(traj1._new_nodes), len(traj2._new_nodes))
+        self.assertEqual(len(traj1._new_links), len(traj2._new_links))
+
+        self.compare_trajectories(traj1, traj2)
+
+    def test_overwrite_leaves(self):
+        traj1 = Trajectory()
+        traj1.res['hi'] = Result('hi.my.name.is.resr', 42, 'resr')
+        traj2 = Trajectory()
+
+        traj2.res['hi'] = Result('hi.my.name.is.resr', 43, 'resr')
+        traj2['ands'] = Result('ands.moreover', 43, 'Another')
+        traj2.ands.test = traj2.name
+
+        traj1._copy_from(traj2)
+        self.assertEqual(traj1.name.resr.resr, 42)
+
+        self.assertTrue(traj1.name.resr is not traj2.name.resr)
 
 class TrajectoryFindTest(unittest.TestCase):
 
@@ -1227,11 +1624,20 @@ class SingleRunTest(unittest.TestCase):
 
         self.traj = traj
         self.n = 1
-        self.single_run = self.traj._make_single_run(self.n)
+        self.traj.v_idx = self.n
+
+        self.single_run = self.traj.__copy__()._make_single_run()
+
+    def test_different_dir(self):
+        traj_dir = dir(self.traj)
+
+        run_dir = dir(self.single_run)
+
+        self.assertGreater(len(traj_dir), len(run_dir))
 
     def test_if_single_run_can_be_pickled(self):
 
-        self.single_run._storageservice=stsv.QueueStorageServiceSender(None)
+        self.single_run._storageservice= QueueStorageServiceSender(None)
         dump = pickle.dumps(self.single_run)
 
         single_run_rec = pickle.loads(dump)
@@ -1306,7 +1712,7 @@ class SingleRunQueueTest(unittest.TestCase):
 
         self.traj = traj
         self.n = 1
-        self.single_run = self.traj._make_single_run(self.n)
+        self.single_run = self.traj._make_single_run()
 
 
     def test_queue(self):

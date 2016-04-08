@@ -2,9 +2,9 @@
 FAQs and Known Issues
 =====================
 
------
-Tools
------
+--------------------
+Tools and Extensions
+--------------------
 
 **Q:** How can I open and inspect an HDF5 file created by *pypet*?
 
@@ -13,6 +13,28 @@ Tools
 .. _HDFview: http://www.hdfgroup.org/products/java/hdfview/
 
 .. _ViTables: http://vitables.org/
+
+
+**Q:** Can I use *pypet* on my computing cluster or can I distribute *pypet* runs among
+different servers?
+
+    **A:** Yes, you can, either by combining *pypet* with SCOOP_ or with
+    `SAGA Python`_ (see also :ref:`pypet-and-scoop`). Examples are provided here:
+    :ref:`example-21` and :ref:`example-22`.
+
+
+.. _SCOOP: https://scoop.readthedocs.org/
+
+.. _SAGA Python: http://saga-python.readthedocs.org/
+
+
+**Q:** I not only need to explore but also tune parameters. Are there any optimization methods
+available in *pypet*?
+
+    **A:** Not directly, but you can easily combine *pypet* with the evolutionary optimization
+    toolkit DEAP_. :ref:`example-19` shows you how.
+
+.. _DEAP: http://deap.readthedocs.org/
 
 
 ------------------
@@ -78,16 +100,20 @@ What should I do?
     **A:**  You are using pandas version ``0.13.x``.
     Unfortunately, pandas performs some unwanted upcasting that
     cannot be handled by *pypet* (see https://github.com/pydata/pandas/issues/6526/).
-    This unwanted upcasting did not happen in previous pandas versions and will be, or more
-    precisely, has already been removed in the next pandas version.
-    So either downgrade pandas to version ``0.12.0`` or upgrade to ``0.14.1`` or newer.
-
+    This unwanted upcasting has already been removed in the next pandas version.
+    So upgrade to ``0.14.1`` or newer.
 
 **Q:** My program crashes if I try to store a Trajectory containing an ArrayParameter!?
 
     **A:** Look at the previous answer,
-    you are using pandas ``0.13.x``, please up or downgrade your
-    pandas package.
+    you are using pandas ``0.13.x``, please upgrade your
+    pandas package to at least ``0.14.1``.
+
+**Q:** My program crashes with a ``ValueError: unknown type: 'object'``!?
+
+    **A:** Look at the previous answer,
+    you are using pandas ``0.13.x``, please upgrade your
+    pandas package to at least ``0.14.1``.
 
 
 --------------
@@ -106,3 +132,12 @@ Other Problems
     **A:** Probably, you use an older HDF5 version (``< 1.8.7``) that does not allow
     simultaneous openings of a single HDF5 file. Either install a newer version or switch to
     queue wrapping.
+
+
+**Q:** I already have a rather evolved simulator can I integrate it with pypet or do I need to
+start from scratch?
+
+   **A:** No, of course you don't neet to start from scratch. T
+   here are ways to integrate or wrap *pypet* around
+   your project. Example :ref:`example-17` shows you how to do that or
+   take a look at section :ref:`wrap-project`.

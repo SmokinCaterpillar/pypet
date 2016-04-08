@@ -10,7 +10,7 @@ except ImportError:
 
 install_requires=[
         'tables >= 2.3.1',
-        'pandas >= 0.12.0',
+        'pandas >= 0.14.1',
         'numpy >= 1.6.1',
         'scipy >= 0.9.0']
 
@@ -68,6 +68,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
         'Operating System :: OS Independent',

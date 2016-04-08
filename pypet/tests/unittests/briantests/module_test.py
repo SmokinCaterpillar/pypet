@@ -7,21 +7,27 @@ if (sys.version_info < (2, 7, 0)):
 else:
     import unittest
 
-import pypet.brian
-from pypet.brian import *
+try:
+    import brian
+    import pypet.brian
+    from pypet.brian import *
+except ImportError as exc:
+    #print('Import Error: %s' % str(exc))
+    brian = None
+
 from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite
 
-import logging
 import inspect
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class TestAllBrianImport(unittest.TestCase):
 
     tags = 'unittest', 'brian', 'import'
 
     def test_import_star(self):
         for class_name in pypet.brian.__all__:
-            logstr = 'Evaulauting %s: %s' % (class_name, repr(eval(class_name)))
+            logstr = 'Evaluauting %s: %s' % (class_name, repr(eval(class_name)))
             get_root_logger().info(logstr)
 
     def test_if_all_is_complete(self):

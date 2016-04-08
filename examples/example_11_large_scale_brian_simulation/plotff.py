@@ -9,7 +9,7 @@ import os
 import matplotlib.pyplot as plt
 
 from pypet import Trajectory, Environment
-from pypet.brian.parameter import BrianMonitorResult, BrianParameter, BrianDurationParameter
+from pypet.brian.parameter import BrianMonitorResult, BrianParameter
 
 
 
@@ -19,8 +19,7 @@ def main():
     # If we pass a filename to the trajectory a new HDF5StorageService will
     # be automatically created
     traj = Trajectory(filename=filename,
-                    dynamically_imported_classes=[BrianDurationParameter,
-                                                  BrianMonitorResult,
+                    dynamically_imported_classes=[BrianMonitorResult,
                                                   BrianParameter])
 
     # Let's create and fake environment to enable logging:
@@ -48,7 +47,7 @@ def main():
     plt.show()
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

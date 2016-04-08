@@ -129,6 +129,9 @@ if tables_version == 2:
     def create_vlarray(hdf5_file, *args, **kwargs): return _make_pt2_vlarray(hdf5_file, *args,
                                                                         **kwargs)
 
+    def modify_coordinates(table, *args, **kwargs): return table.modifyCoordinates(*args,
+                                                                                    **kwargs)
+
     def read_array(array): return _read_array(array)
 
     def create_soft_link(hdf5_file, *args, **kwargs): return hdf5_file.createSoftLink(*args,
@@ -164,10 +167,14 @@ elif tables_version == 3:
     def create_vlarray(hdf5_file, *args, **kwargs): return hdf5_file.create_vlarray(*args,
                                                                                     **kwargs)
 
+    def modify_coordinates(table, *args, **kwargs): return table.modify_coordinates(*args,
+                                                                                    **kwargs)
+
     def read_array(array): return _read_array(array)
 
     def create_soft_link(hdf5_file, *args, **kwargs): return hdf5_file.create_soft_link(*args,
                                                                                      **kwargs)
+
     def get_child(hdf5_node, *args, **kwargs): return hdf5_node._f_get_child(*args, **kwargs)
 
     def remove_rows(table, *args, **kwargs): return table.remove_rows(*args, **kwargs)

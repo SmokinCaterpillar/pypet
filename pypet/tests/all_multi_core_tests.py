@@ -4,39 +4,62 @@ __author__ = 'Robert Meyer'
 from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR, parse_args
 
 tests_include=set(('MultiprocNoPoolLockTest',
+                   #'MultiprocNoPoolPipeTest',
                    'MultiprocPoolSortQueueTest',
                    'MultiprocFrozenPoolSortQueueTest',
                    'MultiprocLinkLockTest',
                    'CapTest',
+                   # 'MultiprocPoolLockTest',
                    'MultiprocStorageLockTest',
-                   'MultiprocNoPoolQueueLoggingTest'))
+                   'MultiprocNoPoolQueueLoggingTest',
+                   'MultiprocFrozenPoolLocalTest',
+                   'TestMPImmediatePostProcQueue',
+                   'MultiprocStorageNetlockTest',
+                   'MultiprocSCOOPSortNetqueueTest'))
+
 big_suite_1 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
-tests_include=set(('MultiprocNoPoolQueueTest',
+tests_include=set((#'MultiprocNoPoolQueueTest',
+                   'MultiprocPoolQueueTest',
+                   'MultiprocFrozenPoolPipeTest',
                    'MultiprocPoolSortLockTest',
+                   'MultiprocPoolSortPipeTest',
                    'MultiprocFrozenPoolSortLockTest',
                    'MultiprocLinkNoPoolLockTest',
                    'TestMPPostProc',
                    'ContinueMPPoolTest',
-                   'MultiprocPoolLockLoggingTest'))
+                   'MultiprocPoolLockLoggingTest',
+                   'MultiprocNoPoolSortLocalTest',
+                   'TestMPImmediatePostProcLocal',
+                   'MultiprocSCOOPSortLocalTest',
+                   'MultiprocFrozenSCOOPLocalTest'))
 big_suite_2 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
-tests_include=set(('MultiprocPoolLockTest',
-                   'MultiprocFrozenPoolLockTest',
+tests_include=set((#'MultiprocFrozenPoolLockTest',
                    'MultiprocNoPoolSortQueueTest',
                    'MultiprocLinkNoPoolQueueTest',
-                   'TestMPImmediatePostProc',
+                   'MultiprocPoolSortPipeTest',
+                   'TestMPImmediatePostProcLock',
+                   #'MultiprocPoolPipeTest',
                    'MultiprocStorageNoPoolLockTest',
-                   'MultiprocNoPoolLockLoggingTest'))
+                   'MultiprocNoPoolLockLoggingTest',
+                   'MultiprocFrozenSCOOPSortNetlockTest',
+                   #'MultiprocFrozenSCOOPSortLocalTest',
+                   'MultiprocSCOOPNetqueueTest'))
 big_suite_3 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
-tests_include=set(('MultiprocPoolQueueTest',
-                   'MultiprocFrozenPoolQueueTest',
+tests_include=set(('MultiprocFrozenPoolQueueTest',
+                   'MultiprocFrozenPoolSortPipeTest',
                    'MultiprocNoPoolSortLockTest',
                    'MultiprocLinkQueueTest',
                    'ContinueMPTest',
                    'BrianFullNetworkMPTest',
-                   'MultiprocPoolQueueLoggingTest'))
+                   'MultiprocPoolQueueLoggingTest',
+                   'MultiprocPoolSortLocalTest',
+                   'MultiprocLinkLocalTest',
+                   'TestMPImmediatePostProcPipe',
+                   'MultiprocSCOOPNetlockTest',
+                   'MultiprocFrozenSCOOPLocalTest'))
 big_suite_4 = discover_tests(lambda  class_name, test_name, tags: class_name in tests_include)
 
 

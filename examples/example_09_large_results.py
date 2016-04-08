@@ -13,7 +13,8 @@ from pypet import pypetconstants
 # HDF5StorageService for us:
 filename = os.path.join('hdf5', 'example_09.hdf5')
 traj = Trajectory(name='example_09_huge_data',
-                  filename=filename)
+                  filename=filename,
+                  overwrite_file=True)
 
 # Now we directly add a huge result. Note that we could do the exact same procedure during
 # a single run, there is no syntactical difference.

@@ -29,14 +29,16 @@ def main():
     env = Environment(trajectory='Multiplication',
                       filename=filename,
                       file_title='Example_18_Many_Runs',
+                      overwrite_file=True,
                       comment='Contains many runs',
                       multiproc=True,
                       use_pool=True,
+                      freeze_input=True,
                       ncores=2,
                       wrap_mode='QUEUE')
 
     # The environment has created a trajectory container for us
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -46,10 +48,10 @@ def main():
     traj.f_explore(cartesian_product({'x': range(50), 'y': range(50)}))
 
     # Run the simulation
-    env.f_run(multiply)
+    env.run(multiply)
 
     # Disable logging
-    env.f_disable_logging()
+    env.disable_logging()
 
     # turn auto loading on, since results have not been loaded, yet
     traj.v_auto_load = True
@@ -59,6 +61,9 @@ def main():
     # Now we can rely on the wildcards
     print(traj.res.crunset.crun.z)
     traj.v_idx = -1
+    # Or we can use the shortcuts `rts_X` (run to set) and `r_X` to get particular results
+    print('The result of run %d is: ' % 2044)
+    print(traj.res.rts_2044.r_2044.z)
 
 if __name__ == '__main__':
     main()

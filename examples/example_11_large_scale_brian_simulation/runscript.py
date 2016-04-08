@@ -11,7 +11,7 @@ import numpy as np
 import os # To allow path names work under Windows and Linux
 
 from pypet.environment import Environment
-from pypet.brian.network import NetworkManager, run_network
+from pypet.brian.network import NetworkManager
 
 from clusternet import CNMonitorAnalysis, CNNeuronGroup, CNNetworkRunner, CNConnections,\
     CNFanoFactorComputer
@@ -31,7 +31,7 @@ def main():
                       overwrite_file=True)
 
     #Get the trajectory container
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # We introduce a `meta` parameter that we can use to easily rescale our network
     scale = 0.5  # To obtain the results from the paper scale this to 1.0
@@ -67,10 +67,10 @@ def main():
 
     # Run the network simulation
     traj.f_store() # Let's store the parameters already before the run
-    env.f_run(clustered_network_manager.run_network)
+    env.run(clustered_network_manager.run_network)
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__=='__main__':

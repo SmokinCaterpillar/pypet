@@ -1,11 +1,18 @@
 from __future__ import print_function
+
 __author__ = 'Robert Meyer'
 
 import sys
+import os
 import datetime
 import numpy as np
 import inspect
 import logging
+import socket
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 import pypet.compat as compat
 from pypet.utils.decorators import deprecated
@@ -106,7 +113,7 @@ class _Progressbar(object):
                 total_seconds = ((time_delta.microseconds +
                                     (time_delta.seconds +
                                      time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
-            remaining_seconds = int((self._total - self._start_index) *
+            remaining_seconds = int((self._total - self._start_index - 1.0) *
                                     total_seconds / float(index - self._start_index) -
                                     total_seconds)
             remaining_delta = datetime.timedelta(seconds=remaining_seconds)
@@ -255,18 +262,6 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
                         time=time, length=length, fmt_string=fmt_string, reset=reset)
 
 
-@deprecated(msg='Please use `pypet.utils.comparisons.nested_equal` instead!')
-def nested_equal(a, b):
-    """
-    Compare two objects recursively by element, handling numpy objects.
-
-    Assumes hashable items are not mutable in a way that affects equality.
-
-    DEPRECATED: Use `pypet.utils.comparisons.nested_equal` instead.
-    """
-    return nested_equal_new(a, b)
-
-
 def get_matching_kwargs(func, kwargs):
     """Takes a function and keyword arguments and returns the ones that can be passed."""
     if inspect.isclass(func):
@@ -283,6 +278,74 @@ def get_matching_kwargs(func, kwargs):
         return {}
 
 
-def get_multiproc_pool(pool):
-    """Returns all processes of a pool as a list"""
-    return pool._pool
+def result_sort(result_list, start_index=0):
+    """Sorts a list of results in O(n) in place (since every run is unique)
+
+    :param result_list: List of tuples [(run_idx, res), ...]
+    :param start_index: Index with which to start, every entry before `start_index` is ignored
+
+    """
+    if len(result_list) < 2:
+        return result_list
+    to_sort = result_list[start_index:]
+    minmax = [x[0] for x in to_sort]
+    minimum = min(minmax)
+    maximum = max(minmax)
+    #print minimum, maximum
+    sorted_list = [None for _ in range(minimum, maximum + 1)]
+    for elem in to_sort:
+        key = elem[0] - minimum
+        sorted_list[key] = elem
+    idx_count = start_index
+    for elem in sorted_list:
+        if elem is not None:
+            result_list[idx_count] = elem
+            idx_count += 1
+    return result_list
+
+
+def format_time(timestamp):
+    """Formats timestamp to human readable format"""
+    format_string = '%Y_%m_%d_%Hh%Mm%Ss'
+    formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime(format_string)
+    return formatted_time
+
+
+def port_to_tcp(port=None):
+    """Returns local tcp address for a given `port`, automatic port if `None`"""
+    #address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
+    domain_name = socket.getfqdn()
+    try:
+        addr_list = socket.getaddrinfo(domain_name, None)
+    except Exception:
+        addr_list = socket.getaddrinfo('localhost', None)
+    family, socktype, proto, canonname, sockaddr = addr_list[0]
+    address =  'tcp://' + sockaddr[0]
+    if port is None:
+        port = ()
+    if not isinstance(port, int):
+        # determine port automatically
+        context = zmq.Context()
+        socket_ = context.socket(zmq.REP)
+        port = socket_.bind_to_random_port(address, *port)
+        socket_.close()
+        context.term()
+    return address + ':' + str(port)
+
+
+def racedirs(path):
+    """Like os.makedirs but takes care about race conditions"""
+    if os.path.isfile(path):
+        raise IOError('Path `%s` is already a file not a directory')
+    while True:
+        try:
+            if os.path.isdir(path):
+                # only break if full path has been created or exists
+                break
+            os.makedirs(path)
+        except EnvironmentError as exc:
+            # Part of the directory path already exist
+            if exc.errno != 17:
+                # This error won't be any good
+                raise
+

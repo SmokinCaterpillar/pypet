@@ -17,10 +17,11 @@ def multiply(traj):
 filename = os.path.join('hdf5', 'example_08.hdf5')
 env = Environment(trajectory='Example08',filename=filename,
                   file_title='Example08',
+                  overwrite_file=True,
                   comment='Another example!')
 
 # Get the trajectory from the environment
-traj = env.v_trajectory
+traj = env.trajectory
 
 # Add both parameters
 traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -30,7 +31,7 @@ traj.f_add_parameter('y', 1, comment='I am the second dimension!')
 traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
 
 # Run the simulation
-env.f_run(multiply)
+env.run(multiply)
 
 # We load all results
 traj.f_load(load_results=pypetconstants.LOAD_DATA)
@@ -47,9 +48,9 @@ idx_iterator = traj.f_find_idx(['x','y'], my_filter_predicate)
 # Now we can print the corresponding results:
 print('The run names and results for parameter combinations with x==2 or y==8:')
 for idx in idx_iterator:
-    # We focus on one particular run. This is equivalent to calling `traj.f_as_run(idx)`.
+    # We focus on one particular run. This is equivalent to calling `traj.f_set_crun(idx)`.
     traj.v_idx=idx
-    run_name = traj.v_as_run
+    run_name = traj.v_crun
     # and print everything nicely
     print('%s: x=%d, y=%d, z=%d' %(run_name, traj.x, traj.y, traj.crun.z))
 
@@ -57,4 +58,4 @@ for idx in idx_iterator:
 traj.f_restore_default()
 
 # Finally disable logging and close all log-files
-env.f_disable_logging()
+env.disable_logging()

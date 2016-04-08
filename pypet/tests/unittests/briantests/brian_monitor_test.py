@@ -1,19 +1,27 @@
 __author__ = 'Robert Meyer'
 
-import brian
-from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
-    PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
-        MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric
-from brian.fundamentalunits import get_unit_fast
-from brian import clear
+try:
+    import brian
+    from brian.monitor import SpikeMonitor,SpikeCounter,StateMonitor, \
+        PopulationSpikeCounter, PopulationRateMonitor, StateSpikeMonitor,  \
+            MultiStateMonitor, ISIHistogramMonitor, VanRossumMetric
+    from brian.fundamentalunits import get_unit_fast
+    from brian import clear
 
-from pypet.brian.parameter import BrianMonitorResult
+    from pypet.brian.parameter import BrianMonitorResult
+    from pypet.tests.unittests.briantests.run_a_brian_network import run_network
+except ImportError as exc:
+    #print('Import Error: %s' % str(exc))
+    brian = None
+
+from pypet.tests.testutils.ioutils import unittest
 from pypet.tests.unittests.parameter_test import ResultTest
-from pypet.tests.unittests.briantests.run_a_brian_network import run_network
+
 import pypet.utils.comparisons as comp
 from pypet.tests.testutils.ioutils import run_suite, parse_args
 
 
+@unittest.skipIf(brian is None, 'Can only be run with brian!')
 class BrianMonitorTest(ResultTest):
 
     tags = 'unittest', 'brian', 'result', 'monitor'
@@ -27,6 +35,10 @@ class BrianMonitorTest(ResultTest):
     def tearDownClass(cls):
         clear(True, True)
         reload(brian)
+
+    def make_constructor(self):
+        self.dynamic_imports = [BrianMonitorResult]
+        self.Constructor = BrianMonitorResult
 
     def setUp(self):
         self.monitors = BrianMonitorResult.monitors
@@ -172,7 +184,7 @@ class BrianMonitorTest(ResultTest):
             raise RuntimeError('You shall not pass!')
 
     def check_multi_state_monitor(self, res, monitor):
-        self.assertEqual(monitor.vars, res.vars)
+        self.assertEqual(monitor.vars, res.vars_)
 
         if len(monitor.times)>0:
             self.assertEqual('second', res.times_unit)

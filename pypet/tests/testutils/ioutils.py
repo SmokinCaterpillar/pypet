@@ -15,13 +15,22 @@ except ImportError:
 import shutil
 import getopt
 import tempfile
+import time
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 import pypet.pypetconstants as pypetconstants
 import pypet.compat as compat
 from pypet import HasLogger
 from pypet.pypetlogging import LoggingManager, rename_log_file
 from pypet.utils.decorators import copydoc
+from pypet.utils.helpful_functions import port_to_tcp
 
+#import pypet.utils.ptcompat as ptcompat
+#hdf5version = ptcompat.hdf5_version
+#print('HDF5 Version: %s' % str(hdf5version))
 
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
@@ -33,12 +42,16 @@ testParams=dict(
     user_tempdir='',
     # Specified log level
     log_config='test'
-    # Specified log options
 )
 
 TEST_IMPORT_ERROR = 'ModuleImportFailure'
 
 generic_log_folder = None
+
+
+def errwrite(text):
+    """Writes to stderr with linebreak"""
+    sys.__stderr__.write(text + '\n')
 
 
 def get_root_logger():
@@ -53,7 +66,14 @@ def get_log_config():
 
 def get_log_path(traj, process_name=None):
     """Returns the path to the log files based on trajectory name etc."""
-    return rename_log_file(traj, generic_log_folder, process_name=process_name)
+    return rename_log_file(generic_log_folder, trajectory=traj, process_name=process_name)
+
+
+def get_random_port_url():
+    """Determines the local server url with a random port"""
+    url = port_to_tcp()
+    errwrite('USING URL: %s \n' % url)
+    return url
 
 
 def prepare_log_config():
@@ -65,6 +85,10 @@ def prepare_log_config():
 
     if conf == 'test':
         conf_file = os.path.join(init_path, 'test.ini')
+        conf_parser = handle_config_file(conf_file)
+        conf = conf_parser
+    elif conf == 'debug':
+        conf_file = os.path.join(init_path, 'debug.ini')
         conf_parser = handle_config_file(conf_file)
         conf = conf_parser
 
@@ -102,7 +126,7 @@ def handle_config_file(config_file):
     return parser
 
 
-def make_temp_dir(filename):
+def make_temp_dir(filename, signal=False):
     """Creates a temporary folder and returns the joined filename"""
     try:
 
@@ -114,15 +138,22 @@ def make_temp_dir(filename):
             os.makedirs(testParams['actual_tempdir'])
 
         return os.path.join(testParams['actual_tempdir'], filename)
-    except OSError:
+    except OSError as exc:
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
 
-        sys.stderr.write('I used `tempfile.gettempdir()` to create the temporary folder '
-                         '`%s`.\n' % actual_tempdir)
+        if signal:
+            errwrite('I used `tempfile.gettempdir()` to create the temporary folder '
+                             '`%s`.' % actual_tempdir)
         testParams['actual_tempdir'] = actual_tempdir
+        if not os.path.isdir(testParams['actual_tempdir']):
+            try:
+                os.makedirs(testParams['actual_tempdir'])
+            except Exception:
+                pass # race condition
+
         return os.path.join(actual_tempdir, filename)
     except:
-        get_root_logger().error('Could not create a directory. Sorry cannot run them')
+        get_root_logger().error('Could not create a directory.')
         raise
 
 
@@ -138,6 +169,9 @@ def run_suite(remove=None, folder=None, suite=None):
     testParams['user_tempdir'] = folder
 
     prepare_log_config()
+
+    # Just signal if make_temp_dir works
+    make_temp_dir('tmp.txt', signal=True)
 
     success = False
     try:
@@ -182,8 +216,16 @@ def remove_data():
 
 def make_trajectory_name(testcase):
     """Creates a trajectory name based on the current `testcase`"""
-    name = 'T'+testcase.id()[12:].replace('.','_')+ '_'+str(random.randint(0,10**4))
-    maxlen = pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH-22
+
+    testid = testcase.id()
+    split_names = testid.split('.')
+    #name = 'T__' + '__'.join(split_names[-2:]) + '__' + randintstr
+    seed = len(testid) + int(10*time.time())
+    random.seed(seed)
+    randintstr = str(random.randint(0, 10 ** 5))
+    name = 'T__' + split_names[-1] + '__' + randintstr
+
+    maxlen = pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH - 22
 
     if len(name) > maxlen:
         name = name[len(name)-maxlen:]
@@ -294,15 +336,15 @@ def parse_args():
     for opt, arg in opt_list:
         if opt == '-k':
             opt_dict['remove'] = False
-            print('I will keep all files.')
+            errwrite('I will keep all files.')
 
         if opt == '--folder':
             opt_dict['folder'] = arg
-            print('I will put all data into folder `%s`.' % arg)
+            errwrite('I will put all data into folder `%s`.' % arg)
 
         if opt == '--suite':
             opt_dict['suite_no'] = arg
-            print('I will run suite `%s`.' % arg)
+            errwrite('I will run suite `%s`.' % arg)
 
     sys.argv = [sys.argv[0]]
     return opt_dict

@@ -19,10 +19,11 @@ def multiply(traj):
 filename = os.path.join('hdf5', 'example_10.hdf5')
 env = Environment(trajectory='Example10', filename=filename,
                   file_title='Example10',
+                  overwrite_file=True,
                   comment='Another example!')
 
 # Get the trajectory from the environment
-traj = env.v_trajectory
+traj = env.trajectory
 
 # Add both parameters
 traj.f_add_parameter('x', 1, comment='I am the first dimension!')
@@ -34,7 +35,7 @@ y_length = 12
 traj.f_explore(cartesian_product({'x': range(x_length), 'y': range(y_length)}))
 
 # Run the simulation
-env.f_run(multiply)
+env.run(multiply)
 
 # We load all results
 traj.f_load(load_results=pypetconstants.LOAD_DATA)
@@ -65,4 +66,4 @@ ax.plot_wireframe(x_mesh, y_mesh, z_mesh, rstride=1, cstride=1)
 plt.show()
 
 # Finally disable logging and close all log-files
-env.f_disable_logging()
+env.disable_logging()

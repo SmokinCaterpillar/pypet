@@ -228,55 +228,11 @@ class BrianParameter(Parameter):
                     self._explored_range = tuple(explore_list)
                     self._explored = True
 
-
         except KeyError:
             super(BrianParameter, self)._load(load_dict)
 
         self._default = self._data
         self._locked = True
-
-
-class BrianDurationParameter(BrianParameter):
-    """Special BRIAN parameter to specify orders and durations of subruns.
-
-    The :class:`~pypet.brian.network.NetworkRunner` extracts the individual subruns
-    for a given network from such duration parameters.
-    The order of execution is defined by the property `v_order`.
-    The exact values do not matter only the rank ordering.
-
-    A Duration Parameter should be in time units (ms or s, for instance).
-
-    DEPRECATED: Please use a normal :class:`~pypet.brian.BrianParameter` instead and
-    add the property `order` to it's :class:`~pypet.annotations.Annotations`.
-    No longer use:
-
-        >>> subrun = BrianDurationParameter('mysubrun', 10 * s, order=42)
-
-    But use:
-
-        >>> subrun = BrianParameter('mysubrun', 10 * s)
-        >>> subrun.v_annotations.order=42
-
-    """
-    def __init__(self, full_name, data=None, order=0, comment='',
-                 storage_mode=BrianParameter.FLOAT_MODE):
-        super(BrianDurationParameter, self).__init__(full_name, data, comment, storage_mode)
-        self.v_annotations.order = order
-
-    @property
-    def v_order(self):
-        """The order in which the subrun with a particular duration will be run
-        by the network runner"""
-        return self.v_annotations.order
-
-    @v_order.setter
-    def v_order(self, order):
-        self.v_annotations.order = order
-
-    def _load(self, load_dict):
-        if 'order' in load_dict:
-            self.v_annotations.order = load_dict['order']
-        super(BrianDurationParameter, self)._load(load_dict)
 
 
 class BrianResult(Result):
@@ -992,7 +948,7 @@ class BrianMonitorResult(Result):
 
     def _extract_multi_state_monitor(self, monitors):
 
-        self.f_set(vars=monitors.vars)
+        self.f_set(vars_=monitors.vars)
 
 
         if len(monitors.times) > 0:

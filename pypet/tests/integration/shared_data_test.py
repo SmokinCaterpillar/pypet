@@ -12,11 +12,15 @@ else:
 
 import tables as pt
 import scipy.sparse as spsp
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 from pypet.shareddata import *
 from pypet import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
-     get_root_logger, parse_args, get_log_config
+     get_root_logger, parse_args, get_log_config, get_random_port_url
 from pypet import compat, Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
@@ -30,6 +34,15 @@ def copy_one_entry_from_giant_matrices(traj):
     m2 = matrices.m2
     m2[idx,idx,idx] = m1[idx,idx,idx]
     traj.f_add_result('dummy.dummy', 42)
+
+
+def load_from_shared_storage(traj):
+    with StorageContextManager(traj) as cm:
+        if 'x' in traj:
+            raise RuntimeError()
+        traj.v_auto_load = True
+        x= traj.dpar.x
+    traj.f_add_result('loaded.x', x, comment='loaded  x')
 
 
 def write_into_shared_storage(traj):
@@ -53,19 +66,26 @@ def write_into_shared_storage(traj):
     vla = daarrays.vla
     vla.append(np.ones(idx+2)*idx)
     root.info('5. Block')
-    if idx > ncores+2:
-        x, y = a[idx-ncores], idx-ncores
-        if x != y:
+    the_range = list(range(max(0, idx-2*ncores), max(0, idx)))
+    for irun in the_range:
+        x, y = a[irun], irun
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = ca[idx-ncores], idx-ncores
-        if x != y:
+        x, y = ca[irun], irun
+        if x != y and x != 0:
             raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = ea[idx-ncores, 9], ea[idx-ncores, 8]
-        if x != y:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
-        x, y = vla[idx-ncores][0], vla[idx-ncores][1]
-        if x != y:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        try:
+            x, y = ea[irun, 9], ea[irun, 8]
+            if x != y and x != 0:
+                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        except IndexError:
+            pass  # Array is not at this size yet
+        try:
+            x, y = vla[irun][0], vla[irun][1]
+            if x != y and x != 0:
+                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+        except IndexError:
+            pass  # Array is not at this size yet
     root.info('6. !!!!!!!!!')
 
     tabs = traj.tabs
@@ -87,6 +107,7 @@ def write_into_shared_storage(traj):
     df = traj.df
     df.append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
 
+
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataEnvironmentTest(TrajectoryComparator):
 
@@ -104,6 +125,31 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.shuffle=True
         self.fletcher32 = False
         self.encoding = 'utf8'
+        self.url = None
+
+    def test_loading_run(self):
+
+        self.traj.f_add_parameter('y', 12)
+        self.traj.f_explore({'y':[12,3,3,4]})
+
+        self.traj.f_add_parameter('TEST', 'test_run')
+        self.traj.f_add_derived_parameter('x', 42)
+        self.traj.f_store()
+        self.traj.dpar.f_remove_child('x')
+
+        self.env.f_run(load_from_shared_storage)
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        size=os.path.getsize(self.filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
+        self.compare_trajectories(self.traj, newtraj)
 
     def explore(self, traj, trials=3):
         self.explored ={'Normal.trial': range(trials),
@@ -144,7 +190,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         traj.f_add_result(SharedResult, 'tabs.t1', SharedTable()).create_shared_data(description={'idx': pt.IntCol(), 'run_name': pt.StringCol(30)},
                         expectedrows=length)
 
-        traj.f_add_result(SharedResult, 'tabs.t2', SharedTable()).create_shared_data(description={'run_name': pt.StringCol(3000)})
+        traj.f_add_result(SharedResult, 'tabs.t2', SharedTable()).create_shared_data(description={'run_name': pt.StringCol(300)})
 
         traj.f_add_result(SharedResult, 'pandas.df', SharedPandasFrame())
 
@@ -176,7 +222,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=False,
-
+                          port=self.url,
                           log_config=get_log_config(),
                           results_per_run=5,
                           derived_parameters_per_run=5,
@@ -284,7 +330,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
     def test_run_large(self):
 
-        self.explore(self.traj, trials=30)
+        self.explore(self.traj, trials=15)
         self.add_array_params(self.traj)
 
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -380,8 +426,30 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
         StorageDataEnvironmentTest.set_mode(self)
         self.mode = pypetconstants.WRAP_MODE_LOCK
         self.multiproc = True
-        self.ncores = 4
+        self.ncores = 3
         self.use_pool=True
+
+    def test_run_large(self):
+        return super(MultiprocStorageLockTest, self).test_run_large()
+
+
+@unittest.skipIf(zmq is None, 'Can only be run with zmq')
+@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
+class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
+
+    # def test_run(self):
+    tags = 'integration', 'hdf5', 'environment', 'multiproc', 'pool', 'shared', 'netlock'
+
+    def set_mode(self):
+        StorageDataEnvironmentTest.set_mode(self)
+        self.mode = pypetconstants.WRAP_MODE_NETLOCK
+        self.multiproc = True
+        self.ncores = 3
+        self.use_pool=True
+        self.url = get_random_port_url()
+
+    def test_run_large(self):
+        return super(MultiprocStorageNetlockTest, self).test_run_large()
 
 
 @unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')

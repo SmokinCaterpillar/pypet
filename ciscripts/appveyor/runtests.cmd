@@ -66,7 +66,7 @@ IF "%SINGLECORE%"=="3" (
 
 IF "%MULTIPROC%"=="ON" (
     ECHO "##### Running multiproc tests #####"
-    python all_multi_core_tests.py
+    python -m scoop -n 2 all_multi_core_tests.py
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -78,7 +78,7 @@ IF "%MULTIPROC%"=="ON" (
 
 IF "%MULTIPROC%"=="1" (
     ECHO "##### Running multiproc test suite 1 #####"
-    python all_multi_core_tests.py --suite=1
+    python -m scoop -n 2 all_multi_core_tests.py --suite=1
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -90,7 +90,7 @@ IF "%MULTIPROC%"=="1" (
 
 IF "%MULTIPROC%"=="2" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py --suite=2
+    python -m scoop -n 2 all_multi_core_tests.py --suite=2
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -102,7 +102,7 @@ IF "%MULTIPROC%"=="2" (
 
 IF "%MULTIPROC%"=="3" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py --suite=3
+    python -m scoop -n 2 all_multi_core_tests.py --suite=3
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###
@@ -114,7 +114,7 @@ IF "%MULTIPROC%"=="3" (
 
 IF "%MULTIPROC%"=="4" (
     ECHO "##### Running multiproc test suite 2 #####"
-    python all_multi_core_tests.py --suite=4
+    python -m scoop -n 2 all_multi_core_tests.py --suite=4
 
     IF ERRORLEVEL 1 (
         ECHO "### Multiproc failed ###

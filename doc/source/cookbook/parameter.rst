@@ -56,7 +56,7 @@ data they except. For example, the :class:`~pypet.parameter.Parameter` excepts o
     * numpy natives, arrays and matrices of type np.int8-64, np.uint8-64, np.float32-64,
       np.complex, np.str
 
-    * python homogeneous non-nested tuples
+    * python homogeneous non-nested tuples and lists
 
 And by *only* I mean they handle exactly these types and nothing else, not even objects
 that are derived from these data types.

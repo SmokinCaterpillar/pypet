@@ -154,6 +154,14 @@ WRAP_MODE_LOCK = 'LOCK'
 """ Lock multiprocessing mode """
 WRAP_MODE_NONE = 'NONE'
 """ No multiprocessing wrapping for the storage service"""
+WRAP_MODE_PIPE = 'PIPE'
+"""Pipe multiprocessing mode"""
+WRAP_MODE_LOCAL = 'LOCAL'
+"""Data is only stored on the local machine"""
+WRAP_MODE_NETLOCK = 'NETLOCK'
+""" Lock multiprocessing mode over a network """
+WRAP_MODE_NETQUEUE = 'NETQUEUE'
+""" Queue multiprocessing mode over a network """
 
 
 ############ Loading Constants ###########################
@@ -304,6 +312,8 @@ DATATYPE_TABLE = 'DATATYPE_TABLE'
 SHARED_DATA = 'SHARED_DATA_'
 """ An HDF5 data object for direct interaction """
 
+NESTED_GROUP = 'NESTED_GROUP'
+""" An HDF5 group containing nested data """
 
 ############# LOGGING ############
 
@@ -315,6 +325,8 @@ LOG_RUN = '$run'
 """Wildcard replaced by name of current run"""
 LOG_PROC = '$proc'
 """Wildcard replaced by the name of the current process"""
+LOG_HOST = '$host'
+"""Wildcard replaced by the name of the current host"""
 LOG_SET = '$set'
 """Wildcard replaced by the name of the current run set"""
 

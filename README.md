@@ -4,7 +4,7 @@ pypet
 
 [![Travis Build Status](https://travis-ci.org/SmokinCaterpillar/pypet.svg?branch=master)](https://travis-ci.org/SmokinCaterpillar/pypet)
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true)](https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master)
-[![Coverage Status](https://coveralls.io/repos/SmokinCaterpillar/pypet/badge.png?branch=master)](https://coveralls.io/r/SmokinCaterpillar/pypet?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master)](https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master)
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
@@ -16,34 +16,15 @@ from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
 
-====================
-IMPORTANT DISCLAIMER
-====================
-
-The program is currently under development,
-please keep that in mind and use it very carefully.
-
-Before publishing the official *0.1.0* release I will integrate *pypet* first in my own research
-project. Thus, I have a more profound testing environment than only using
-unittests. Accordingly, you still have to deal with the naming *0.1b.X* for a little while.
-However, unless it is really, really, really necessary I do not plan to introduce drastic
-API changes anymore.
-So feel free to use this beta version and even more so feel free to give feedback,
-suggestions, and report bugs. Use **github** (https://github.com/SmokinCaterpillar/pypet) issues or
-write to the *pypet* Google Group (https://groups.google.com/forum/?hl=de#!forum/pypet).
-
-Thanks!
-
-
 ------------
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, 3.4 and
+Python 2.6, 2.7, 3.3, or 3.4, and
 
 * tables >= 2.3.1
 
-* pandas >= 0.12.0
+* pandas >= 0.14.1
 
 * numpy >= 1.6.1
 
@@ -61,6 +42,13 @@ If you use Python 2.6 you also need
 
 * unittest2
 
+
+There are also some optional packages that you can but do not have to install.
+
+If you want to combine *pypet* with SCOOP you need
+
+* scoop >= 0.7.1
+
 For git integration you additionally need
 
 * GitPython >= 0.3.1
@@ -75,7 +63,7 @@ To utilize the continuing of crashed trajectories you need
 
 Automatic Sumatra records are supported for
 
-* Sumatra >= 0.6.0
+* Sumatra >= 0.7.1
 
 
 ========================
@@ -197,8 +185,10 @@ Main Features
 
 * Support for **multiprocessing**, *pypet* can run your simulations in parallel
 
-* **Analyse** your data on-the-fly during multiprocessing for adaptive
-  exploration of the parameter space
+* **Analyse** your data on-the-fly during multiprocessing
+
+* **Adaptively** explore tha parameter space combining *pypet* with optimization
+  tools like the evolutionary algorithms framework DEAP (http://deap.readthedocs.org/en/)
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
@@ -210,6 +200,9 @@ Main Features
 
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
   Sumatra (http://neuralensemble.org/sumatra/)
+  
+* *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
+  SCOOP (http://scoop.readthedocs.org/)
 
 
 =====================
@@ -248,7 +241,7 @@ Let's take a look at the snippet at once:
                       comment = 'I am the first example!')
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # Add both parameters
     traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
@@ -258,7 +251,7 @@ Let's take a look at the snippet at once:
     traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 And now let's go through it one by one. At first we have a job to do, that is multiplying two
 values:
@@ -304,7 +297,7 @@ The environment will automatically generate a trajectory for us which we can acc
 ::
 
     # Get the trajectory from the environment
-    traj = env.v_trajectory
+    traj = env.trajectory
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
 of `x=y=1.0`.
@@ -331,7 +324,7 @@ combinations.
 ::
 
     # Run the simulation with all parameter combinations
-    env.f_run(multiply)
+    env.run(multiply)
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
 all parameter combinations. Every time it will pass a `traj` container with another one of these
@@ -386,7 +379,7 @@ with `-k` to keep the HDF5 and log files created by the tests
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 20 minutes. The test suite encompasses more than **700** tests
+Running all tests can take up to 20 minutes. The test suite encompasses more than **900** tests
 and has a code coverage of about **90%**!
 
 Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using

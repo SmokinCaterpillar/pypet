@@ -7,19 +7,15 @@ $MINICONDA_URL = "http://repo.continuum.io/miniconda/"
 
 function DownloadMiniconda ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
-    if ($python_version -match "3.4") {
-        $filename = "Miniconda3-3.5.5-Windows-" + $platform_suffix + ".exe"
+    if ($python_version -match "3.5") {
+        $filename = "Miniconda3-latest-Windows-" + $platform_suffix + ".exe"
     } else {
-        $filename = "Miniconda-3.5.5-Windows-" + $platform_suffix + ".exe"
+        $filename = "Miniconda-latest-Windows-" + $platform_suffix + ".exe"
     }
     $url = $MINICONDA_URL + $filename
 
     $basedir = $pwd.Path + "\"
     $filepath = $basedir + $filename
-    if (Test-Path $filename) {
-        Write-Host "Reusing" $filepath
-        return $filepath
-    }
 
     # Download and retry up to 3 times in case of network transient errors.
     Write-Host "Downloading" $filename "from" $url
@@ -90,7 +86,8 @@ function UpdateConda ($python_home) {
 function main () {
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     UpdateConda $env:PYTHON
-    InstallCondaPackages $env:PYTHON "numpy scipy=0.14.0 matplotlib pip numexpr cython pytables pandas"
+    #InstallCondaPackages $env:PYTHON "numpy scipy=0.14.0 matplotlib pip numexpr cython pytables=3.1.1 pandas"
+    InstallCondaPackages $env:PYTHON "numpy scipy hdf5 matplotlib pip numexpr cython pytables pandas"
 }
 
 main

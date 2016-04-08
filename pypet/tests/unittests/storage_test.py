@@ -24,7 +24,6 @@ from pypet.tests.testutils.ioutils import make_temp_dir, get_root_logger, \
 from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
-from pypet import new_group as a_new_group
 
 
 class FakeResult(Result):
@@ -58,7 +57,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('newassignment.hdf5')
         traj = Trajectory(filename=filename, overwrite_file=True)
 
-        traj.par = Parameter('d1.d2.d3.d4.d5', 55)
+        traj.par.d1 = Parameter('d1.d2.d3.d4.d5', 55)
         traj.f_store(max_depth=4)
 
         traj = load_trajectory(index=-1, filename=filename)
@@ -71,7 +70,7 @@ class StorageTest(TrajectoryComparator):
         self.assertFalse('d3' in traj)
 
         traj.par.f_remove(recursive=True)
-        traj.dpar = Parameter('d1.d2.d3.d4.d5', 123)
+        traj.dpar.d1 = Parameter('d1.d2.d3.d4.d5', 123)
 
         traj.dpar.f_store_child('d1', recursive=True, max_depth=3)
         traj.dpar.f_remove_child('d1', recursive=True)
@@ -89,7 +88,7 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('d2' in traj)
         self.assertTrue('d3' not in traj)
 
-        traj.dpar = Parameter('l1.l2.l3.l4.l5', 123)
+        traj.dpar.l1 = Parameter('l1.l2.l3.l4.l5', 123)
         traj.dpar.f_store(recursive=True, max_depth=0)
         self.assertFalse(traj.dpar.l1._stored)
 
@@ -105,6 +104,21 @@ class StorageTest(TrajectoryComparator):
         traj.dpar.f_load(recursive=True, max_depth=3)
         self.assertTrue('l3' in traj)
         self.assertTrue('l4' not in traj)
+
+    def test_file_size_many_params(self):
+        filename = make_temp_dir('filesize.hdf5')
+        traj = Trajectory(filename=filename, overwrite_file=True, add_time=False)
+        npars = 700
+        traj.f_store()
+        for irun in range(npars):
+            par = traj.f_add_parameter('test.test%d' % irun, 42+irun, comment='duh!')
+            traj.f_store_item(par)
+
+
+        size =  os.path.getsize(filename)
+        size_in_mb = size/1000000.
+        get_root_logger().info('Size is %sMB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
 
     def test_loading_explored_parameters(self):
 
@@ -122,7 +136,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_loading_and_storing_empty_containers(self):
         filename = make_temp_dir('empty_containers.hdf5')
-        traj = Trajectory(filename=filename)
+        traj = Trajectory(filename=filename, add_time=True)
 
         # traj.f_add_parameter('empty.dict', {})
         # traj.f_add_parameter('empty.list', [])
@@ -175,35 +189,26 @@ class StorageTest(TrajectoryComparator):
 
     def test_new_assignment_method(self):
         filename = make_temp_dir('newassignment.hdf5')
-        traj = Trajectory(filename=filename)
+        traj = Trajectory(filename=filename, add_time=True)
 
-        traj.v_lazy_adding = True
         comment = 'A number'
-        traj.par.x = 44, comment
+        traj.par.x = Parameter('', 44, comment)
 
         self.assertTrue(traj.f_get('x').v_comment == comment)
 
-        traj.par.iamgroup = a_new_group
-
-        self.assertTrue(isinstance(traj.iamgroup, ParameterGroup))
-
-        traj.v_lazy_adding = False
         traj.x = 45
         self.assertTrue(traj.par.f_get('x').f_get() == 45)
 
         self.assertTrue(isinstance(traj.f_get('x'), Parameter))
 
-        traj.f = Parameter('lll', 444, 'lll')
+        with self.assertRaises(AttributeError):
+            traj.f = Parameter('lll', 444, 'lll')
+
+
+        traj.f = Parameter('', 444, 'lll')
 
         self.assertTrue(traj.f_get('f').v_name == 'f')
 
-        traj.v_lazy_adding = True
-        traj.res.k = 22, 'Hi'
-        self.assertTrue(isinstance(traj.f_get('k'), Result))
-        self.assertTrue(traj.f_get('k')[1] == 'Hi')
-
-        with self.assertRaises(AttributeError):
-            traj.res.k = 33, 'adsd'
 
         conf = traj.conf
         with self.assertRaises(AttributeError):
@@ -211,8 +216,8 @@ class StorageTest(TrajectoryComparator):
         traj.f_set_properties(fast_access=True)
 
 
-        traj.crun = 43, 'JJJ'
-        self.assertTrue(traj.run_A[0] == 43)
+        traj.crun = Result('', k=43, m='JJJ')
+        self.assertTrue(traj.run_A['k'] == 43)
 
         with self.assertRaises(AttributeError):
             traj.f_set_properties(j=7)
@@ -220,14 +225,12 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(AttributeError):
             traj.f_set_properties(depth=7)
 
-        traj.hui = (('444', 'kkkk',), 'l')
+        traj.hui = Result('hui', ('444', 'kkkk',), 'l')
 
 
 
         self.assertTrue(traj.f_get('hui')[1] == 'l')
 
-        with self.assertRaises(AttributeError):
-            traj.hui = ('445', 'kkkk',)
 
         traj.f_get('hui').f_set(('445', 'kkkk',))
 
@@ -238,62 +241,62 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_link('klkikju', traj.par) # for shizzle
 
 
-        traj.meee = Result('h', 43, hui = 3213, comment='du')
+        traj.meee = Result('meee.h', 43, hui = 3213, comment='du')
 
         self.assertTrue(traj.meee.h.h == 43)
 
         with self.assertRaises(TypeError):
-            traj.par.mu = NNGroupNode('jj', comment='mi')
+            traj.par.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = NNGroupNode('jj', comment='mi')
+            traj.res.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = NNGroupNode('jj', comment='mi')
+            traj.conf.jj = NNGroupNode('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = NNGroupNode('jj', comment='mi')
+            traj.dpar.jj = NNGroupNode('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = ResultGroup('jj', comment='mi')
+            traj.par.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ResultGroup('jj', comment='mi')
+            traj.dpar.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = ResultGroup('jj', comment='mi')
+            traj.conf.jj = ResultGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ResultGroup('jj', comment='mi')
+            traj.jj = ResultGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = ConfigGroup('jj', comment='mi')
+            traj.par.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ConfigGroup('jj', comment='mi')
+            traj.dpar.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = ConfigGroup('jj', comment='mi')
+            traj.res.jj = ConfigGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ConfigGroup('jj', comment='mi')
+            traj.jj = ConfigGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.par.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.par.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.conf.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.res.jj = DerivedParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = DerivedParameterGroup('jj', comment='mi')
+            traj.jj = DerivedParameterGroup('jj', comment='mi')
 
         with self.assertRaises(TypeError):
-            traj.dpar.mu = ParameterGroup('jj', comment='mi')
+            traj.dpar.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.res.mu = ParameterGroup('jj', comment='mi')
+            traj.res.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.conf.mu = ParameterGroup('jj', comment='mi')
+            traj.conf.jj = ParameterGroup('jj', comment='mi')
         with self.assertRaises(TypeError):
-            traj.mu = ParameterGroup('jj', comment='mi')
+            traj.jj = ParameterGroup('jj', comment='mi')
 
-        traj.par.mu = ParameterGroup('jj', comment='mi')
-        traj.res.mus = ResultGroup('jj', comment='mi')
-        traj.mu = NNGroupNode('jj')
+        traj.par.jj = ParameterGroup('jj', comment='mi')
+        traj.res.jj = ResultGroup('jj', comment='mi')
+        traj.jj = NNGroupNode('jj')
         cg = ConfigGroup('a.g')
         traj.conf.a = cg
 
-        self.assertTrue(traj.f_get('conf.a.a.g', shortcuts=False) is cg)
+        self.assertTrue(traj.f_get('conf.a.g', shortcuts=False) is cg)
 
         dg = DerivedParameterGroup('ttt')
         traj.dpar.ttt = dg
@@ -308,9 +311,9 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.vvv.v_full_name == 'vvv')
 
-        self.assertTrue(traj.par.mu.v_name == 'mu')
+        self.assertTrue(traj.par.jj.v_name == 'jj')
 
-        traj.rrr = MyParamGroup('ff')
+        traj.ff = MyParamGroup('ff')
 
         traj.par.g = MyParamGroup('')
 
@@ -321,12 +324,11 @@ class StorageTest(TrajectoryComparator):
 
         traj = load_trajectory(index=-1, filename=filename, dynamic_imports=MyParamGroup)
 
-        self.assertTrue(isinstance(traj.rrr, NNGroupNode))
-        self.assertTrue(isinstance(traj.rrr.ff, MyParamGroup))
+        self.assertTrue(isinstance(traj.ff, MyParamGroup))
         self.assertTrue(isinstance(traj.par.g, MyParamGroup))
 
-        traj.par = Parameter('hiho', 42, comment='you')
-        traj.par = Parameter('g1.g2.g3.g4.g5', 43)
+        traj.par.hiho = Parameter('hiho', 42, comment='you')
+        traj.par.g1 = Parameter('g1.g2.g3.g4.g5', 43)
 
         self.assertTrue(traj.hiho == 42)
         self.assertTrue(isinstance(traj.par.g1, ParameterGroup ))
@@ -335,7 +337,7 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_shortenings_of_names(self):
-        traj = Trajectory(filename=make_temp_dir('testshortening.hdf5'))
+        traj = Trajectory(filename=make_temp_dir('testshortening.hdf5'), add_time=True)
         traj.f_aconf('g', 444)
         self.assertTrue(isinstance(traj.f_get('g'), Parameter))
         self.assertTrue(traj.conf.g == 444)
@@ -355,7 +357,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_storage_service_errors(self):
 
-        traj = Trajectory(filename=make_temp_dir('testnoservice.hdf5'))
+        traj = Trajectory(filename=make_temp_dir('testnoservice.hdf5'), add_time=True)
 
         traj_name = traj.v_name
 
@@ -478,7 +480,7 @@ class StorageTest(TrajectoryComparator):
 
         env = Environment(trajectory='Testmigrate', filename=filename,
 
-                          log_config=get_log_config())
+                          log_config=get_log_config(), add_time=True)
 
         traj = env.v_trajectory
         for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
@@ -510,7 +512,7 @@ class StorageTest(TrajectoryComparator):
         filename = make_temp_dir('overwrite.hdf5')
 
         env = Environment(trajectory='testoverwrite', filename=filename,
-                          log_config=get_log_config())
+                          log_config=get_log_config(), overwrite_file=True)
 
         traj = env.v_traj
 
@@ -550,7 +552,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_migrations(self):
 
-        traj = Trajectory(name='Testmigrate', filename=make_temp_dir('migrate.hdf5'))
+        traj = Trajectory(name='Testmigrate', filename=make_temp_dir('migrate.hdf5'),
+                          add_time=True)
 
         traj.f_add_result('I.am.a.mean.resu', 42, comment='Test')
         traj.f_add_derived_parameter('ffa', 42)
@@ -572,7 +575,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_wildcard_search(self):
 
-        traj = Trajectory(name='Testwildcard', filename=make_temp_dir('wilcard.hdf5'))
+        traj = Trajectory(name='Testwildcard', filename=make_temp_dir('wilcard.hdf5'),
+                          add_time=True)
 
         traj.f_add_parameter('expl', 2)
         traj.f_explore({'expl':[1,2,3,4]})
@@ -582,7 +586,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_result('results.wctest.run_00000001.jjj', 43)
         traj.f_add_result('results.wctest.%s.jjj' % traj.f_wildcard('$', -1), 43)
 
-        traj.v_as_run = 1
+        traj.v_crun = 1
 
         self.assertTrue(traj.results.wctest['$'].jjj==43)
         self.assertTrue(traj.results.wc2test.crun.hhh==333)
@@ -621,7 +625,8 @@ class StorageTest(TrajectoryComparator):
         get_root_logger().info('Done with wildcard test')
 
     def test_store_and_load_large_dictionary(self):
-        traj = Trajectory(name='Testlargedict', filename=make_temp_dir('large_dict.hdf5'))
+        traj = Trajectory(name='Testlargedict', filename=make_temp_dir('large_dict.hdf5'),
+                          add_time=True)
 
         large_dict = {}
 
@@ -640,7 +645,8 @@ class StorageTest(TrajectoryComparator):
 
         traj_name = traj.v_name
 
-        traj2 = Trajectory(filename=make_temp_dir('large_dict.hdf5'))
+        traj2 = Trajectory(filename=make_temp_dir('large_dict.hdf5'),
+                           add_time=True)
 
         traj2.f_load(name=traj_name, load_data=2)
 
@@ -650,7 +656,8 @@ class StorageTest(TrajectoryComparator):
     def test_auto_load(self):
 
 
-        traj = Trajectory(name='Testautoload', filename=make_temp_dir('autoload.hdf5'))
+        traj = Trajectory(name='Testautoload', filename=make_temp_dir('autoload.hdf5'),
+                          add_time=True)
 
         traj.v_auto_load = True
 
@@ -683,7 +690,8 @@ class StorageTest(TrajectoryComparator):
     def test_get_default(self):
 
 
-        traj = Trajectory(name='Testgetdefault', filename=make_temp_dir('autoload.hdf5'))
+        traj = Trajectory(name='Testgetdefault', filename=make_temp_dir('autoload.hdf5'),
+                          add_time=True)
 
         traj.v_auto_load = True
 
@@ -712,7 +720,8 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_version_mismatch(self):
-        traj = Trajectory(name='TestVERSION', filename=make_temp_dir('testversionmismatch.hdf5'))
+        traj = Trajectory(name='TestVERSION', filename=make_temp_dir('testversionmismatch.hdf5'),
+                          add_time=True)
 
         traj.f_add_parameter('group1.test',42)
 
@@ -748,11 +757,11 @@ class StorageTest(TrajectoryComparator):
     def test_no_run_information_loading(self):
         filename = make_temp_dir('testnoruninfo.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=filename)
+                          filename=filename,
+                          add_time=True)
 
         length = 100000
-        traj.v_lazy_adding = True
-        traj.par.x = 42
+        traj.par.x = Parameter('', 42)
         traj.f_explore({'x': range(length)})
 
         traj.f_store()
@@ -764,7 +773,8 @@ class StorageTest(TrajectoryComparator):
     def test_delete_whole_subtrees(self):
         filename = make_temp_dir('testdeltree.hdf5')
         traj = Trajectory(name='TestDelete',
-                          filename=filename, large_overview_tables=True)
+                          filename=filename, large_overview_tables=True,
+                          add_time=True)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
         dpar = traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
@@ -840,12 +850,40 @@ class StorageTest(TrajectoryComparator):
         #     # We cannot delete something containing an explored parameter
         #     traj.f_delete_item('par', recursive=True)
 
-        with self.assertRaises(TypeError):
-            traj.f_delete_item('ggg')
+        # with self.assertRaises(TypeError):
+        #     traj.f_delete_item('ggg')
+
+    def test_delete_links(self):
+        traj = Trajectory(name='TestDelete',
+                          filename=make_temp_dir('testpartiallydel.hdf5'),
+                          add_time=True)
+
+        res = traj.f_add_result('mytest.test', a='b', c='d')
+
+        traj.f_add_link('x.y', res)
+        traj.f_add_link('x.g.h', res)
+
+        traj.f_store()
+
+        traj.f_remove_child('x', recursive=True)
+        traj.f_load()
+
+        self.assertEqual(traj.x.y.a, traj.test.a)
+        self.assertEqual(traj.x.g.h.a, traj.test.a)
+
+        traj.f_delete_link('x.y', remove_from_trajectory=True)
+        traj.f_delete_link((traj.x.g, 'h'), remove_from_trajectory=True)
+
+        traj.f_load()
+
+        with self.assertRaises(AttributeError):
+            traj.x.g.h
+
 
     def test_partially_delete_stuff(self):
         traj = Trajectory(name='TestDelete',
-                          filename=make_temp_dir('testpartiallydel.hdf5'))
+                          filename=make_temp_dir('testpartiallydel.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -871,30 +909,35 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('results' in traj)
         self.assertTrue(res not in traj)
 
-    def test_throw_warning_if_old_kw_is_used(self):
-        pass
-
-        filename = make_temp_dir('hdfwarning.hdf5')
-
-        with warnings.catch_warnings(record=True) as w:
-
-            env = Environment(trajectory='test', filename=filename,
-                              dynamically_imported_classes=[],
-                              log_config=get_log_config())
-
-        with warnings.catch_warnings(record=True) as w:
-            traj = Trajectory(dynamically_imported_classes=[])
-
-        traj = env.v_trajectory
-        traj.f_store()
-
-        with warnings.catch_warnings(record=True) as w:
-            traj.f_load(dynamically_imported_classes=[])
-
-        env.f_disable_logging()
+    # def test_throw_warning_if_old_kw_is_used(self):
+    #
+    #     filename = make_temp_dir('hdfwarning.hdf5')
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         env = Environment(trajectory='test', filename=filename,
+    #                           dynamically_imported_classes=[],
+    #                           log_config=get_log_config(), add_time=True)
+    #         self.assertEqual(len(w), 1)
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         traj = Trajectory(dynamically_imported_classes=[])
+    #         self.assertEqual(len(w), 1)
+    #
+    #     traj = env.v_trajectory
+    #     traj.f_store()
+    #
+    #     with warnings.catch_warnings(record=True) as w:
+    #         warnings.simplefilter("always", DeprecationWarning, append=False)
+    #         traj.f_load(dynamically_imported_classes=[])
+    #         self.assertEqual(len(w), 1)
+    #
+    #     env.f_disable_logging()
 
     def test_overwrite_stuff(self):
-        traj = Trajectory(name='TestOverwrite', filename=make_temp_dir('testowrite.hdf5'))
+        traj = Trajectory(name='TestOverwrite', filename=make_temp_dir('testowrite.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -926,7 +969,7 @@ class StorageTest(TrajectoryComparator):
 
     def test_loading_as_new(self):
         filename = make_temp_dir('asnew.h5')
-        traj = Trajectory(name='TestPartial', filename=filename)
+        traj = Trajectory(name='TestPartial', filename=filename, add_time=True)
 
         traj.f_add_parameter('x', 3)
         traj.f_add_parameter('y', 2)
@@ -945,7 +988,9 @@ class StorageTest(TrajectoryComparator):
 
         self.assertTrue(traj.v_name == 'TestTraj')
 
-        self.assertTrue(len(traj) == 3)
+        self.assertEqual(len(traj), 3)
+
+        self.assertEqual(len(traj._explored_parameters), 2)
 
         traj.f_shrink()
 
@@ -953,7 +998,8 @@ class StorageTest(TrajectoryComparator):
 
 
     def test_partial_loading(self):
-        traj = Trajectory(name='TestPartial', filename=make_temp_dir('testpartially.hdf5'))
+        traj = Trajectory(name='TestPartial', filename=make_temp_dir('testpartially.hdf5'),
+                          add_time=True)
 
         res = traj.f_add_result('mytest.test', a='b', c='d')
 
@@ -1040,7 +1086,8 @@ class StorageTest(TrajectoryComparator):
 
     def test_store_items_and_groups(self):
 
-        traj = Trajectory(name='testtraj', filename=make_temp_dir('teststoreitems.hdf5'))
+        traj = Trajectory(name='testtraj', filename=make_temp_dir('teststoreitems.hdf5'),
+                          add_time=True)
 
         traj.f_store()
 

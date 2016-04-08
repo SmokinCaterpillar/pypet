@@ -22,6 +22,7 @@ Basic Concepts
     ../examplesdoc/example_14
     ../examplesdoc/example_15
     ../examplesdoc/example_04
+    ../examplesdoc/example_21
     ../examplesdoc/example_09
     ../examplesdoc/example_13
     ../examplesdoc/example_17
@@ -33,6 +34,7 @@ Basic Concepts
     Ex14: Links
     Ex15: More ways to add data
     Ex4: Multiprocessing
+    Ex21: SCOOP multiprocessing
     Ex9: Large Results
     Ex13: Pipeline and post-processing
     Ex17: Wrapping an existing project
@@ -53,7 +55,9 @@ Advanced Concepts
     ../examplesdoc/example_10
     ../examplesdoc/example_12
     ../examplesdoc/example_16
-
+    ../examplesdoc/example_19
+    ../examplesdoc/example_20
+    ../examplesdoc/example_22
 
 ..
     Ex3: Merging
@@ -63,6 +67,9 @@ Advanced Concepts
     Ex10: Items from all runs
     Ex12: Sharing Data between Processes
     Ex16: Multiprocessing Context
+    Ex19: DEAP
+    Ex20: Manual runs (DEAP)
+    Ex22: SAGA Python
 
 
 -----------------

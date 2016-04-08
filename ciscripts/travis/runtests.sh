@@ -5,16 +5,16 @@ set -u # Treat references to unset variables as an error
 
 if [[ $TEST_SUITE == ON ]]
     then
-        if [[ $TRAVIS_PYTHON_VERSION == 2.7* && $NEWEST == TRUE  ]]
+        if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]
             then
                 # try with many files, i.e. do not remove data after every test
                 # but only for one particular setting of the test matrix python = 2.7 and newest
                 # packages
-                echo "Running henri test suite and keeping all files"
-                python ../../pypet/tests/all_henri_tests.py -k
+                echo "Running test suite and keeping all files"
+                python ../../pypet/tests/all_tests.py -k
             else
-                echo "Running henri test suite"
-                python ../../pypet/tests/all_henri_tests.py
+                echo "Running test suite (with SCOOP)"
+                python -m scoop -n 3 ../../pypet/tests/all_tests.py
             fi
     fi
 
@@ -66,7 +66,7 @@ if [[ $GIT_TEST == ON ]]
 if [[ $COVERAGE == ON ]]
     then
         cd ../../
-        coverage run --parallel-mode --source=pypet --include=*/pypet/brian2/* ./pypet/tests/henri_coverage_run.py
+        coverage run --parallel-mode --source=pypet --omit=*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py ./pypet/tests/coverage_run.py
         coverage combine
         coveralls --verbose
         cd ciscripts/travis
@@ -77,4 +77,12 @@ if [[ $EXAMPLES == ON ]]
         cd ../../pypet/tests
         python all_examples.py
         cd ../../ciscripts/travis
+        if [[ $SCOOP == ON ]]
+            then
+                cd ../../examples
+                echo "Running SCOOP example"
+                python -m scoop -n 3 example_21_scoop_multiprocessing.py
+                echo "SCOOP example succesfull"
+                cd ../ciscripts/travis
+            fi
     fi

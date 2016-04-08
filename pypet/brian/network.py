@@ -16,7 +16,7 @@ components, analyser and your runner to the manager.
 
 Pass the :func:`~pypet.brian.network.run_network` function together with a
 :class:`~pypet.brian.network.NetworkManager` to your main environment function
-:func:`~pypet.environment.Environment.f_run` to start a simulation and parallel
+:func:`~pypet.environment.Environment.run` to start a simulation and parallel
 parameter exploration. Be aware that in case of a *pre-built* network,
 successful parameter exploration
 requires parallel processing (see :class:`~pypet.brian.network.NetworkManager`).
@@ -30,32 +30,8 @@ __author__ = 'Robert Meyer'
 from brian import Network, clear, reinit
 from brian.units import second
 
-from pypet.brian.parameter import BrianDurationParameter
 from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
-
-
-@deprecated('Please use `environment.f_run(manager.run_network)` instead of '
-            '`environment.f_run(run_network, manager)`.')
-def run_network(traj, network_manager):
-    """Top-level simulation function, pass this together with a NetworkManager to the environment.
-
-    DEPRECATED: Please pass `network_manager.run_network` to the environment's `f_run` function
-
-    :param traj: Trajectory container
-
-    :param network_manager: :class:`~pypet.brian.network.NetworkManager` instance
-
-        *   Creates a `BRIAN network`_.
-
-        *   Manages all :class:`~pypet.brian.network.NetworkComponent` instances,
-            all :class:`~pypet.brian.network.NetworkAnalyser` and a single
-            :class:`~pypet.brian.network.NetworkRunner`.
-
-        .. _`BRIAN network`: http://briansimulator.org/docs/reference-network.html
-
-    """
-    network_manager.run_network(traj)
 
 
 class NetworkComponent(HasLogger):
@@ -459,11 +435,6 @@ class NetworkRunner(NetworkComponent):
 
         for durations in durations_list:
             for duration_param in durations.f_iter_leaves(with_links=False):
-
-                if isinstance(duration_param, BrianDurationParameter):
-                    self._logger.warning('BrianDurationParameters are deprecated. '
-                                         'Please use a normal BrianParameter and '
-                                         'specify the order in `v_annotations.order`!')
 
                 if 'order' in duration_param.v_annotations:
                     order = duration_param.v_annotations.order

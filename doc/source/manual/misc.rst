@@ -14,9 +14,9 @@ In the meantime you can cite the software as given below. For *bibtex* you can u
 
 ::
 
-    @misc{rmeyer2015,
+    @misc{rmeyer2016,
         author = {Robert Meyer and Klaus Obermayer},
-        year = {2015},
+        year = {2016},
         title = {pypet: {T}he {P}ython {P}arameter {E}xploration {T}oolkit},
         note = {\url{http://pypet.readthedocs.org/}},
         institution = {Technische Universität Berlin, Neural Information Processing Group}
@@ -63,6 +63,8 @@ Acknowledgments
     Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project
 
+* Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature.
+
 *
 
     Thanks to the `BCCN Berlin`_, the Research Training Group GRK 1589/1, and the
@@ -100,10 +102,10 @@ If you do not want to browse to your installation folder, you can also download 
 :download:`all_tests.py <../../../pypet/tests/all_tests.py>` script.
 
 Running all tests can take up to 20 minutes and might temporarily take up to
-1 GB of disk space. The test suite encompasses more than **700** tests
+1 GB of disk space. The test suite encompasses more than **900** tests
 and has a code coverage of about **90%**!
 
-*pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using
+*pypet* is constantly tested with Python 2.6, 2.7, 3.3, 3.4, and 3.5 for **Linux** using
 Travis-CI_. Testing for **Windows** platforms is performed via Appveyor_.
 The source code is available at `github.com/SmokinCaterpillar/pypet`_.
 

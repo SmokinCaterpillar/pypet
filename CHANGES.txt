@@ -1,3 +1,110 @@
+pypet 0.2.0
+
+*   No longer beta
+
+pypet 0.2b1
+
+*   ENH: Pypet can now apply fast merging if trajectories reside in different files.
+    If one still wants to apply slow merging, one can set `slow_merge=True`.
+
+*   ENH: New `merge_all_in_folder` function
+
+*   The range is now a list that is by default copied upon request. To avoid
+    quadratic complexity with multiple calls to `f_expand`.
+
+*   ENH: Meta data of single runs is no longer stored during the
+    single run to avoid overhead and guarantee faster runs
+
+*   For more stability continuing is no longer supported for the
+    ``'QUEUE'`` and ``'PIPE'`` wrap modes.
+
+*   Queue retries are now logged in debug mode.
+
+*   One can now choose what `f_iter_runs` should return.
+
+*   New `f_run_map` and `f_pipeline_map` functionality for iterable arguments.
+
+*   New wrap mode ``'LOCAL'`` to ensure data is only stored by the main program
+
+*   Immediate post-processing is now supported by all wrap modes.
+
+*   PIPE wrapping is no longer supported under Windows
+
+*   The `add_time` parameter of the trajectory is by default now `False`
+
+*   New `niceness` feature to prioritize child processes
+
+*   New `scoop` feature to allow multiprocessing with the scoop package.
+
+*   Passing `log_multiproc=False` to an environment disables multiprocess logging.
+
+*   Parameters and Results can nest data in HDF5 themselves using dot notation.
+
+*   Removed BrianDurationParameter
+
+*   Parameters now support lists and no longer make numpy arrays unwritable
+
+*   Results are now always sorted according to the run indices
+    (except for immediate post-processing)
+
+*   Process ID and hostname are also added to the logfiles' naming scheme
+
+*   `freeze_pool_input` has been renamed to `freeze_input` because it can be used
+    with SCOOP as well.
+
+*   New ``'NETLOCK'`` wrap mode, to allow locking over a network and usage
+    of servers with a shared home directory.
+
+*   Prefixes are no longer mandatory if using `func` and `vars`:
+    `traj.f_iter_runs()` is equivalent to `traj.func.iter_runs()` or
+    `myresult.v_name` is equivalent to `myresult.vars.name`
+
+*   BUG FIX: If a trajectory is loaded `as new` the explored parameters are
+    now correctly loaded
+
+*   New ``graceful_exit`` mode to allow to stop your programs via `CTRL+C` while finishing
+    all your active runs first and storing all your remaining data.
+
+*   New `v_no_clobber` property that allows to ignore additions to the trajectory that
+    are already there.
+
+*   New `rts_X` abbreviation that translates a given run index into the correspondin run set,
+    e.g. ``rts_4007`` gives ``run_set_00004```.
+
+*   `log_stdout` is `False` by default.
+
+*   *pypet* can now be combined with DEAP optimization.
+
+*   All deprecated functions have been removed!
+
+*   Lazy adding is no longer supported!
+
+
+pypet 0.2b.0
+
+*   Erroneous Release due to PyPI fault :/
+
+
+pypet 0.1b.12
+
+*   Renaming of the MultiprocContext's `start` function to `f_start`
+
+*   BUG FIX: Correct lock acquiring for multiprocessing with StorageContextManager
+
+*   BUG FIX: `v_full_copy` is now `False` by default
+
+*   BUG FIX: `v_full_copy` is no longer automatically set to `True` when using
+    `freeze_pool_input`.
+
+*   New `consecutive_merge` parameter for `f_merge` to allow faster merging of several
+    trajectories.
+
+*   New `f_merge_many` function to merge many trajectories at once.
+
+*   New experimental ``'PIPE'`` wrapping which is even faster (but more unreliable)
+    than ``'QUEUE'``.
+
+
 pypet 0.1b.11
 
 *   If one wants the old logging method, `log_config` should not be specified, i.e.

@@ -155,7 +155,7 @@ class BaseParameter(NNLeafNode):
         self._locked = False
 
         # Whether to keep the full range array when pickled or not
-        self._full_copy = True
+        self._full_copy = False
         self._explored = False  # If explored or not
 
     def f_supports(self, data):
@@ -228,15 +228,6 @@ class BaseParameter(NNLeafNode):
         """Sets the full copy mode"""
         val = bool(val)
         self._full_copy = val
-
-    @deprecated(msg='Please use `f_has_range()` instead.')
-    def f_is_array(self):
-        """Returns true if the parameter is explored and contains a range array.
-
-        DEPRECATED: Use `f_has_range()` instead.
-
-        """
-        return self.f_has_range()
 
     def f_has_range(self):
         """Returns true if the parameter contains a range array.
@@ -318,9 +309,9 @@ class BaseParameter(NNLeafNode):
             return False
 
         if not self.f_supports(val1) and not self.f_supports(val2):
-            raise TypeError('I do not support the types of both inputs (`%s` and `%s`),'
-                            ' therefore I cannot judge whether the two are equal.' %
-                            str(type(val1)), str(type(val2)))
+            raise TypeError('I do not support the types of both inputs (`%s` and `%s`), '
+                            'therefore I cannot judge whether '
+                            'the two are equal.' % (str(type(val1)), str(type(val2))))
 
         if not self._values_of_same_type(val1, val2):
             return False
@@ -462,14 +453,13 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError("Should have implemented this.")
 
-    def __getitem__(self, idx):
-        """Equivalent to `f_get_range[idx]`
+    def __getitem__(self, item):
+        """Equivalent to `f_get_range()[idx]`
 
         :raises: TypeError if parameter has no range
 
         """
-        return self.f_get_range().__getitem__(idx)
-
+        return self.f_get_range().__getitem__(item)
 
     def f_get(self):
         """Returns the current data value of the parameter and locks the parameter.
@@ -493,36 +483,17 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError("Should have implemented this.")
 
-    @deprecated(msg='Please use `f_get_range()` instead!')
-    def f_get_array(self):
+    def f_get_range(self, copy=True):
         """Returns an iterable to iterate over the values of the exploration range.
 
         Note that the returned values should be either a copy of the exploration range
-        or the array must be immutable, for example a python tuple.
+        unless explicetly requested otherwise.
 
-        :return: Immutable sequence
+        :param copy:
 
-        :raises: TypeError if the parameter is not explored
+            If range should be copied to avoid tempering with data.
 
-        Example usage:
-
-        >>> param = Parameter('groupA.groupB.myparam',data=22, comment='I am a neat example')
-        >>> param._explore([42,43,43])
-        >>> param.f_get_array()
-        (42,43,44)
-
-        DEPRECATED: Use `f_get_range()` instead!
-
-        """
-        return self.f_get_range()
-
-    def f_get_range(self):
-        """Returns an iterable to iterate over the values of the exploration range.
-
-        Note that the returned values should be either a copy of the exploration range
-        or the array must be immutable, for example a python tuple.
-
-        :return: Immutable sequence
+        :return: Iterable
 
         :raises: TypeError if the parameter is not explored
 
@@ -635,7 +606,6 @@ class BaseParameter(NNLeafNode):
         """
         raise NotImplementedError('Implement this!')
 
-
     def _shrink(self):
         """If a parameter is explored, i.e. it has a range, the whole exploration range is deleted.
 
@@ -653,7 +623,6 @@ class BaseParameter(NNLeafNode):
 
         """
         raise NotImplementedError("Should have implemented this.")
-
 
     def f_empty(self):
         """Erases all data in the parameter.
@@ -696,7 +665,7 @@ class Parameter(BaseParameter):
     * numpy natives, arrays and matrices of type
       np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
 
-    * python homogeneous non-nested tuples
+    * python homogeneous non-nested tuples and lists
 
     Note that for larger numpy arrays it is recommended to use the
     :class:`~pypet.parameter.ArrayParameter`.
@@ -760,7 +729,7 @@ class Parameter(BaseParameter):
         # but it is necessary to keep a reference to it to restore the original value
         # after exploration
 
-        self._explored_range = tuple()  # Tuple that will changed later on if parameter is explored
+        self._explored_range = []  # List that will changed later on if parameter is explored
         self._set_logger()
 
         if data is not None:
@@ -845,10 +814,11 @@ class Parameter(BaseParameter):
         # If we don't need a full copy of the Parameter (because a single process needs
         # only access to a single point in the parameter space) we can delete the rest
         if not self._full_copy:
-            result['_explored_range'] = tuple()
+            result['_explored_range'] = []
 
         return result
 
+    # @no_prefix_getattr
     def __getattr__(self, item):
         """Allows to query for `.data` as an attribute"""
         if item == 'data':
@@ -889,7 +859,7 @@ class Parameter(BaseParameter):
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
         dtype = type(data)
-        if dtype is tuple:
+        if dtype is tuple or dtype is list:
 
             # Parameters cannot handle empty tuples
             if len(data) == 0:
@@ -962,7 +932,6 @@ class Parameter(BaseParameter):
 
         return True
 
-
     @copydoc(BaseParameter.f_set)
     def f_set(self, data):
 
@@ -978,34 +947,14 @@ class Parameter(BaseParameter):
                                  'you not explicitly overwrite the data on disk, this change '
                                  'might be lost and not propagated to disk.')
 
-        val = self._convert_data(data)
-
-        if not self.f_supports(val):
+        if not self.f_supports(data):
             raise TypeError('Unsupported data `%s` of type `%s`. '
-                            'If you passed a tuple, this error might also be caused '
+                            'If you passed a tuple or list, this error might also be caused '
                             'by heterogeneous data within the '
-                            'tuple.' % (str(val), str(type(val))))
+                            'tuple or list.' % (str(data), str(type(data))))
 
-        self._data = val
+        self._data = data
         self._default = self._data
-
-
-    def _convert_data(self, val):
-        """Converts data to be handled by the parameter.
-
-        The only operation so far is to set numpy arrays immutable.
-        All other data items are simply returned without modification.
-
-        :param val: the data value to convert
-
-        :return: the converted data
-
-        """
-        if isinstance(val, np.ndarray):
-            val.flags.writeable = False
-            return val
-
-        return val
 
     @copydoc(BaseParameter.f_get_default)
     def f_get_default(self):
@@ -1015,8 +964,12 @@ class Parameter(BaseParameter):
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._default
 
-    def f_get_range(self):
-        """Returns a python tuple containing the exploration range.
+    def f_get_range(self, copy=True):
+        """Returns a python iterable containing the exploration range.
+
+        :param copy:
+
+            If the range should be copied before handed over to avoid tempering with data
 
         Example usage:
 
@@ -1031,6 +984,8 @@ class Parameter(BaseParameter):
         if not self.f_has_range():
             raise TypeError('Your parameter `%s` is not array, so cannot return array.' %
                             self.v_full_name)
+        elif copy:
+            return self._explored_range[:]
         else:
             return self._explored_range
 
@@ -1062,12 +1017,16 @@ class Parameter(BaseParameter):
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
         if self.f_has_range():
-            raise TypeError('Your Parameter %s is already explored, cannot _explore it further!' %
-                            self._name)
+            raise TypeError('Your parameter `%s` is already explored, '
+                            'cannot _explore it further!' % self._name)
 
-        data_tuple = self._data_sanity_checks(explore_iterable)
+        if self._data is None:
+            raise TypeError('Your parameter `%s` has no default value, please specify one '
+                            'via `f_set` before exploration. ' % self.v_full_name)
 
-        self._explored_range = data_tuple
+        data_list = self._data_sanity_checks(explore_iterable)
+
+        self._explored_range = data_list
         self._explored = True
         self.f_lock()
 
@@ -1091,7 +1050,7 @@ class Parameter(BaseParameter):
          >>> param._explore([3.0,2.0,1.0])
          >>> param._expand([42.0, 43.42])
          >>> param.f_get_range()
-         >>> (3.0, 2.0, 1.0, 42.0, 43.42)
+         >>> [3.0, 2.0, 1.0, 42.0, 43.42]
 
         :raises TypeError, ParameterLockedException
 
@@ -1103,11 +1062,10 @@ class Parameter(BaseParameter):
             raise TypeError('Your Parameter `%s` is not an array and can therefore '
                             'not be expanded.' % self._name)
 
-        data_tuple = self._data_sanity_checks(explore_iterable)
+        data_list = self._data_sanity_checks(explore_iterable)
 
-        self._explored_range = self._explored_range + data_tuple
+        self._explored_range.extend(data_list)
         self.f_lock()
-
 
     def _data_sanity_checks(self, explore_iterable):
         """Checks if data values are  valid.
@@ -1116,27 +1074,25 @@ class Parameter(BaseParameter):
         type as the default value.
 
         """
-        data_tuple = []
+        data_list = []
 
         for val in explore_iterable:
-            newval = self._convert_data(val)
 
-            if not self.f_supports(newval):
-                raise TypeError('%s is of not supported type %s.' % (repr(val), str(type(newval))))
+            if not self.f_supports(val):
+                raise TypeError('%s is of not supported type %s.' % (repr(val), str(type(val))))
 
-            if not self._values_of_same_type(newval, self._default):
+            if not self._values_of_same_type(val, self._default):
                 raise TypeError(
                     'Data of `%s` is not of the same type as the original entry value, '
                     'new type is %s vs old type %s.' %
-                    (self.v_full_name, str(type(newval)), str(type(self._default))))
+                    (self.v_full_name, str(type(val)), str(type(self._default))))
 
-            data_tuple.append(newval)
+            data_list.append(val)
 
-        if len(data_tuple) == 0:
+        if len(data_list) == 0:
             raise ValueError('Cannot explore an empty list!')
 
-        return tuple(data_tuple)
-
+        return data_list
 
     def _store(self):
         """Returns a dictionary of formatted data understood by the storage service.
@@ -1148,7 +1104,8 @@ class Parameter(BaseParameter):
         :return: Dictionary containing the data and optionally the exploration range.
 
         """
-        store_dict = {'data': ObjectTable(data={'data': [self._data]})}
+        if self._data is not None:
+            store_dict = {'data': ObjectTable(data={'data': [self._data]})}
 
         if self.f_has_range():
             store_dict['explored_data'] = ObjectTable(data={'data': self._explored_range})
@@ -1168,12 +1125,15 @@ class Parameter(BaseParameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
-        self._data = self._convert_data(load_dict['data']['data'][0])
-        self._default = self._data
+        if 'data' in load_dict:
+            self._data = load_dict['data']['data'][0]
+            self._default = self._data
+        else:
+            self._logger.warning('Your parameter `%s` is empty, '
+                                 'I did not find any data on disk.' % self.v_full_name)
 
         if 'explored_data' in load_dict:
-            self._explored_range = tuple([self._convert_data(x)
-                                          for x in load_dict['explored_data']['data'].tolist()])
+            self._explored_range = [x for x in load_dict['explored_data']['data'].tolist()]
             self._explored = True
 
         self._locked = True
@@ -1185,7 +1145,6 @@ class Parameter(BaseParameter):
 
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._data
-
 
     @copydoc(BaseParameter._shrink)
     def _shrink(self):
@@ -1200,7 +1159,7 @@ class Parameter(BaseParameter):
             raise TypeError('Cannot shrink empty Parameter.')
 
         del self._explored_range
-        self._explored_range = {}
+        self._explored_range = []
         self._explored = False
 
     @copydoc(BaseParameter.f_empty)
@@ -1256,7 +1215,7 @@ class ArrayParameter(Parameter):
         the order of the arrays later on.
 
         """
-        if not type(self._data) in [np.ndarray, tuple, np.matrix]:
+        if type(self._data) not in (np.ndarray, tuple, np.matrix, list):
             return super(ArrayParameter, self)._store()
         else:
             store_dict = {'data' + ArrayParameter.IDENTIFIER: self._data}
@@ -1278,6 +1237,8 @@ class ArrayParameter(Parameter):
                         # You cannot hash numpy arrays themselves, but if they are read only
                         # you can hash array.data
                         hash_elem = HashArray(elem)
+                    elif isinstance(elem, list):
+                        hash_elem = tuple(elem)
                     else:
                         hash_elem = elem
 
@@ -1315,8 +1276,8 @@ class ArrayParameter(Parameter):
             'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array
 
         """
-        return 'xa%s%08d' % (ArrayParameter.IDENTIFIER, name_idx)
-
+        return 'explored%s.set_%05d.xa_%08d' % (ArrayParameter.IDENTIFIER,
+                                                  name_idx // 1000, name_idx)
 
     def _load(self, load_dict):
         """Reconstructs the data and exploration array.
@@ -1346,7 +1307,7 @@ class ArrayParameter(Parameter):
                     arrayname = self._build_name(name_idx)
                     explore_list.append(load_dict[arrayname])
 
-                self._explored_range = tuple([self._convert_data(x) for x in explore_list])
+                self._explored_range = [x for x in explore_list]
                 self._explored = True
 
         except KeyError:
@@ -1371,7 +1332,7 @@ class ArrayParameter(Parameter):
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
         dtype = type(data)
-        if dtype is tuple and len(data) == 0:
+        if dtype is tuple or dtype is list and len(data) == 0:
             return True  #  ArrayParameter does support empty tuples
         elif dtype is np.ndarray and data.size == 0 and data.ndim == 1:
                 return True  #  ArrayParameter supports empty numpy arrays
@@ -1615,15 +1576,16 @@ class SparseParameter(ArrayParameter):
 
         """
         name_list = self._get_name_list(is_dia)
-        return tuple(['xspm%s%s%s%08d' % (SparseParameter.IDENTIFIER, name,
-                                          SparseParameter.IDENTIFIER, name_idx)
-                      for name in name_list])
+        return tuple(['explored%s.set_%05d.xspm_%s_%08d' % (SparseParameter.IDENTIFIER,
+                                                         name_idx // 200, name, name_idx)
+                                                                        for name in name_list])
 
     def _build_names_old(self, name_idx, is_dia):
         """ONLY for backwards compatibility"""
         name_list = self._get_name_list(is_dia)
-        return tuple(['xspm%s%s%08d' % (SparseParameter.IDENTIFIER, name, name_idx)
-                      for name in name_list])
+        return tuple(['xspm%s%s%s%08d' % (SparseParameter.IDENTIFIER, name,
+                                          SparseParameter.IDENTIFIER, name_idx)
+                                                            for name in name_list])
 
     @staticmethod
     def _reconstruct_matrix(data_list):
@@ -1634,26 +1596,27 @@ class SparseParameter(ArrayParameter):
 
         """
         matrix_format = data_list[0]
+        data = data_list[1]
+        is_empty = isinstance(data, compat.base_type) and data == '__empty__'
 
         if matrix_format == 'csc':
-            if data_list[1] == '__empty__':
-                 return spsp.csc_matrix(data_list[4])
+            if is_empty:
+                return spsp.csc_matrix(data_list[4])
             else:
                 return spsp.csc_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'csr':
-            if data_list[1] == '__empty__':
-                 return spsp.csr_matrix(data_list[4])
+            if is_empty:
+                return spsp.csr_matrix(data_list[4])
             else:
                 return spsp.csr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'bsr':
-            if data_list[1] == '__empty__':
-                # We have an empty matrix, that cannot be build as in esle case
+            if is_empty:
+                # We have an empty matrix, that cannot be build as in elee case
                 return spsp.bsr_matrix(data_list[4])
             else:
                 return spsp.bsr_matrix(tuple(data_list[1:4]), shape=data_list[4])
         elif matrix_format == 'dia':
-            if data_list[1] == '__empty__':
-                # We have an empty matrix, that cannot be build as in esle case
+            if is_empty:
                 return spsp.dia_matrix(data_list[3])
             else:
                 return spsp.dia_matrix(tuple(data_list[1:3]), shape=data_list[3])
@@ -1704,7 +1667,7 @@ class SparseParameter(ArrayParameter):
                     matrix = self._reconstruct_matrix(data_list)
                     explore_list.append(matrix)
 
-                self._explored_range = tuple(explore_list)
+                self._explored_range = explore_list
                 self._explored = True
 
         except KeyError:
@@ -1765,10 +1728,6 @@ class PickleParameter(Parameter):
         """
         return True
 
-    def _convert_data(self, val):
-        """No conversion necessary, therefore we simply return the value."""
-        return val
-
     @staticmethod
     def _build_name(name_id):
         """Formats names for storage
@@ -1790,9 +1749,11 @@ class PickleParameter(Parameter):
 
         """
         store_dict = {}
-        dump = pickle.dumps(self._data, protocol=self.v_protocol)
-        store_dict['data'] = dump
-        store_dict[PickleParameter.PROTOCOL] = self.v_protocol
+
+        if self._data is not None:
+            dump = pickle.dumps(self._data, protocol=self.v_protocol)
+            store_dict['data'] = dump
+            store_dict[PickleParameter.PROTOCOL] = self.v_protocol
 
         if self.f_has_range():
 
@@ -1843,9 +1804,12 @@ class PickleParameter(Parameter):
         if self.v_locked:
             raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
 
-        dump = load_dict['data']
-
-        self._data = pickle.loads(dump)
+        if 'data' in load_dict:
+            dump = load_dict['data']
+            self._data = pickle.loads(dump)
+        else:
+            self._logger.warning('Your parameter `%s` is empty, '
+                                 'I did not find any data on disk.' % self.v_full_name)
 
         try:
             self.v_protocol = load_dict[PickleParameter.PROTOCOL]
@@ -1864,7 +1828,7 @@ class PickleParameter(Parameter):
                 loaded = pickle.loads(load_dict[arrayname])
                 explore_list.append(loaded)
 
-            self._explored_range = tuple(explore_list)
+            self._explored_range = explore_list
             self._explored = True
 
         self._default = self._data
@@ -2019,33 +1983,8 @@ class Result(BaseResult):
             result.extend(self._data.keys())
         return result
 
-    @property
-    @deprecated('No longer supported')
-    def v_no_data_string(self):
-        """Whether or not to give a short summarizing string when calling
-         :func:`~pypet.parameter.Result.f_val_to_str` or `__str__`.
-
-        Can be set to `False` if the evaluation of stored data into string is too costly.
-
-        DEPRECATED! Does not change anything. Data will always be printed.
-
-        """
-        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
-                             'longer have an effect. Data will always be printed.')
-        return False
-
-    @v_no_data_string.setter
-    def v_no_data_string(self, boolean):
-        """Sets the no_data_string property
-
-        DEPRECATED! Does not change anything. Data will always be printed.
-
-        """
-        self._logger.warning('`v_no_data_string is DEPRECATED. Changes of this property do no '
-                             'longer have an effect. Data will always be printed.')
-
     def f_translate_key(self, key):
-        """Translates integer indeces into the appropriate names"""
+        """Translates integer indices into the appropriate names"""
         if isinstance(key, int):
             if key == 0:
                 key = self.v_name
@@ -2166,6 +2105,8 @@ class Result(BaseResult):
         'String!'
 
         """
+        if args and self.v_name is None:
+            raise AttributeError('Cannot set positional value because I do not have a name!')
         for idx, arg in enumerate(args):
             valstr = self.f_translate_key(idx)
             self.f_set_single(valstr, arg)
@@ -2366,6 +2307,7 @@ class Result(BaseResult):
         else:
             self.f_set_single(key, value)
 
+    # @no_prefix_getattr
     def __getattr__(self, name):
         return self.f_get(name)
 

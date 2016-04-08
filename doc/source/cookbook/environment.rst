@@ -26,7 +26,7 @@ because most of the time the default settings are sufficient.
 
     The first argument ``trajectory`` can either be a string or a given trajectory object. In case of
     a string, a new trajectory with that name is created. You can access the new trajectory
-    via ``v_trajectory`` property. If a new trajectory is created,
+    via ``trajectory`` property. If a new trajectory is created,
     the comment and dynamically imported classes are added to the trajectory.
 
 * ``add_time``
@@ -96,6 +96,8 @@ because most of the time the default settings are sufficient.
 
     ``log_folder='logs', logger_names='('pypet', 'MyCustomLogger'), log_levels=(logging.ERROR, logging.INFO)``
 
+    You can further disable multiprocess logging via setting ``log_multiproc=False``.
+
 * ``log_stdout``
 
     Whether the output of ``stdout`` and ``stderr`` should be recorded into the log files.
@@ -130,6 +132,13 @@ because most of the time the default settings are sufficient.
     If you have psutil_ installed, you can set `ncores=0` to let psutil_ determine
     the number of CPUs available.
 
+* ``use_scoop``
+
+    If python should be used in a SCOOP_ framework to distribute runs amond a cluster
+    or multiple servers. If so you need to start your script via
+    ``python -m scoop my_script.py``. Currently, SCOOP_ only works with
+    ``'LOCAL'`` ``wrap_mode`` (see below).
+
 * ``use_pool``
 
     If you choose multiprocessing you can specify whether you want to spawn a new
@@ -147,17 +156,23 @@ because most of the time the default settings are sufficient.
     If you choose ``use_pool=False`` you can also make use of the `cap` values,
     see below.
 
-* ``freeze_pool_input``
+* ``freeze_input``
 
     Can be set to ``True`` if the run function as well as all additional arguments
     are immutable. This will prevent the trajectory from getting pickled again and again.
     Thus, the run function, the trajectory as well as all arguments are passed to the pool
-    at initialisation.
+    or SCOOP_ workers at initialisation.
+    Works also under :func:`~pypet.environment.Environment.run_map`.
+    In this case the iterable arguments are, of course, not frozen but passed for every run.
 
-* ``queue_maxsize``
+* ``timeout``
 
-    Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
-    ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+    Timeout parameter in seconds passed on to SCOOP_ and ``'NETLOCK'`` wrapping.
+    Leave `None` for no timeout. After `timeout` seconds SCOOP_ will assume
+    that a single run failed and skip waiting for it.
+    Moreover, if using ``'NETLOCK'`` wrapping, after `timeout` seconds
+    a lock is automatically released and again
+    available for other waiting processes.
 
 * ``cpu_cap``
 
@@ -199,32 +214,105 @@ because most of the time the default settings are sufficient.
 
     Analogous to ``cpu_cap`` but the swap memory is considered.
 
+* ``niceness``
+
+    If you are running on a UNIX based system or you have psutil_ (under Windows) installed,
+    you can choose a niceness value to prioritize the child processes executing the
+    single runs in case you use multiprocessing.
+    Under Linux these usually range from 0 (highest priority)
+    to 19 (lowest priority). For Windows values check the psutil_ homepage.
+    Leave ``None`` if you don't care about niceness.
+    Under Linux the `niceness`` value is a minimum value, if the OS decides to
+    nice your program (maybe you are running on a server) *pypet* does not try to
+    decrease the `niceness` again.
+
 * ``wrap_mode``
 
-     If ``multiproc`` is ``True``, specifies how storage to disk is handled via
-     the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
-     needs to be wrapped with a helper class to allow the interaction with multiple processes.
+    If ``multiproc`` is ``True``, specifies how storage to disk is handled via
+    the storage service. Since PyTables HDF5 is not thread safe, the HDF5 storage service
+    needs to be wrapped with a helper class to allow the interaction with multiple processes.
 
-     There are two options:
+    There are a few options:
 
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_QUEUE`: ('QUEUE')
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_QUEUE`: ('QUEUE')
 
-     Another process for storing the trajectory is spawned. The sub processes
-     running the individual single runs will add their results to a
-     multiprocessing queue that is handled by an additional process.
+        Another process for storing the trajectory is spawned. The sub processes
+        running the individual single runs will add their results to a
+        multiprocessing queue that is handled by an additional process.
 
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_LOCK`: ('LOCK')
 
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_LOCK`: ('LOCK')
+        Each individual process takes care about storage by itself. Before
+        carrying out the storage, a lock is placed to prevent the other processes
+        to store data. Allows loading of data during runs.
 
-     Each individual process takes care about storage by itself. Before
-     carrying out the storage, a lock is placed to prevent the other processes
-     to store data.
+    :const:`~pypet.pypetconstants.WRAP_MODE_LOCK`: ('PIPE)
 
-     If you don't want wrapping at all use
-     :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
+        Experimental mode based on a single pipe. Is faster than ``'QUEUE'`` wrapping
+        but data corruption may occur, does not work under Windows
+        (since it relies on forking).
 
-     If you have no clue what I am talking about, you might want to take a look at multiprocessing_
-     in python to learn more about locks, queues and thread safety and so forth.
+    :const:`~pypet.pypetconstant.WRAP_MODE_LOCAL` ('LOCAL')
+
+        Data is not stored during the single runs but after they completed.
+        Storing is only performed locally in the main process.
+
+        Note that removing data during a single run has no longer an effect on memory
+        whatsoever, because there are references kept for all data
+        that is supposed to be stored.
+
+    :const:`~pypet.pypetconstant.WRAP_MODE_NETLOCK` ('NETLOCK')
+
+        Similar to 'LOCK' but locks can be shared across a network.
+        Sharing is established by running a lock server that
+        distributes locks to the individual processes.
+        Can be used with SCOOP_ if all hosts have access to
+        a shared home directory.
+        Allows loading of data during runs.
+
+    :const:`~pypet.pypetconstant.WRAP_MODE_NETQUEUE` ('NETQUEUE')
+
+        Similar to 'QUEUE' but data can be shared across a network.
+        Sharing is established by running a queue server that
+        distributes locks to the individual processes.
+
+    If you don't want wrapping at all use
+    :const:`pypet.pypetconstants.MULTIPROC_MODE_NONE` ('NONE').
+
+    If you have no clue what I am talking about, you might want to take a look at multiprocessing_
+    in python to learn more about locks, queues and thread safety and so forth.
+
+* ``queue_maxsize``
+
+    Maximum size of the Storage Queue, in case of ``'QUEUE'`` wrapping.
+    ``0`` means infinite, ``-1`` (default) means the educated guess of ``2 * ncores``.
+
+* ``port``
+
+    Port to be used by lock server in case of ``'NETLOCK'`` wrapping.
+    Can be a single integer as well as a tuple ``(7777, 9999)`` to specify
+    a range of ports from which to pick a random one.
+    Leave `None` for using pyzmq's default range.
+    In case automatic determining of the host's IP address fails,
+    you can also pass the full address (including the protocol and
+    the port) of the host in the network like ``'tcp://127.0.0.1:7777'``.
+
+* ``param gc_interval``
+
+    Interval (in runs or storage operations) with which ``gc.collect()``
+    should be called in case of the ``'LOCAL'``, ``'QUEUE'``, or ``'PIPE'`` wrapping.
+    Leave ``None`` for never.
+
+    In case of ``'LOCAL'`` wrapping ``1`` means after every run ``2``
+    after every second run, and so on. In case of ``'QUEUE'`` or ``'PIPE''`` wrapping
+    ``1`` means after every store operation,
+    ``2`` after every second store operation, and so on.
+    Only calls ``gc.collect()`` in the main (if ``'LOCAL'`` wrapping)
+    or the queue/pipe process. If you need to garbage collect data within your single runs,
+    you need to manually call ``gc.collect()``.
+
+    Usually, there is no need to set this parameter since the Python garbage collection
+    works quite nicely and schedules collection automatically.
 
 * ``clean_up_runs``
 
@@ -252,7 +340,10 @@ because most of the time the default settings are sufficient.
     Note that after the execution of the final run, your post-processing routine will
     be called again as usual.
 
-* ``continuable``
+    **IMPORTANT**: If you use immediate post-processing, the results that are passed to
+    your post-processing function are not sorted by their run indices but by finishing time!
+
+* ``resumable``
 
     Whether the environment should take special care to allow to resume or continue
     crashed trajectories. Default is ``False``.
@@ -270,7 +361,7 @@ because most of the time the default settings are sufficient.
     (see below).
     Using this data you can continue crashed trajectories.
 
-    In order to resume trajectories use :func:`~pypet.environment.Environment.f_continue`.
+    In order to resume trajectories use :func:`~pypet.environment.Environment.resume`.
 
     Your individual single runs must be completely independent of one
     another to allow continuing to work. Thus, they should **not** be based on shared data
@@ -283,14 +374,14 @@ because most of the time the default settings are sufficient.
 
     .. _dill: https://pypi.python.org/pypi/dill
 
-* ``continue_folder``
+* ``resume_folder``
 
-    The folder where the continue files will be placed. Note that *pypet* will create
+    The folder where the resume files will be placed. Note that *pypet* will create
     a sub-folder with the name of the environment.
 
-* ``delete_continue``
+* ``delete_resume``
 
-    If true, *pypet* will delete the continue files after a successful simulation.
+    If true, *pypet* will delete the resume files after a successful simulation.
 
 * ``storage_service``
 
@@ -325,6 +416,12 @@ because most of the time the default settings are sufficient.
     for data analysis), than set to ``False`` and the
     environment won't add config information like number of processors to the
     trajectory.
+
+* ``graceful_exit``
+
+    If ``True`` hitting CTRL+C (i.e.sending SIGINT) will not terminate the program
+    immediately. Instead, active single runs will be finished and stored before
+    shutdown. Hitting CTRL+C twice will raise a KeyboardInterrupt as usual.
 
 * ``lazy_debug``
 
@@ -446,8 +543,8 @@ Thus, you can change the settings of the trajectory immediately.
 
 .. _`PyTables Compression`: http://pytables.github.io/usersguide/optimization.html#compression-issues
 
-.. _config-added-by-environment:
 
+.. _config-added-by-environment:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Config Data added by the Environment
@@ -474,26 +571,32 @@ Thus, you will be able to track how your trajectory was built over time.
 
 .. _more-on-logging:
 
-^^^^^^^
+-------
 Logging
-^^^^^^^
+-------
 
 *pypet* comes with a full fledged logging environment.
 
 Per default the environment will created loggers_ and stores all logged messages
-to log files. This includes also everything written to the standard stream ``stdout``,
-like ``print`` statements, for instance. To disable logging of the standard streams
-set ``log_stdout=False``. Note that you should always do this in case you use an interactive
+to log files. This can include also everything written to the standard stream ``stdout``,
+like ``print`` statements, for instance. In order to log print statements set
+``log_stdout=True``. ``log_stdout`` can also be a tuple: ``('mylogger', 10)``,
+specifying a logger name as well as a log-level.
+The log-level defines with what level ``stdout`` is logged, it is *not* a filter.
+
+Note that you should always disable this feature
+in case you use an interactive
 console like *IPython*. Otherwise your console output will be garbled.
 
 After your experiments are finished you can disable logging to files via
-:func:`~pypet.environment.Environment.f_disable_logging`. This also restores the
+:func:`~pypet.environment.Environment.disable_logging`. This also restores the
 standard stream.
 
 You can tweak the standard logging settings via passing the following arguments to the environment.
 `log_folder` specifies a folder where all log-files are stored. `logger_names` is a list
 of logger names to which the standard settings apply. `log_levels` is a list of levels
 with which the specified loggers should be logged.
+You can further disable multiprocess logging via setting ``log_multiproc=False``.
 
 .. code-block:: python
 
@@ -504,7 +607,10 @@ with which the specified loggers should be logged.
                      log_folder = './logs/',
                      logger_nmes = ('pypet', 'MyCustomLogger'),
                      log_levels=(logging.ERROR, logging.INFO),
-                     log_stdout=True)
+                     log_stdout=True,
+                     log_multiproc=False,
+                     multiproc=True,
+                     ncores=4)
 
 
 
@@ -528,7 +634,10 @@ which are replaced during runtime:
     run set.
 
     :const:`~pypet.pypetconstants.LOG_PROC` ($proc) is replaced by the name fo the
-    current process.
+    current process and its process id.
+
+    :const:`~pypet.pypetconstant.LOG_HOST` ($host) is replaced by the network name of the
+    current host (note that dots (.)  in the hostname are replaced by minus (-))
 
 Note that in contrast to the standard logging package, *pypet* will automatically create
 folders for your log-files if these don't exist.
@@ -555,7 +664,7 @@ is automatically disabled in the end:
     with Environment(trajectory='mytraj',
                      log_config='DEFAULT,
                      log_stdout=True) as env:
-        traj = env.v_trajectory
+        traj = env.trajectory
 
         # do your complex experiment...
 
@@ -569,11 +678,11 @@ This is equivalent to:
     env = Environment(trajectory='mytraj',
                       log_config='DEFAULT'
                       log_stdout=True)
-    traj = env.v_trajectory
+    traj = env.trajectory
 
     # do your complex experiment...
 
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 .. _loggers: https://docs.python.org/2/library/logging.html
@@ -583,9 +692,9 @@ This is equivalent to:
 
 .. _more-on-multiprocessing:
 
-^^^^^^^^^^^^^^^
+---------------
 Multiprocessing
-^^^^^^^^^^^^^^^
+---------------
 
 For an  example on multiprocessing see :ref:`example-04`.
 
@@ -594,12 +703,7 @@ The following code snippet shows how to enable multiprocessing with 4 CPUs, a po
 .. code-block:: python
 
     env = Environment(self, trajectory='trajectory',
-                 comment='',
-                 dynamic_imports=None,
-                 log_folder='../log/',
-                 use_hdf5=True,
                  filename='../experiments.h5',
-                 file_title='experiment',
                  multiproc=True,
                  ncores=4,
                  use_pool=True,
@@ -639,11 +743,14 @@ In case your operating system allows forking, your data does not need to be
 picklable.
 Furthermore, if your trajectory contains many parameters and
 you want to avoid that your trajectory
-gets pickled over and over again you can set ``freeze_pool_input=True``.
+gets pickled over and over again you can set ``freeze_input=True``.
 The trajectory, the run function as well as the
 all additional function arguments are passed to the multiprocessing pool at
 initialization. Be aware that the run function as well as the the additional arguments must be
-immutable, otherwise your individual runs are no longer independent.
+immutable, otherwise your individual runs are no longer independent. In case you use
+:func:`~pypet.environment.Environment.run_map` (see below), additional arguments are not frozen
+but passed for every run.
+
 
 Moreover, if you **enable** multiprocessing and **disable** pool usage,
 besides the maximum number of utilized processors ``ncores``,
@@ -672,11 +779,19 @@ The process will **not** be terminated by *pypet*. The process will only cause *
 new processes until the utilization falls below the threshold again.
 In order to use this cap feature, you need the psutil_ package.
 
+In addition to the cap values, you can also choose the ``niceness`` of your multiprocessing
+processes. If your operating system supports ``nice`` (Linux, MacOS) natively, this feature
+works even without the psutil_ package. Priority values under Linux usually range from 0 (highest)
+to 19 (lowest), for Windows values see the psutil_ documentation.
+Low priority processes will be given less CPU time, so they are *nice* to other processes.
+Nicing works with ``use_pool`` as well. Leave ``None`` if you don't care about niceness.
+
 Note that HDF5 is not thread safe, so you cannot use the standard HDF5 storage service out of the
 box. However, if you want multiprocessing, the environment will automatically provide wrapper
 classes for the HDF5 storage service to allow safe data storage.
-There are two different modes that are supported. You can choose between them via setting
-``wrap_mode``. You can select between ``'QUEUE'`` and ``'LOCK'`` wrapping. If you
+There are a couple different modes that are supported. You can choose between them via setting
+``wrap_mode``. You can select between ``'QUEUE'``, ``'LOCK'``, ``'PIPE'``,
+``'LOCAL'``,``'NETLOCK'``, and ``'NETQUEUE'`` wrapping. If you
 have your own service that is already thread safe you can also choose ``'NONE'`` to skip wrapping.
 
 If you chose the ``'QUEUE'`` mode, there will be an additional process spawned that is the only
@@ -699,10 +814,39 @@ be quite large like the entire data gathered in a single run.
 If you chose the ``'LOCK'`` mode, every process will place a lock before it opens the HDF5 file
 for writing data. Thus, only one process at a time stores data. The advantages are the
 possibility to load data and that your data
-does not need to be send over a queue over and over again. Yet, your simulations might take longer
+does not need to be send over a queue over and over again. Yet, your simulations may take longer
 since processes have to wait often for each other to release locks.
 
-Finally, there also exist a lightweight multiprocessing environment
+``'PIPE'`` wrapping is a rather experimental mode where all processes feed their data into
+a shared `multiprocessing pipe`_. This can be much faster than a queue. However, no
+data integrity checks are made. So there's no guarantee that all you data is really saved.
+Use this if you go for many runs that just produce small results, and use it carefully.
+Since this mode relies on forking of processes, it cannot be used under Windows.
+
+``'LOCAL'`` wrapping means that all data is kept and feed back to your local main process as
+soon as a single run is completed. Your data is then stored by your main process.
+This wrap mode can be useful if you use *pypet* with SCOOP_ (see also :ref:`pypet-and-scoop`)
+in a cluster environment and your workers are distributed over a network.
+Note that freeing data with ``f_empty()`` during a single run has no effect
+on your memory because the local wrapper will keep references to all data
+until the single run is completed.
+
+``'NETLOCK'`` wrapping is similar to ``'LOCK'`` wrapping but locks can be
+shared across a computer network. Lock distribution is established by
+a server process that listens at a particular ``port`` for lock requests.
+The server locks and releases locks accordingly.
+Like regular ``'LOCK'`` wrapping
+it allows to load data during the runs. This wrap mode can be used with
+SCOOP_ if all hosts have access to a shared home directory.
+``'NETLOCK'`` wrapping requires an installation of pyzmq_.
+However, installing SCOOP_ will automatically install pyzmq_
+if it is missing.
+
+``'NETQUEUE'`` wrapping is similar to ``'QUEUE'`` wrapping but data
+can be shared across a computer network. Data is collected by a server process that listens
+at a particular ``port``. As above this wrap mode can be used with SCOOP_ and requires pyzmq_.
+
+Finally, there also exists a lightweight multiprocessing environment
 :class:`~pypet.environment.MultiprocContext`. It allows to use trajectories in a
 multiprocess safe setting without the need of a full :class:`~pypet.environment.Environment`.
 For instance, you might use this if you also want to analyse the trajectory with
@@ -713,12 +857,102 @@ multiprocessing. You can find an example here: :ref:`example-16`.
 
 .. _psutil: http://psutil.readthedocs.org/
 
+.. _multiprocessing pipe: https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Pipe
+
+.. _pyzmq: https://zeromq.github.io/pyzmq/
+
+
+.. _pypet-and-scoop:
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Multiprocessing with a Cluster or a Multi-Server Framework
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*pypet* can be used on computing clusters as well as multiple servers sharing a
+home directory via SCOOP_.
+
+Simply create your environment as follows
+
+.. code-block:: python
+
+    env = Environment(multiproc=True,
+                      use_scoop=True
+                      wrap_mode='LOCAL')
+
+
+and start your script via ``python -m scoop my_script.py``.
+If using SCOOP_, the only multiprocessing wrap modes currently supported are
+``'LOCAL'``, ``'NETLOCK'``, and ``'NETQUEUE'``. That is in the former case
+all your data is actually stored by your local main python process and
+results are collected from all workers. ``'NETLOCK'`` means locks are shared across
+the computer network to allow only one process to write data at a time.
+Lastly, ``'NETQUEUE'`` starts queue process that collects data stores it.
+
+In case SCOOP_ is configured correctly, you can easily use
+*pypet* in a multi-server or cluster framework. :ref:`example-21` shows how to
+combine *pypet* and SCOOP_. For instance, if you have multiple servers sharing the
+same home directory you can distribute your runs on all of them via
+``python -m scoop --hostfile hosts -vv -n 16 my_script.py`` to start 16 workers on your ``hosts``
+which is a file specifying the servers to use. It has the format
+
+   | some_host 10
+   | 130.148.250.11
+   | another_host 4
+
+with the name or IP of the host followed by the number of workers you want to launch (optional).
+
+To use *pypet* and SCOOP_ on a computing cluster one additional needs a bash start-up script.
+For instance, for a sun grid engine (SGE), the bash script might look like the following:
+
+    | #!/bin/bash
+    | #$ -l h_rt=3600
+    | #$ -N mysimulation
+    | #$ -pe mp 4
+    | #$ -cwd
+    |
+    | # Launch the simulation with SCOOP
+    | python -m scoop -vv mysimulation.py
+
+Most important is the ``-pe`` parallel environment flag to let the computer grid
+and SCOOP know how many workers to spawn (here 4).
+Other options may be parameters like ``-l h_rt`` defining the maximum runtime,
+``-N`` assigning a name, or ``-cwd`` using the the current folder as the working directory.
+The particular options depend on your cluster environment and
+requirements of the grid provider. This job script, let's name it ``mybash.sh``,
+can be submitted via
+
+    $ qsub mybash.sh
+
+Accordingly, the simulation ``mysimulation.py`` gets queued and eventually executed
+in parallel on the computer grid as soon as resources are available.
+
+See also the `SCOOP docs`_ and the `example start up scripts`_
+on how to set up multiple hosts and scripts for other grid engines.
+
+To avoid overhead of re-pickling the trajectory,
+SCOOP_ mode also supports setting ``freeze_input=True`` (see :ref:`more-on-multiprocessing`).
+
+Moreover, you can also use *pypet* with `SAGA Python`_ to manually schedule your experiments
+on a cluster environment. :ref:`example-22` shows how to submit batches of experiments
+and later on merge the trajectories from each experiment into one.
+
+
+.. _SCOOP docs: http://scoop.readthedocs.org/en/0.7/usage.html#how-to-launch-scoop-programs
+
+.. _SCOOP: https://scoop.readthedocs.org/
+
+.. _SAGA Python: http://saga-python.readthedocs.org/
+
+.. _example start up scripts: https://github.com/soravux/scoop/tree/master/examples/submit_files
+
+.. _shared constants: http://scoop.readthedocs.org/en/latest/_modules/scoop/shared.html
+
+
 .. _more-on-git:
 
-
-^^^^^^^^^^^^^^^
+---------------
 Git Integration
-^^^^^^^^^^^^^^^
+---------------
 
 The environment can make use of version control. If you manage your code with
 git_, you can trigger automatic commits with the environment to get a proper snapshot
@@ -750,13 +984,12 @@ commit in case of changed code, the program will throw a ``GitDiffError``.
 
 .. _git: http://git-scm.com/
 
-.. _GitPython: http://pythonhosted.org/GitPython/0.3.1/index.html
 
 .. _more-on-sumatra:
 
-^^^^^^^^^^^^^^^^^^^
+-------------------
 Sumatra Integration
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 The environment can make use of a Sumatra_ experimental lab-book.
 
@@ -774,16 +1007,16 @@ In contrast to the automatic git commits (see above),
 which are done as soon as the environment is created, a sumatra record is only created and
 stored if you actually perform single runs. Hence, records are stored if you use one of following
 three functions:
-:func:`~pypet.environment.Environment.f_run`, or :func:`~pypet.environment.Environment.f_pipeline`,
-or :func:`~pypet.environment.Environment.f_continue` and your simulation succeeds and does
+:func:`~pypet.environment.Environment.run`, or :func:`~pypet.environment.Environment.pipeline`,
+or :func:`~pypet.environment.Environment.resume` and your simulation succeeds and does
 not crash.
 
 
 .. _more-on-overview:
 
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 HDF5 Overview Tables
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 The :class:`~pypet.storageservice.HDF5StorageService` creates summarizing information
 about your trajectory that can be found in the ``overview`` group within your HDF5 file.
@@ -929,29 +1162,67 @@ and optionally other positional and keyword arguments of your choice.
 .. code-block:: python
 
     def myjobfunc(traj, *args, **kwargs)
-        #Do some sophisticated simulations with your trajectory
+        # Do some sophisticated simulations with your trajectory
         ...
         return 'fortytwo'
 
 
 In order to run this simulation, you need to hand over the function to the environment.
 You can also specify the additional arguments and keyword arguments using
-:func:`~pypet.environment.Environment.f_run`:
+:func:`~pypet.environment.Environment.run`:
 
 .. code-block:: python
 
-    env.f_run(myjobfunc, *args, **kwargs)
+    env.run(myjobfunc, *args, **kwargs)
 
 The argument list ``args`` and keyword dictionary ``kwargs`` are directly handed over to the
 ``myjobfunc`` during runtime.
 
-The :func:`~pypet.environment.Environment.f_run` will return a list of tuples.
+The :func:`~pypet.environment.Environment.run` will return a list of tuples.
 Whereas the first tuple entry is the index of the corresponding run and the second entry
-of the tuple is the result returned by your run function
-(for the example above this would simply always be
-the string ``'fortytwo'``, i.e. ``((0, 'fortytwo'), (1, 'fortytwo'),...)``).
-In case you use multiprocessing these tuples are **not** in the order
-of the run indices but in the order of their finishing time!
+of the tuple is the result returned by your run function.
+For the example above this would simply always be
+the string ``'fortytwo'``, i.e. ``((0, 'fortytwo'), (1, 'fortytwo'),...)``.
+These will always be in order of the run indices even in case of multiprocessing.
+The only exception to this rule is if you use immediate postprocessing
+(see :ref:`more-about-postproc`) where results are in order of finishing time.
+
+using :func:`~pypet.environment.Environment.run` all ``args`` and ``kwargs`` are supposed to
+be static, that is all of them are passed to every function call.
+If you need to pass different values to each function call of your job function use
+:func:`~pypet.environment.Environment.run_map`, where each entry in ``args`` and
+``kwargs`` needs to be an iterable (list, tuple, iterator, generator etc.). Hence,
+the contents of each iterable are passed one after the other to your job function.
+For instance, assuming besides the trajectory your job function takes
+3 arguments (here passed as 2 positional and 1 keyword argument):
+
+.. code-block:: python
+
+    def myjobfunc(traj, arg1, arg2, arg3):
+        # do stuff
+
+        ...
+
+    env.run(myjobfunc, range(5), ['a','b','c','d','e'], arg3=[5,4,3,2,1])
+
+Thus, the first run of your job function will be started with the arguments
+``0`` (from ``range``) ``'a'`` (from the list) and ``arg3=5`` (from the other list).
+Accordingly the second run gets passed ``1, 'b', arg3=4``.
+
+
+^^^^^^^^^^^^^
+Graceful Exit
+^^^^^^^^^^^^^
+
+Sometimes you might need to stop your experiments via ``CTRL-C``. If you did choose
+``graceful_exit=True`` when creating an environment, ``CTRL-C`` won't kill your
+program immediately but *pypet* will try to exit gracefully. That is *pypet* will finish
+the currently active runs and wait until their results have been returned.
+Hitting ``CTRL+C`` twice will, of course, immediately kill your program.
+
+By default ``graceful_exit`` is ``False`` because it does not work in all python contexts.
+For instance, ``graceful_exit`` does not work with IPython notebooks.
+If in doubt, just try it out.
 
 
 .. _more-about-postproc:
@@ -961,12 +1232,13 @@ Adding Post-Processing
 ----------------------
 
 You can add a post-processing function that is called after the execution of all the single
-runs via :func:`~pypet.environment.Environment.f_add_postprocessing`.
+runs via :func:`~pypet.environment.Environment.add_postprocessing`.
 
 Your post processing function must accept the trajectory container as the first argument,
-a list of tuples (containing the run indices and results), and arbitrary positional and
+a list of tuples (containing the run indices and results, normally in order of indices
+unless you use ``immediate_postproc``, see below), and arbitrary positional and
 keyword arguments. In order to pass arbitrary arguments to your post-processing function,
-simply pass these first to :func:`~pypet.environment.Environment.f_add_postprocessing`.
+simply pass these first to :func:`~pypet.environment.Environment.add_postprocessing`.
 
 For example:
 
@@ -980,7 +1252,7 @@ Whereas in your main script you can call
 
 .. code-block:: python
 
-    env.f_add_postproc(mypostprocfunc, 42, extra_arg2=42.5)
+    env.add_postproc(mypostprocfunc, 42, extra_arg2=42.5)
 
 
 which will later on pass ``42`` as ``extra_arg1`` and ``42.4`` as ``extra_arg2``. It is the
@@ -1012,9 +1284,28 @@ called again. Likewise, you could potentially expand again, and after the next e
 post-processing will be executed again (and again, and again, and again, I guess you get it).
 Thus, you can use post-processing for an adaptive search within your parameter space.
 
-**IMPORTANT**: All changes you apply to your trajectory, like setting auto-loading or changing fast
+**IMPORTANT**: All changes you apply to your trajectory,
+like setting auto-loading or changing fast
 access, are propagated to the new single runs. So try to undo all changes before finishing
 the post-processing if you plan to trigger new single runs.
+
+Moreover, your post-processing function can return more than a dictionary,
+it can return up to five elements.
+
+    1. dictionary for further exploration
+
+    2. New ``args`` tuple that is passed to subsequent calls to your job function.
+    Potentially these have to be iterables in case you used
+    :func:`~pypet.environment.Environment.run_map`.
+
+    3. New ``kwargs`` dictionary that is passed as keyword arguments to
+    subsequent calls to your job function.
+    Potentially these have to be iterables in case you used
+    :func:`~pypet.environment.Environment.run_map`.
+
+    4. New ``args`` for the next call to your post-proc function
+
+    5. New ``kwargs`` for the next call to your post-proc function.
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1043,25 +1334,28 @@ because you don't have to wrap your head around dead-locks).
 Accordingly, post-processing should be rather quick in comparison to your single runs, otherwise
 post-processing will become the bottleneck in your parallel simulations.
 
+**IMPORTANT**: If you use immediate post-processing, the results that are passed to
+your post-processing function are not sorted by their run indices but by finishing time!
 
----------------------------
-Using a Experiment Pipeline
----------------------------
+
+----------------------------
+Using an Experiment Pipeline
+----------------------------
 
 Your numerical experiments usually work like the following: You add some parameters to
 your trajectory, you mark a few of these for exploration, and you pass your main function
-to the environment via :func:`~pypet.environment.Environment.f_run`. Accordingly, this
+to the environment via :func:`~pypet.environment.Environment.run`. Accordingly, this
 function will be executed with all parameter combinations. Maybe you want some post-processing
 in the end and that's about it. However, sometimes even the addition of parameters can be
 fairly complex. Thus, you want this part under the supervision of an environment, too.
 For instance, because you have a Sumatra_ lab-book and adding of parameters should also account as
 runtime.
 Thus, to have your entire experiment and not only the exploration of the parameter space
-managed by *pypet* you can use the :func:`~pypet.environment.Environment.f_pipeline`
+managed by *pypet* you can use the :func:`~pypet.environment.Environment.pipeline`
 function, see also :ref:`example-13`.
 
 You have to pass a so called *pipeline* function to
-:func:`~pypet.environment.Environment.f_pipeline` that defines your entire experiment.
+:func:`~pypet.environment.Environment.pipeline` that defines your entire experiment.
 Accordingly, your pipeline function is only allowed to take a single parameter,
 that is the trajectory container.
 Next, your pipeline function can fill in some parameters and do some pre-processing.
@@ -1121,6 +1415,23 @@ the run function followed by the positional and keyword arguments:
         return myjobfunc, args, kwargs
 
 
+.. _more-on-optimization:
+
+----------------------
+Parameter Optimization
+----------------------
+
+Since *pypet* offers iterative post-processing and
+the ability to :func:`~pypet.trajectory.Trajectory.f_expand`
+trajectories, you can iteratively explore the parameter space.
+*pypet* does **not** provide built-in parameter optimization methods.
+However, *pypet* can be easily combined with frameworks like the evolutionary
+algorithms toolbox DEAP_ for adaptive parameter optimization.
+:ref:`example-19` shows how you can integrate *pypet* and DEAP_.
+
+.. _DEAP: http://deap.readthedocs.org/en/
+
+
 .. _more-on-continuing:
 
 -------------------------------------------
@@ -1131,9 +1442,9 @@ In order to use this feature you need dill_.
 Careful, dill_ is rather experimental and still in alpha status!
 
 If all of your data can be handled by dill_,
-you can use the config parameter ``continuable=True`` passed
+you can use the config parameter ``resumable=True`` passed
 to the :class:`~pypet.environment.Environment` constructor.
-This will create a continue directory (name specified by you via ``continue_folder``)
+This will create a resume directory (name specified by you via ``resume_folder``)
 and a sub-folder with the name of the trajectory. This folder is your safety net
 for data loss due to a computer crash. If for whatever reason your day or week-long
 lasting simulation was interrupted, you can resume it
@@ -1142,15 +1453,15 @@ HDF5 file is not corrupted and for interruptions due
 to computer crashes, like power failure etc. If your
 simulations crashed due to errors in your code, there is no way to restore that!
 
-You can resume a crashed trajectory via :func:`~pypet.environment.Environment.f_continue`
-with the name of the continue folder (not the subfolder) and the name of the trajectory:
+You can resume a crashed trajectory via :func:`~pypet.environment.Environment.resume`
+with the name of the resume folder (not the subfolder) and the name of the trajectory:
 
 .. code-block:: python
 
     env = Environment(continuable=True)
 
-    env.f_continue(trajectory_name='my_traj_2015_10_21_04h29m00s',
-                            continue_folder='./experiments/continue/')
+    env.resume(trajectory_name='my_traj_2015_10_21_04h29m00s',
+                            resume_folder='./experiments/resume/')
 
 
 The neat thing here is, that you create a novel environment for the continuation. Accordingly,
@@ -1159,11 +1470,14 @@ You *cannot* change any HDF5 settings or even change the whole storage service.
 
 When does continuing not work?
 
-Continuing will **not** work if your top-level simulation function or the arguments passed to your
-simulation function are altered between individual runs. For instance, if you use multiprocessing
+Continuing does **not** work with ``'QUEUE'`` or ``'PIPE'`` wrapping in case of multiprocessing.
+
+Moreover, continuing will **not** work if your top-level simulation function
+or the arguments passed to your simulation function are altered between individual runs.
+For instance, if you use multiprocessing
 and you want to write computed data into a shared data list
 (like ``multiprocessing.Manager().list()``, see :ref:`example-12`),
-these changes will be lost and cannot be captured by the continue snapshots.
+these changes will be lost and cannot be captured by the resume snapshots.
 
 A work around here would be to not manipulate the arguments but pass these values as results
 of your top-level simulation function. Everything that is returned by your top-level function
@@ -1171,14 +1485,76 @@ will be part of the snapshots and can be reconstructed after a crash.
 
 Continuing *might not* work if you use post-processing that expands the trajectory.
 Since you are not limited in how you manipulate the trajectory within your post-processing,
-there are potentially many side effects that remain undetected by the continue snapshots.
+there are potentially many side effects that remain undetected by the resume snapshots.
 You can try to use both together, but there is **no** guarantee whatsoever that continuing a
 crashed trajectory and post-processing with expanding will work together.
 
 
-
-.. _dill: https://pypi.python.org/pypi/dill
-
 .. _sumatra: http://neuralensemble.org/sumatra/
 
 .. _openBLAS: http://www.openblas.net/
+
+
+-----------
+Manual Runs
+-----------
+
+You are not obliged to use a trajectory with an environment. If you still want the
+distinction between single runs but manually schedule them, take a look at
+the :func:`pypet.utils.decorators.manual_run` decorator. An example of how to use it
+is given here :ref:`example-20`.
+
+
+.. _wrap-project:
+
+------------------------------------------
+Combining *pypet* with an Existing Project
+------------------------------------------
+
+If you already have a rather evolved simulator yourself, there are ways
+to combine it with *pypet* instead of starting from scratch. Usually,
+the only thing you need is a wrapper function that passes parameters
+from the :class:`~pypet.trajectory.Trajectory` to your simulator and puts
+your results back into it. Finally, you need some boilerplate like code to
+create an :class:`~pypet.environment.Environment`, add some parameters and exploration,
+and start the wrapping function instead of your simulation directly.
+A full fledged example is given here: :ref:`example-17`.
+Or take this script for instance where ``my_simulator`` is your original simulation:
+
+.. code-block:: python
+
+    from pypet import Environment
+
+
+    def my_simulator(a,b,c):
+        # Do some serious stuff and compute a `result`
+        result = 42  # What else?
+        return result
+
+
+    def my_pypet_wrapper(traj):
+        result = my_simulator(traj.a, traj.b, traj.c)
+        traj.f_add_result('my_result', result, comment='Result from `my_simulator`')
+
+
+    def main():
+        # Boilerplate main code:
+
+        # Create the environment
+        env = Environment()
+        traj = env.traj
+
+        # Now add the parameters and some exploration
+        traj.f_add_parameter('a', 0)
+        traj.f_add_parameter('b', 0)
+        traj.f_add_parameter('c', 0)
+        traj.f_explore({'a': [1,2,3,4,5]})
+
+        # Run your wrapping function instead of your simulator
+        env.run(my_pypet_wrapper)
+
+
+    if __name__ == '__main__':
+        # Let's make the python evangelists happy and encapsulate
+        # the main function as you always should ;-)
+        main()

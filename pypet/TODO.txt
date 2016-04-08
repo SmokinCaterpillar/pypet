@@ -1,46 +1,42 @@
-* Countdown for continuation *PROBABLY NOT NECESSARY*
 
-* New method to determine overview *DONE*
+* Add docu about graceful exit  *DONEÜ
 
-* Remove merging of overview tables *DONE*
+* Add docu about no clobber *DONE*
 
-* fix merging *DONE*
+* Add docu about rt2, runtoset *DONE*
 
-* Fixing link additions *DONE*
+* Add docu about new map feature *DONE*
 
-* new lazy mode  *DONE*
+* Write more tests for new map feature *DONE*
 
-* testing if user functions can be pickled. *NAH wont do it*
+* Doc manual runs *DONE*
 
-* Don't store exploration in storage but let the trajectory always know which parameters are
-explored  *DONE*
+* Write tests for manual runs *DONE*
 
+* Add examples to docu *DONE*
 
-* IMPORTANT: add new `explorations table`! *DONE*
+* Better document examples *DONE*
 
-* Change info about summary tables *DONE*
+* Doc new wrapper *DONE*
 
+* Test new wrapper  *DONE*
 
-* Add doc for new logging *DONE*
+* more test for copying *DONE*
 
-* Docs for wildcard functions *DONE*
+* Doc new niceness feature  *DONE*
 
-*  Write doc for config parsing *Done*
+* Doc new scoop feature *DONE*
 
-* write tests for wildcards *DONE*
+* Add gc.collect to queue and pipe feature *DONE*
 
-* Document new lazy mode  *Done*
+* Document new NETLOCK wrap mode *DONE*
 
-* Document new cap feature *Done*
+* Create NETQUEUE mode (Mehmet) *DONE*
 
-* Add slots *DONE*
+* Document and test TimeOutLockerServer *DONE*
 
-* Add optimization tips *DONE*
+* Add changes about naming *DONE*
 
-* Write an example for grouping *DONE*
+* Doc new naming *DONE*
 
-* Add to FAQs *DONE*
-
-* Document new maxsize feature *DONE*
-
-* Document new cap feature *DONE*
+* Doc Brian changes *DONE*

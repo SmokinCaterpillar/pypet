@@ -41,6 +41,9 @@ if python_major == 2:
     # Returns a list of values
     def listitems(dictionary): return dictionary.items()
     # Returns list items
+    def rinput(prompt=None): return raw_input(prompt)
+    # Reads user input
+
 
     xrange = xrange
     # Returns the iterator function range
@@ -65,6 +68,7 @@ elif python_major == 3:
     def listkeys(dictionary): return list(dictionary.keys())
     def listvalues(dictionary): return list(dictionary.values())
     def listitems(dictionary): return list(dictionary.items())
+    def rinput(prompt=None): return input(prompt)
 
     xrange = range
 

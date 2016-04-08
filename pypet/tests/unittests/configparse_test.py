@@ -28,7 +28,6 @@ class ConfigParseTest(TrajectoryComparator):
 
         traj = env.v_traj
         self.assertTrue(traj.v_auto_load)
-        self.assertTrue(traj.v_lazy_adding)
         self.assertEqual(traj.v_storage_service.filename, filename)
 
         self.assertEqual(traj.x, 42)

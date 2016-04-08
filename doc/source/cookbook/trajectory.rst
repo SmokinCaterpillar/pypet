@@ -3,14 +3,25 @@
 Naming Convention
 =================
 
-To avoid confusion with natural naming scheme and the functionality provided by the trajectory,
-parameters, and so on, I followed the idea by PyTables to use prefixes:
+To avoid confusion with natural naming scheme and the functionality provided by the
+trajectory tree - that includes all group and leaf nodes like
+parameters and results - I followed the idea by PyTables to use prefixes:
 ``f_`` for functions and ``v_`` for python variables/attributes/properties.
 
 For instance, given a result instance ``myresult``, ``myresult.v_comment`` is the object's
 comment attribute and
 ``myresult.f_set(mydata=42)`` is the function for adding data to the result container.
 Whereas ``myresult.mydata`` might refer to a data item named ``mydata`` added by the user.
+
+If you don't like using prefixes, you can alternatively also use the properties
+``vars`` and ``func`` that are supported by each tree node. For example,
+``traj.f_iter_runs()`` is equivalent to ``traj.func.iter_runs()`` or
+``mygroup.v_full_name`` is equivalent to ``mygroup.vars.full_name``.
+
+The prefix and ``vars``/``func`` notation only applies to tree data objects
+(group nodes and leaf nodes) but
+not to other aspects of pypet. For example, the :class:`~pypet.environment.Environment`
+does not rely on prefixes at all.
 
 Moreover, the following abbreviations are supported by *pypet* for interaction with a
 :class:`~pypet.trajectory.Trajectory`:
@@ -21,8 +32,12 @@ Moreover, the following abbreviations are supported by *pypet* for interaction w
     * ``res`` to ``results``
     * ``crun`` or the ``$`` symbol to the name of the
       current single run, e.g. ``run_00000002``
-    * ``r_X`` and ``run_X`` (e.g. ``r_2``) are mapped to the corresponding run name, e.g
-      ``run_00000008``.
+    * ``r_X`` and ``run_X`` (e.g. ``r_8``) are mapped to the corresponding run name (e.g
+      ``run_00000008``).
+    * ``rts_X`` and ``runtoset_X`` (e.g. ``rts_8``) are translated into the corresponding
+      run set for the given **run index** (e.g. ``run_set_00000``). Note that you need to
+      give the index of the **run** not the index of the set, e.g. ``rts_4042`` gives
+      ``run_set_00004``.
 
 If you add or request data by using the abbreviations, these are automatically
 translated into the corresponding long forms.
@@ -139,10 +154,11 @@ this is analogous.
 There are two ways to use the above functions,
 either you already have an instantiation of the object, i.e. you add a given parameter:
 
-    >>> my_param = Parameter('subgroup1.subgroup2.myparam',42, comment='I am an example')
+    >>> my_param = Parameter('subgroup1.subgroup2.myparam', 42, comment='I am an example')
     >>> traj.f_add_parameter(my_param)
 
-Or you let the trajectory create the parameter, where the name is the first positional argument:
+Or you let the trajectory create the parameter using your specifications.
+Note in this case the name is the first positional argument:
 
     >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', 42, comment='I am an example')
 
@@ -154,7 +170,10 @@ If you only want to add a different type of parameter once, but not change the s
 constructor in general, you can add the constructor as
 the first positional argument followed by the name as the second argument:
 
-    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', 42, comment='I am an example')
+    >>> traj.f_add_parameter(PickleParameter, 'subgroup1.subgroup2.myparam', data=42, comment='I am an example')
+
+Note that you always should specify a default data value of a parameter,
+even if you want to explore it later.
 
 Derived parameters, config and results work analogously.
 
@@ -164,6 +183,53 @@ that is added to the subbranch ``parameters``. This will also automatically crea
 the subgroups ``traffic`` and inside there the group ``mobiles``.
 If you add the parameter ``traj.f_add_parameter('traffic.mobiles.ncycles', data = 11)`` afterwards,
 you will find this parameter also in the group ``traj.parameters.traffic.ncycles``.
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Caveat of Passing Arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are not interested in some nitty-gritty details, skip this section, but just
+**remember that for passing comments always use the keyword argument** ``comment=``.
+
+
+Let's take another look on how *pypet* actually handles the creation of parameters:
+
+    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')
+
+In this case all arguments and keyword arguments
+(here 1 positional and 2 keyword
+arguments: ``'subgroup1.subgroup2.myparam', data=42, comment='I am an example'``)
+are always passed on to the :class:`~pypet.parameter.Parameter` constructor as you provide them.
+So internally *pypet* just calls
+``Parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')``.
+For parameters, the keyword arguments ``data=`` and ``comment=`` are optional.
+You could instead be using positional arguments, as in:
+
+    >>> traj.f_add_parameter('subgroup1.subgroup2.myparam', 42, 'I am an example')
+
+Internally *pypet* calls
+``Parameter('subgroup1.subgroup2.myparam', 42, 'I am an example')`` which is equivalent to
+the keyword argument version
+``Parameter('subgroup1.subgroup2.myparam', data=42, comment='I am an example')``.
+
+Note that we also got rid of the ``comment=`` keyword. But you are advised
+to **always** use the keyword argument ``comment=`` if you want to provide a comment.
+Leaving it out does **not** work for results.
+To stress this again,
+**for results you cannot leave out the keyword argument ``comment=``if you want to provide a comment.**
+The reason is that results can keep more than a single data item; as we will see later.
+So here the keyword argument ``comment=`` is necessary to stress that the string you provide
+is indeed a comment and not just data.
+
+   >>> traj.f_add_result('myresult', 125, comment='I am an example result')
+
+is **not** equivalent to
+
+   >>> traj.f_add_result('myresult', 125, 'I am an example result')
+
+because in the first case ``'I am an example result'`` is a comment, whereas in the
+second ``'I am an example result'`` is interpreted as a data item.
 
 
 ^^^^^^^^^^^^^^^^^^^^^
@@ -194,59 +260,16 @@ If the names match (``.myparam`` and ``'myparam'``) as above,
 or if your parameter has the empty string as a name
 (``traj.parameters.myparam = Parameter('', 42)``), the parameter will be added
 and named as the generic attribute, here ``myparam``.
-However, if the names disagree or if the parameter or result name contains groups,
-the generic attribute will become also a group node.
-For instance,
+However, if the names disagree an AttributeError is thrown.
+Yet, you can still create groups on the fly
 
-    >>> traj.parameters.mygroup = Parameter('myparam', 42)
+    >>> traj.parameters.mygroup = Parameter('mygroup.mysubgroup.myparam', 42)
 
-creates a new parameter at ``traj.parameters.mygroup.myparam`` and ``mygroup`` is a new
-group node, respectively.
-Likewise
-
-    >>> traj.parameters.mygroup = Parameter('mysubgroup.myparam', 42)
-
-adds a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam``.
-
-Finally, there's an even simpler way to add a parameter or result, so called lazy adding.
-You have to turn it on to via `traj.v_lazy_adding=True`
-
-    >>> traj.v_lazy_adding=True
-    >>> traj.parameters.myparam = 42, 'I am a useful comment'
-
-Accordingly, this is internally translated into
-
-    >>> traj.parameters.f_add_leaf('myparam', 42, 'I am a useful comment')
-
-Where :func:`~pypet.naturalnaming.NNGroupNode.f_add_leaf` is a generic addition function,
-see :ref:`generic-addition` below.
-This does work for results as well, but you **cannot** pass comments, because
-
-    >>> traj.results.myresult = 42, 'I am NOT a comment!'
-
-will create a result with two data items, first being the value ``42`` and the second one
-a string ``'I am NOT a comment'``. Comments can be passed to the standard results only as
-keyword arguments and all *lazy* values are passed as positional arguments.
-Yet, you can pass as many items to a result as you want. This, for instance, is legit:
-
-    >>> traj.results.another_result = 42, 43, 44
-    >>> traj.results.another_result.v_comment = 'Result containing 3 integer values'
-    >>> traj.results.another_result[2]
-    44
-
-As long as *lazy adding* is turned on, you cannot change existing values. Thus,
-
-    >>> traj.parameters.myparam = 43
-
-will throw an ``AttributeError`` because ``myparam`` already exists, and has the value ``42``.
-Yet, after turning it off, it works again:
-
-   >>> traj.v_lazy_adding = False
-   >>> traj.par.myparam = 43
-   >>> traj.myparam
-   43
+creates a new parameter at ``traj.parameters.mygroup.mysubgroup.myparam`` and ``mygroup`` and
+ ``mysubgroup`` are new group nodes, respectively.
 
 The different ways of adding data are also explained in example :ref:`example-15`.
+
 
 
 ^^^^^^^^^^^
@@ -349,6 +372,21 @@ to the current run, like ``run_00000002``) first. If this fails, it will fall ba
 ``traj.dpar.random_vector.run_ALL`` (if this fails, too, *pypet* will throw an error).
 
 Accordingly, you have to write less code and post-processing and data analysis become easier.
+
+
+^^^^^^^^^^
+No Clobber
+^^^^^^^^^^
+
+You can set ``traj.v_no_clobber=True`` to ignore the addition of existing data.
+In this case adding an already existing item to your trajectory won't throw an
+``AttributeError`` but simply ignore your addition:
+
+    >>> traj.f_add_parameter('testparam', 42)
+    >>> traj.v_no_clobber=True
+    >>> traj.f_add_parameter('testparam', 39)
+    >>> traj.par.testparam
+    42
 
 
 .. _more-on-wildcards:
@@ -624,7 +662,7 @@ Parameter Exploration
 Exploration can be prepared with the function :func:`~pypet.trajectory.Trajectory.f_explore`.
 This function takes a dictionary with parameter names
 (not necessarily the full names, they are searched) as keys and iterables specifying
-how the parameter values for each single run. Note that all iterables
+the parameter ranges as values. Note that all iterables
 need to be of the same length. For example:
 
 >>> traj.f_explore({'ncars':[42,44,45,46], 'ncycles' :[1,4,6,6]})
@@ -959,7 +997,7 @@ For instance:
     # Stating `results` here is important. We removed the results node above, so
     # we have to explicitly name it here to reload it, too. There are no shortcuts allowed
     # for nodes that have to be loaded on the fly and that did not exist in memory before.
-    answer= traj.results.mygroupA,mygroupB.myresult
+    answer= traj.results.mygroupA.mygroupB.myresult
     # And answer will be 42
 
 
@@ -1055,6 +1093,9 @@ merged trajectory runs from 0 to N1+N2-1.
 
 Also checkout the example in :ref:`example-03`.
 
+Moreover, if you need to merge several trajectories take a look at the faster
+:func:`~pypet.trajectory.Trajectory.f_merge_many` function.
+
 
 .. _more-on-single-runs:
 
@@ -1121,7 +1162,7 @@ code snippet will iterate over all four runs and print the result of each run:
 .. code-block:: python
 
     for run_name in traj.f_get_run_names():
-        traj.f_as_run(run_name)
+        traj.f_set_crun(run_name)
         x=traj.x
         y=traj.y
         z=traj.z

@@ -6,6 +6,7 @@ else:
 import logging
 
 import numpy as np
+import time
 import pandas as pd
 from scipy import sparse as spsp
 from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, PickleParameter, \
@@ -13,7 +14,8 @@ from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, 
 from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
 from pypet.utils.helpful_functions import flatten_dictionary
-from pypet.storageservice import LockWrapper
+from pypet.utils.mpwrappers import LockWrapper
+from pypet.utils.siginthandling import sigint_handling
 
 __author__ = 'Robert Meyer'
 
@@ -27,6 +29,7 @@ def create_param_dict(param_dict):
     param_dict['Numpy_2D'] = {}
     param_dict['Numpy_3D'] = {}
     param_dict['Tuples'] ={}
+    param_dict['Lists'] ={}
     param_dict['Pickle']={}
 
     normal_dict = param_dict['Normal']
@@ -41,17 +44,17 @@ def create_param_dict(param_dict):
     numpy_dict['string'] = np.array(['Uno', 'Dos', 'Tres'])
     numpy_dict['int'] = np.array([1,2,3,4])
     numpy_dict['double'] = np.array([1.0,2.0,3.0,4.0])
-    numpy_dict['bool'] = np.array([True,False, True])
+    numpy_dict['bool'] = np.array([True, False, True])
 
     param_dict['Numpy_2D']['double'] = np.matrix([[1.0,2.0],[3.0,4.0]])
     param_dict['Numpy_3D']['double'] = np.array([[[1.0,2.0],[3.0,4.0]],[[3.0,-3.0],[42.0,41.0]]])
 
-    spsparse_csc = spsp.lil_matrix((2222,22))
+    spsparse_csc = spsp.lil_matrix((222,22))
     spsparse_csc[1,2] = 44.6
     spsparse_csc[1,9] = 44.5
     spsparse_csc = spsparse_csc.tocsc()
 
-    spsparse_csr = spsp.lil_matrix((2222,22))
+    spsparse_csr = spsp.lil_matrix((222,22))
     spsparse_csr[1,3] = 44.7
     spsparse_csr[17,17] = 44.755555
     spsparse_csr = spsparse_csr.tocsr()
@@ -74,12 +77,18 @@ def create_param_dict(param_dict):
     param_dict['Sparse']['csr_mat'] = spsparse_csr
     param_dict['Sparse']['dia_mat'] = spsparse_dia
 
+    param_dict['Tuples']['empty'] = ()
     param_dict['Tuples']['int'] = (1,2,3)
     param_dict['Tuples']['float'] = (44.4,42.1,3.)
     param_dict['Tuples']['str'] = ('1','2wei','dr3i')
 
-    param_dict['Pickle']['list']= ['b','h', 53, (),0]
-    param_dict['Pickle']['list']= ['b','h', 42, (),1]
+    param_dict['Lists']['lempty'] = []
+    param_dict['Lists']['lint'] = [1,2,3]
+    param_dict['Lists']['lfloat'] = [44.4,42.1,3.]
+    param_dict['Lists']['lstr'] = ['1','2wei','dr3i']
+
+    param_dict['Pickle']['list']= ['b','h', 53, (), 0]
+    param_dict['Pickle']['list']= ['b','h', 42, (), 1]
     param_dict['Pickle']['list']= ['b',[444,43], 44, (),2]
 
 
@@ -89,7 +98,8 @@ def add_params(traj,param_dict):
     flat_dict = flatten_dictionary(param_dict,'.')
 
     for key, val in flat_dict.items():
-        if isinstance(val, (np.ndarray,tuple)):
+        if isinstance(val, (np.ndarray, tuple)) or (isinstance(val, list) and
+                                                        (len(val) < 4 or val[3] != ())):
             traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
         elif isinstance(val, (str,bool,float)+compat.int_types):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
@@ -138,7 +148,40 @@ def multiply(traj):
     return z
 
 
+def multiply_with_graceful_exit(traj):
+    z=traj.x*traj.y
+    rootlogger = get_root_logger()
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
+    traj.f_add_result('z',z)
+    if traj.v_idx > 3:
+        if not sigint_handling.hit:
+            sigint_handling._handle_sigint(None, None)
+    return z
+
+def multiply_with_storing(traj):
+    rootlogger = get_root_logger()
+    z=traj.x*traj.y
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y))
+    traj.f_add_result('z',z)
+    traj.f_store()
+    return z
+
+
+def multiply_args(traj, arg1=0, arg2=0, arg3=0):
+    rootlogger = get_root_logger()
+    z=traj.x*traj.y + arg1 + arg2 + arg3
+    rootlogger.info('z=x*y: '+str(z)+'='+str(traj.x)+'*'+str(traj.y) +
+                    '+'+str(arg1)+'+'+str(arg2)+'+'+str(arg3))
+    traj.f_add_result('z',z)
+    return z
+
+
 def simple_calculations(traj, arg1, simple_kwarg):
+
+        if traj.v_idx == 0:
+            # to shuffle runs
+            time.sleep(0.1)
+
         rootlogger = get_root_logger()
 
         if not 'runs' in traj.res:
@@ -149,7 +192,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         my_dict2={}
         param_dict=traj.parameters.f_to_dict(fast_access=True,short_names=False)
-        for key in sorted(param_dict.keys())[0:10]:
+        for key in sorted(param_dict.keys())[0:5]:
             val = param_dict[key]
             if 'trial' in key:
                 continue
@@ -164,14 +207,14 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
-        my_dict['__LONG'] = compat.long_type(42)
+        my_dict['__LONG'] = compat.long_type(4266)
         my_dict['__UNICODE'] = u'sdfdsf'
         my_dict['__BYTES'] = b'zweiundvierzig'
         my_dict['__NUMPY_UNICODE'] = np.array([u'$%&ddss'])
         my_dict['__NUMPY_BYTES'] = np.array([b'zweiundvierzig'])
 
         keys = sorted(to_dict_wo_config(traj).keys())
-        for idx,key in enumerate(keys[0:10]):
+        for idx,key in enumerate(keys[0:5]):
             keys[idx] = key.replace('.', '_')
 
         listy=traj.f_add_result_group('List', comment='Im a result group')
@@ -193,6 +236,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.res.f_add_result(name='lll', comment='duh', data=444)
 
+        x = traj.res.f_add_result(name='nested', comment='duh')
+
+        x['nested0.nested1.nested2.nested3'] =  44
+
         traj.res.f_add_result(name='test.$set.$', comment='duh', data=444)
 
         try:
@@ -201,10 +248,10 @@ def simple_calculations(traj, arg1, simple_kwarg):
         except TypeError:
             pass
 
-        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
-            raise RuntimeError()
-        if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
-            raise RuntimeError()
+        # if not traj.f_contains('results.runs.' + traj.v_crun + '.ggjg', shortcuts=False):
+        #     raise RuntimeError()
+        # if not traj.f_contains('results.runs.' + traj.v_crun + '.ggg', shortcuts=False):
+        #     raise RuntimeError()
         if not traj.f_contains('results.runs.' + traj.v_crun + '.hhg', shortcuts=False):
             raise RuntimeError()
 
@@ -236,18 +283,21 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         traj.f_get('DictsNFrame').f_set(myframe)
 
-        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0), 'Iamstring',(1,2,3),[4,5,6],zwei=2).v_comment='test'
+        traj.f_add_result('IStore.SimpleThings',1.0,3,np.float32(5.0),
+                          'Iamstring',
+                          (1,2,3), [4,5,6],
+                          zwei=2).v_comment='test'
         traj.f_add_derived_parameter('super.mega',33, comment='It is huuuuge!')
         traj.super.f_set_annotations(AgainATestAnnotations='I am a string!111elf')
 
-        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict, protocol=1, comment='p1')
-        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict, protocol=2, comment='p2')
-        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict, protocol=0, comment='p0')
+        traj.f_add_result(PickleResult,'pickling.result.proto1', my_dict2, protocol=1, comment='p1')
+        traj.f_add_result(PickleResult,'pickling.result.proto2', my_dict2, protocol=2, comment='p2')
+        traj.f_add_result(PickleResult,'pickling.result.proto0', my_dict2, protocol=0, comment='p0')
 
-        traj.f_add_result(SparseResult, 'sparse.csc',traj.csc_mat,42).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.bsr',traj.bsr_mat,52).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.csr',traj.csr_mat,62).v_comment='sdsa'
-        traj.f_add_result(SparseResult, 'sparse.dia',traj.dia_mat,72).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csc', traj.csc_mat, 42).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.bsr', traj.bsr_mat, 52).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.csr', traj.csr_mat, 62).v_comment='sdsa'
+        traj.f_add_result(SparseResult, 'sparse.dia', traj.dia_mat, 72).v_comment='sdsa'
 
         traj.sparse.v_comment = 'I contain sparse data!'
 
@@ -257,9 +307,9 @@ def simple_calculations(traj, arg1, simple_kwarg):
         traj.object.f_set_annotations(test2=42.42)
 
         traj.f_add_result('$.here', 77, comment='huhu')
-        traj.f_add_result('or.not.$', dollah=77, comment='duh!')
-        traj.f_add_result('or.not.rrr.$.j', 77, comment='duh!')
-        traj.f_add_result('or.not.rrr.crun.jjj', 777, comment='duh**2!')
+        traj.f_add_result('tor.hot.$', dollah=77, comment='duh!')
+        traj.f_add_result('tor.hot.rrr.$.j', 77, comment='duh!')
+        traj.f_add_result('tor.hot.rrr.crun.jjj', 777, comment='duh**2!')
 
         #traj.f_add_result('PickleTerror', result_type=PickleResult, test=traj.SimpleThings)
         rootlogger.info('<<<<<<Finished Simple Calculations')
@@ -289,6 +339,11 @@ def to_dict_wo_config(traj):
 
 class TrajectoryComparator(unittest.TestCase):
 
+    def are_results_in_order(self, results):
+        self.assertGreater(len(results), 0)
+        sorted_res = sorted(results, key=lambda key: key[0])
+        self.assertEqual(results, sorted_res)
+
     def clear_handlers(self):
         """Deletes all handlers and closes all log-files"""
         root = logging.getLogger()
@@ -301,6 +356,8 @@ class TrajectoryComparator(unittest.TestCase):
                     if hasattr(handler, 'close'):
                         handler.close()
                 logger.handlers = []
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
 
     def tearDown(self):
         if hasattr(self, 'env') and hasattr(self.env, 'f_disable_logging'):

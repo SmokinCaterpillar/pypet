@@ -1,38 +1,45 @@
 language: python
-python:
-  - 2.7
-  #- 2.6
 
 
-env:
-  matrix:
-    #- NEWEST=FALSE PANDAS_VERSION=0.12.0 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
-    - NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+sudo: false
+
+
+addons:
+   apt:
+     packages:
+       - gfortran
+       - libopenblas-dev
+       - liblapack-dev
+       - libhdf5-serial-dev
 
 
 matrix:
   include:
-    - python: 3.3
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
-    - python: 3.4
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON
+    - python: 2.6
+      env: NEWEST=FALSE PANDAS_VERSION=0.14.1 TABLES_VERSION=2.3.1 NUMEXPR_VERSION=1.4.1 CYTHON_VERSION=0.13.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 2.7
-      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=OFF
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+    - python: 3.3
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+    - python: 3.5
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+    - python: 2.7
+      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
+    - python: 2.7
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
+    - python: 3.4
+      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
+
 
 
 # Install dependencies for PyTables
 # command to install dependencies
 before_install:
-  - travis_retry sudo apt-get update
-  - echo "+++++++++++ Installing BLAS and FORTRAN compiler +++++++++++"
-  - travis_retry sudo apt-get install gfortran libopenblas-dev liblapack-dev
-  - echo "+++++++++++ Installing HDF5 +++++++++++++"
-  - travis_retry sudo apt-get install libhdf5-serial-dev
   - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then
-      travis_retry wget http://repo.continuum.io/miniconda/Miniconda-3.7.3-Linux-x86_64.sh -O miniconda.sh;
+      travis_retry wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
     else
-      travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-3.7.3-Linux-x86_64.sh -O miniconda.sh;
+      travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -60,18 +67,17 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - travis_retry pip install --pre brian2
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then travis_retry pip install brian; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
   - travis_retry pip install dill
   - echo "+++++++++++ Installing GitPython and Sumatra if needed ++++++++++++"
   - if [[ $GIT_TEST == ON ]]; then chmod +x ciscripts/travis/install_gitpython.sh; travis_retry ciscripts/travis/install_gitpython.sh; fi
-  - echo "+++++++++++ Installing matplotlib if needed ++++++++++++"
-  - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; fi
-  #Temporal solution to travis issue #155
-  - echo "+++++++++++ Dealing with Issue 155 +++++++++++"
-  - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
+  - echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
+  - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; travis_retry pip install deap; fi
+  - echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
+  - travis_retry pip install https://pypi.python.org/packages/source/s/scoop/scoop-0.7.1.release.tar.gz
   - echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
   - if [[ $COVERAGE == OFF ]]; then travis_retry python setup.py install; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
@@ -83,5 +89,7 @@ script: cd ciscripts/travis; chmod +x runtests.sh; ./runtests.sh
 
 branches:
   only:
-    - brian2
+    - develop
+    - master
+    - removing_lazy_adding
 

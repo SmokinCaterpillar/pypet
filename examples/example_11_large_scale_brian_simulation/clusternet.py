@@ -754,7 +754,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         """
         print_folder = os.path.join(traj.analysis.plot_folder,
-                                    traj.v_trajectory_name, traj.v_crun)
+                                    traj.v_name, traj.v_crun)
         print_folder = os.path.abspath(print_folder)
         if not os.path.isdir(print_folder):
             os.makedirs(print_folder)

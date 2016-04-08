@@ -12,10 +12,9 @@ import time
 import hashlib
 import itertools as itools
 import inspect
-import copy as cp
 import sys
-from copy import deepcopy
-import numpy as np
+import copy as cp
+
 if sys.version_info < (2, 7, 0):
     from ordereddict import OrderedDict
 else:
@@ -40,8 +39,8 @@ from pypet.parameter import BaseParameter, Parameter, Result
 import pypet.storageservice as storage
 import pypet.utils.dynamicimports as dynamicimports
 from pypet.utils.decorators import kwargs_api_change, not_in_run, copydoc, deprecated,\
-    kwargs_mutual_exclusive
-from pypet.utils.helpful_functions import is_debug
+    kwargs_mutual_exclusive, manual_run
+from pypet.utils.helpful_functions import is_debug, format_time
 from pypet.utils.storagefactory import storage_factory
 
 
@@ -87,6 +86,7 @@ def load_trajectory(name=None,
 
 
 def make_run_name(idx):
+    """Creates a run name based on ``idx``"""
     if idx >= 0:
         return pypetconstants.FORMATTED_RUN_NAME % idx
     else:
@@ -94,6 +94,7 @@ def make_run_name(idx):
 
 
 def make_set_name(idx):
+    """Creates a run set name based on ``idx``"""
     GROUPSIZE = 1000
     set_idx = idx // GROUPSIZE
     if set_idx >= 0:
@@ -227,11 +228,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     """
 
     @kwargs_api_change('dynamically_imported_classes', 'dynamic_imports')
-    def __init__(self, name='my_trajectory', add_time=True, comment='',
+    def __init__(self, name='my_trajectory', add_time=False, comment='',
                  dynamic_imports=None, wildcard_functions=None,
                  storage_service=None, **kwargs):
+
+        copy_traj = kwargs.pop('_copy_traj', False)  # True if trajectory is copied
+
         # This is true during the actual runs:
         self._is_run = False
+
+        super(Trajectory, self).__init__()
 
         # Helper variable: During a multiprocessing single run, the trajectory is usually
         # pickled without all the parameter exploration ranges and all run information
@@ -239,28 +245,21 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # helper variable to return the correct length during single runs.
         self._length = 1
 
-        super(Trajectory, self).__init__()
+        if not copy_traj:
+            self._set_logger()
 
-        self._set_logger()
+            init_time = time.time()
+            formatted_time = format_time(init_time)
+            self._timestamp = init_time
+            self._time = formatted_time
+
+            if add_time:
+                self._name = name + '_' + str(formatted_time)
+            else:
+                self._name = name
 
         self._version = VERSION
         self._python = '.'.join([str(x) for x in sys.version_info[0:3]])
-
-        init_time = time.time()
-        formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp = init_time
-        self._time = formatted_time
-
-        # Times related to single runs
-        self._runtime_run = None
-        self._timestamp_run = None
-        self._time_run = None
-        self._finish_timestamp_run = None
-
-        if add_time:
-            self._name = name + '_' + str(formatted_time)
-        else:
-            self._name = name
 
         self._parameters = {}  # Contains all parameters
         self._derived_parameters = {}  # Contains all derived parameters
@@ -270,11 +269,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._config = {}  # Contains all config parameters
         self._all_groups = {}  # Contains ALL groups regardless in which subtree they are
         self._run_parent_groups = {}  # Contains all groups which are parents of run groups
-        self._new_nodes = OrderedDict() # Contains all elements added during a
+        self._new_nodes = OrderedDict()  # Contains all elements added during a
         # particular single run with full names as keys and a (parent, child) pair as value
-        self._new_links = OrderedDict() # Contains all new added links during a single run
+        self._new_links = OrderedDict()  # Contains all new added links during a single run
         self._other_leaves = {}  # Contains ALL other user added leaves
-        self._linked_by = {} #Contains all nodes that are linked to
+        self._linked_by = {}  # Contains all nodes that are linked to
 
         self._changed_default_parameters = {}  # Needed for paremeter presetting
 
@@ -286,6 +285,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # like time of creation, whether they have been completed and so on.
         # Check function 'f_get_run_information' for a description
 
+        self._updated_run_information = set() # Set of updated run information which
+        # needs to be updated in case the trajectory is stored.
+
         self._nn_interface = NaturalNamingInterface(root_instance=self)
         self._fast_access = True
         self._shortcuts = True
@@ -293,9 +295,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._max_depth = None
         self._auto_load = False
         self._with_links = True
-        self._lazy_adding = False
-
-        self._expansion_not_stored = False
 
         self._environment_hexsha = None
         self._environment_name = None
@@ -310,49 +309,54 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._standard_leaf = Result
 
         self._auto_run_prepend = True
+        self._no_clobber = False
 
-        self._full_copy = True
+        self._run_started = False  # For manually using a trajectory
+        self._run_by_environment = False  # To disable manual running of experiment
 
-        self._dynamic_imports = ['pypet.parameter.PickleParameter']
+        self._full_copy = False
 
-        if not dynamic_imports is None:
-            self.f_add_to_dynamic_imports(dynamic_imports)
+        if not copy_traj:
+            self._dynamic_imports = ['pypet.parameter.PickleParameter']
 
-        faulty_names = self._nn_interface._check_names([name])
+            if not dynamic_imports is None:
+                self.f_add_to_dynamic_imports(dynamic_imports)
 
-        if '.' in name:
-            faulty_names += ' colons >>.<< are not allowed in trajectory names,'
+            faulty_names = self._nn_interface._check_names([name])
 
-        if faulty_names:
-            raise ValueError('Your Trajectory %s f_contains the following not admissible names: '
-                             '%s please choose other names.'
-                             % (name, faulty_names))
+            if '.' in name:
+                faulty_names += ' colons >>.<< are not allowed in trajectory names,'
 
-        internal_wildcard_functions = {('$', 'crun'): make_run_name,
-                                       ('$set', 'crunset'): make_set_name}
-        if wildcard_functions:
-            internal_wildcard_functions.update(wildcard_functions)
+            if faulty_names:
+                raise ValueError('Your Trajectory %s f_contains the following not admissible names: '
+                                 '%s please choose other names.'
+                                 % (name, faulty_names))
 
-        self._wildcard_functions = {}
-        self._wildcard_cache = {}
-        self._wildcard_keys = {}
-        self._reversed_wildcards = {} # Only needed for merging
+            internal_wildcard_functions = {('$', 'crun'): make_run_name,
+                                           ('$set', 'crunset'): make_set_name}
+            if wildcard_functions:
+                internal_wildcard_functions.update(wildcard_functions)
 
-        self.f_add_wildcard_functions(internal_wildcard_functions)
+            self._wildcard_functions = {}
+            self._wildcard_cache = {}
+            self._wildcard_keys = {}
+            self._reversed_wildcards = {} # Only needed for merging
 
-        # Per Definition the length is set to be 1. Even with an empty trajectory
-        # in principle you could make a single run
-        self._add_run_info(0)
-        self._test_run_addition(1)
+            self.f_add_wildcard_functions(internal_wildcard_functions)
 
-        self._comment = ''
-        self.v_comment = comment
+            # Per Definition the length is set to be 1. Even with an empty trajectory
+            # in principle you could make a single run
+            self._add_run_info(0)
+            self._test_run_addition(1)
 
-        self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
-                                                               trajectory=self, **kwargs)
-        if len(unused_kwargs) > 0:
-            raise ValueError('The following keyword arguments were not used: `%s`' %
-                             str(unused_kwargs))
+            self._comment = ''
+            self.v_comment = comment
+
+            self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
+                                                                   trajectory=self, **kwargs)
+            if len(unused_kwargs) > 0:
+                raise ValueError('The following keyword arguments were not used: `%s`' %
+                                 str(unused_kwargs))
 
     def f_get_wildcards(self):
         """Returns a list of all defined wildcards"""
@@ -372,7 +376,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     raise ValueError('Your wildcard `%s` is used twice1' % wildcard)
                 self._wildcard_keys[wildcard] = wildcards
             self._wildcard_functions[wildcards] = function
-            self._logger.info('Added wildcard function `%s`.' % str(wildcards))
+            self._logger.debug('Added wildcard function `%s`.' % str(wildcards))
 
     def f_wildcard(self, wildcard='$', run_idx=None):
         """#TODO"""
@@ -390,12 +394,16 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         result = super(Trajectory, self).__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
-        # Accordingly, we need to store the length in the helper variable
-        # `_length_during_nfc`.
-        if not self.v_full_copy and self.v_crun is not None:
-            runname = self._single_run_ids[self.v_idx]
+        if not self.v_full_copy:
+            if self.v_crun is not None:
+                idx = self.v_idx
+            else:
+                idx = 0
+            runname = self._single_run_ids[idx]
             result['_run_information'] = {runname: self._run_information[runname]}
-            result['_single_run_ids'] = {self.v_idx: runname, runname: self.v_idx}
+            result['_single_run_ids'] = {idx: runname, runname: idx}
+            result['_updated_run_information'] = set()
+
         result['_wildcard_cache'] = {}
         return result
 
@@ -415,15 +423,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         return '%s%s %s %s: %s' % (self.f_get_class_name(), runstr, self.v_name, info_string,
                                  children_string)
-
-    @property
-    @deprecated('No longer supported, please refer to the storage service instead.')
-    def v_filename(self):
-        """The name and path of the hdf5 file in case you use the HDF4StorageService"""
-        try:
-            return self.v_storage_serivce.filename
-        except AttributeError:
-            return None
 
     @property
     def v_version(self):
@@ -494,18 +493,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self.f_set_crun(idx)
 
     @property
-    @deprecated(msg='Please use `v_crun` instead')
-    def v_as_run(self):
-        return self.v_crun
-
-    @v_as_run.setter
-    @not_in_run
-    @deprecated(msg='Please use `v_crun` instead')
-    def v_as_run(self, run_name):
-        """Changes the run name to make the trajectory behave as a single run"""
-        self.v_crun = run_name
-
-    @property
     def v_crun_(self):
         """"
         Similar to ``v_crun`` but returns ``'run_ALL'`` if ``v_crun`` is ``None``.
@@ -547,27 +534,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._full_copy
 
-    @property
-    def v_lazy_adding(self):
-        """If lazy additions are allowed.
-
-        I.e. `traj.par.x = 42` which adds a new parameter with value 42"""
-        return self._lazy_adding
-
-    @v_lazy_adding.setter
-    def v_lazy_adding(self, val):
-        """Sets lazy adding"""
-        self._lazy_adding = bool(val)
-
     @v_full_copy.setter
     @not_in_run
     def v_full_copy(self, val):
         """ Sets full copy mode of trajectory and (!) ALL explored parameters!"""
-        if val != self._full_copy:
-            self._full_copy = val
-            for param in compat.itervalues(self._explored_parameters):
-                if param is not None:
-                    param.v_full_copy = val
+        self._full_copy = bool(val)
+        for param in compat.itervalues(self._explored_parameters):
+            if param is not None:
+                param.v_full_copy = bool(val)
 
     @property
     def v_with_links(self):
@@ -622,11 +596,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._dynamic_imports.extend(dynamic_imports)
 
     @not_in_run
-    @deprecated(msg='Please use `pypet.trajectory.Trajectory.f_set_crun` instead.')
-    def f_as_run(self, name_or_idx):
-        return self.f_set_crun(name_or_idx)
-
-    @not_in_run
     def f_set_crun(self, name_or_idx):
         """Can make the trajectory behave as during a particular single run.
 
@@ -667,8 +636,23 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._set_explored_parameters_to_idx(self.v_idx)
 
     @not_in_run
-    def f_iter_runs(self):
+    def f_iter_runs(self, start=0, stop=None, step=1, yields='name'):
         """Makes the trajectory iterate over all runs.
+
+        :param start: Start index of run
+
+        :param stop: Stop index, leave ``None`` for length of trajectory
+
+        :param step: Stepsize
+
+        :param yields:
+
+            What should be yielded: ``'name'`` of run, ``idx`` of run
+            or ``'self'`` to simply return the trajectory container.
+
+            You can also pick ``'copy'`` to get **shallow** copies (ie the tree is copied but
+            no leave nodes except explored ones.) of your trajectory,
+            might lead to some of overhead.
 
         Note that after a full iteration, the trajectory is set back to normal.
 
@@ -700,58 +684,26 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
 
         """
-        for run_name in self.f_get_run_names(sort=True):
-            self.f_set_crun(run_name)
-
-            yield run_name
+        if stop is None:
+            stop =len(self)
+        elif stop > len(self):
+            raise ValueError('Stop cannot be larger than the trajectory lenght.')
+        yields = yields.lower()
+        if yields == 'name':
+            yield_func = lambda x: self.f_idx_to_run(x)
+        elif yields == 'idx':
+            yield_func = lambda x: x
+        elif yields == 'self':
+            yield_func = lambda x: self
+        elif yields == 'copy':
+            yield_func = lambda x: self.__copy__()
+        else:
+            raise ValueError('Please choose yields among: `name`, `idx`, or `self`.')
+        for idx in compat.xrange(start, stop, step):
+            self.f_set_crun(idx)
+            yield yield_func(idx)
 
         self.f_set_crun(None)
-
-    def _remove_incomplete_runs(self, start_timestamp, run_indices):
-        """Requests the storage service to delete incomplete runs.
-
-        Called by the environment if you resume a crashed trajectory to allow
-        re-running of non-completed runs.
-
-        :param finished_runs:
-
-            Number of actually finished runs
-
-        :param nruns:
-
-            Number of runs that were supposed to be executed with this environment
-
-        :param snapshot_traj:
-
-            The trajectory that was part of the snapshot, we need it to make sure, that
-            we do not remove anything that was already part of the snapshot.
-
-        :return
-
-            List of indices that were completed
-
-        """
-        self._logger.info('Removing incomplete runs.')
-
-        index_set = set(run_indices)
-
-        # First check if the completed runs are also finished runs (i.e. are part of the snapshot)
-        # If not remove these
-        for run_name in self._run_information:
-            info_dict = self._run_information[run_name]
-            completed = info_dict['completed']
-            timestamp = info_dict['timestamp']
-            idx = info_dict['idx']
-            name = info_dict['name']
-            if completed and timestamp >= start_timestamp and idx not in index_set:
-                self._run_information[name]['completed'] = 0
-
-        cleaned_run_indices = []
-        for index in run_indices:
-            if self.f_is_completed(index):
-                cleaned_run_indices.append(index)
-
-        return cleaned_run_indices
 
     @not_in_run
     def f_shrink(self, force=False):
@@ -1053,6 +1005,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             ValueError: If not all explored parameter ranges are of the same length
 
         """
+        if len(self._explored_parameters) == 0:
+            self._logger.info('Your trajectory has not been explored, yet. '
+                              'I will call `f_explore` instead.')
+            return self.f_explore(build_dict)
 
         enlarge_set = set([self.f_get(key).v_full_name
                            for key in build_dict.keys()])
@@ -1075,7 +1031,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for param_name in self._explored_parameters:
                 old_ranges[param_name] = self._explored_parameters[param_name].f_get_range()
             try:
-                old_ranges = deepcopy(old_ranges)
+                old_ranges = cp.deepcopy(old_ranges)
             except Exception:
                 self._logger.error('Cannot deepcopy old parameter ranges, if '
                                      'something fails during `f_expand` I cannot revert the '
@@ -1107,9 +1063,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self._add_run_info(irun)
             self._test_run_addition(length)
 
-            # We need to update the explored parameters:
-            if self._stored:
-                self._expansion_not_stored = True
+            # We need to update the explored parameters in case they were stored:
+            self._remove_exploration()
+
         except Exception:
             if old_ranges is not None:
                 # Try to restore the original parameter exploration
@@ -1136,14 +1092,226 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             raise RuntimeError('Your renaming function does not return an appropriate value for '
                                '`-1`. `%s` is actual an already given run name.' % dummy)
 
-    def _store_expansion(self):
+    def _remove_exploration(self):
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
         for param in compat.itervalues(self._explored_parameters):
+            if param._stored:
+                try:
+                    self.f_delete_item(param)
+                except Exception:
+                    self._logger.exception('Could not delete expanded parameter `%s` '
+                                           'from disk.' % param.v_full_name)
+
+    def __copy__(self):
+        """Returns a shallow copy"""
+        return self.f_copy(copy_leaves=True,
+                           with_links=True)
+
+    def f_copy(self, copy_leaves=True,
+                     with_links=True):
+        """Returns a *shallow* copy of a trajectory.
+
+        :param copy_leaves:
+
+            If leaves should be **shallow** copied or simply referred to by both trees.
+            **Shallow** copying is established using the copy module.
+
+            Accepts the setting ``'explored'`` to only copy explored parameters.
+            Note that ``v_full_copy`` determines how these will be copied.
+
+        :param with_links: If links should be ignored or followed and copied as well
+
+        :return: A shallow copy
+
+        """
+        new_traj = Trajectory(_copy_traj=True)
+
+        new_traj._length = self._length
+        new_traj._name = self._name
+
+        new_traj._timestamp = self._timestamp
+        new_traj._time = self._time
+
+        new_traj._single_run_ids = self._single_run_ids
+        new_traj._run_information = self._run_information
+        new_traj._updated_run_information = self._updated_run_information
+
+        new_traj._fast_access = self._fast_access
+        new_traj._shortcuts = self._shortcuts
+        new_traj._iter_recursive = self._iter_recursive
+        new_traj._max_depth = self._max_depth
+        new_traj._auto_load = self._auto_load
+        new_traj._with_links = self._with_links
+
+        new_traj._environment_hexsha = self._environment_hexsha
+        new_traj._environment_name = self._environment_name
+
+        # Index of a trajectory is -1, if the trajectory should behave like a single run
+        # and blind out other single run results, this can be changed via 'v_crun'.
+        new_traj._idx = self._idx
+        new_traj._crun = self._crun
+
+        new_traj._standard_parameter = self._standard_parameter
+        new_traj._standard_result = self._standard_result
+        new_traj._standard_leaf = self._standard_leaf
+
+        new_traj._auto_run_prepend = self._auto_run_prepend
+        new_traj._no_clobber = self._no_clobber
+
+        new_traj._run_started = self._run_started # For manually using a trajectory
+        new_traj._run_by_environment = self._run_by_environment  # To disable manual running of experiment
+
+        new_traj._full_copy = self._full_copy
+
+        new_traj._dynamic_imports = self._dynamic_imports
+
+        new_traj._wildcard_functions = self._wildcard_functions
+        new_traj._wildcard_keys = self._wildcard_keys
+        new_traj._reversed_wildcards = self._reversed_wildcards
+        new_traj._wildcard_cache = self._wildcard_cache
+
+        new_traj._comment = self._comment
+
+        new_traj._stored = self._stored
+
+        new_traj._storage_service = self._storage_service
+
+        new_traj._is_run = self._is_run
+
+        new_traj._copy_from(self, copy_leaves=copy_leaves,
+                                   with_links=with_links)
+
+        # Copy references to new nodes and leaves
+        for my_dict, new_dict in ((self._new_nodes, new_traj._new_nodes),
+                                 (self._new_links, new_traj._new_links)):
+            for key in my_dict:
+                value = my_dict[key]
+                parent, child = value
+                if parent is self:
+                    new_parent = new_traj
+                else:
+                    new_parent = new_traj.f_get(parent.v_full_name,
+                                            shortcuts=False,
+                                            with_links=False,
+                                            auto_load=False)
+                new_child = new_parent._children[key[1]]
+                new_dict[key] = (new_parent, new_child)
+
+        return new_traj
+
+    def _copy_from(self, node,
+                          copy_leaves=True,
+                          overwrite=False,
+                          with_links=True):
+        """Pass a ``node`` to insert the full tree to the trajectory.
+
+        Considers all links in the given node!
+        Ignored nodes already found in the current trajectory.
+
+        :param node: The node to insert
+
+        :param copy_leaves:
+
+            If leaves should be **shallow** copied or simply referred to by both trees.
+            **Shallow** copying is established using the copy module.
+
+            Accepts the setting ``'explored'`` to only copy explored parameters.
+            Note that ``v_full_copy`` determines how these will be copied.
+
+        :param overwrite:
+
+            If existing elemenst should be overwritten. Requries ``__getstate__`` and
+            ``__setstate__`` being implemented in the leaves.
+
+        :param with_links: If links should be ignored or followed and copied as well
+
+        :return: The corresponding (new) node in the tree.
+
+        """
+
+        def _copy_skeleton(node_in, node_out):
+            """Copies the skeleton of from `node_out` to `node_in`"""
+            new_annotations = node_out.v_annotations
+            node_in._annotations = new_annotations
+            node_in.v_comment = node_out.v_comment
+
+        def _add_leaf(leaf):
+            """Adds a leaf to the trajectory"""
+            leaf_full_name = leaf.v_full_name
             try:
-                self.f_store_item(param, store_data=pypetconstants.OVERWRITE_DATA)
-            except Exception:
-                pass  # We end up here if the parameter was not stored to disk, yet
-            self.f_store_item(param)
+                found_leaf = self.f_get(leaf_full_name,
+                                        with_links=False,
+                                        shortcuts=False,
+                                        auto_load=False)
+                if overwrite:
+                    found_leaf.__setstate__(leaf.__getstate__())
+                return found_leaf
+            except AttributeError:
+                pass
+            if copy_leaves is True or (copy_leaves == 'explored' and
+                                           leaf.v_is_parameter and leaf.v_explored):
+                new_leaf = self.f_add_leaf(cp.copy(leaf))
+            else:
+                new_leaf = self.f_add_leaf(leaf)
+            if new_leaf.v_is_parameter and new_leaf.v_explored:
+                self._explored_parameters[new_leaf.v_full_name] = new_leaf
+            return new_leaf
+
+        def _add_group(group):
+            """Adds a new group to the trajectory"""
+            group_full_name = group.v_full_name
+            try:
+                found_group = self.f_get(group_full_name,
+                                             with_links=False,
+                                             shortcuts=False,
+                                             auto_load=False)
+                if overwrite:
+                    _copy_skeleton(found_group, group)
+                return found_group
+            except AttributeError:
+                pass
+            new_group = self.f_add_group(group_full_name)
+            _copy_skeleton(new_group, group)
+            return new_group
+
+        is_run = self._is_run
+        self._is_run = False  # So that we can copy Config Groups and Config Data
+        try:
+            if node.v_is_leaf:
+                return _add_leaf(node)
+            elif node.v_is_group:
+                other_root = node.v_root
+                if other_root is self:
+                    raise RuntimeError('You cannot copy a given tree to itself!')
+                result = _add_group(node)
+                nodes_iterator = node.f_iter_nodes(recursive=True, with_links=with_links)
+                has_links = []
+                if node._links:
+                    has_links.append(node)
+                for child in nodes_iterator:
+                    if child.v_is_leaf:
+                        _add_leaf(child)
+                    else:
+                        _add_group(child)
+                        if child._links:
+                            has_links.append(child)
+
+                if with_links:
+                    for current in has_links:
+                        mine = self.f_get(current.v_full_name, with_links=False,
+                                          shortcuts=False, auto_load=False)
+                        my_link_set = set(mine._links.keys())
+                        other_link_set = set(current._links.keys())
+                        new_links = other_link_set - my_link_set
+                        for link in new_links:
+                            where_full_name = current._links[link].v_full_name
+                            mine.f_add_link(link, where_full_name)
+
+                return result
+            else:
+                raise RuntimeError('You shall not pass!')
+        except Exception:
+            self._is_run = is_run
 
     @not_in_run
     def f_explore(self, build_dict):
@@ -1230,6 +1398,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 if not act_param.v_is_leaf or not act_param.v_is_parameter:
                     raise ValueError('%s is not an appropriate search string for a parameter.' % key)
 
+                act_param.f_unlock()
+
                 act_param._explore(builditerable)
                 added_explored_parameters.append(act_param)
 
@@ -1260,10 +1430,17 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 self.f_shrink(force=True)
             raise
 
+    def _update_run_information(self, run_information_dict):
+        """Overwrites the run information of a particular run"""
+        idx = run_information_dict['idx']
+        name = run_information_dict['name']
+        self._run_information[name] = run_information_dict
+        self._updated_run_information.add(idx)
+
     def _add_run_info(self, idx, name='', timestamp=42.0, finish_timestamp=1.337,
                       runtime='forever and ever', time='>>Maybe time`s gone on strike',
                       completed=0, parameter_summary='Not yet my friend!',
-                      short_environment_hexsha='notyet!'):
+                      short_environment_hexsha='N/A'):
         """Adds a new run to the `_run_information` dict."""
 
         if idx in self._single_run_ids:
@@ -1306,25 +1483,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not par.f_is_empty():
                 par.f_lock()
 
-    def _finalize(self, load_meta_data=True):
+    def _finalize(self, store_meta_data=True):
         """Final rollback initiated by the environment
 
-        Restores the trajectory as root of the tree, and loads meta data from disk.
+        Restores the trajectory as root of the tree, and stores meta data to disk.
         This updates the trajectory's information about single runs, i.e. if they've been
         completed, when they were started, etc.
 
         """
         self._is_run = False
         self.f_set_crun(None)
-        if load_meta_data:
-            self.f_load(self.v_name, None, False, load_parameters=pypetconstants.LOAD_NOTHING,
-                        load_derived_parameters=pypetconstants.LOAD_NOTHING,
-                        load_results=pypetconstants.LOAD_NOTHING,
-                        load_other_data=pypetconstants.LOAD_NOTHING)
-
-    @deprecated('Please use `f_load_skeleton` instead.')
-    def f_update_skeleton(self):
-        return self.f_load_skeleton()
+        if store_meta_data:
+            self.f_store(only_init=True)
 
     @not_in_run
     def f_load_skeleton(self):
@@ -1529,14 +1699,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 param.f_unlock()
 
     def _check_if_both_have_same_parameters(self, other_trajectory,
-                                            ignore_data):
+                                            ignore_data, consecutive_merge):
         """ Checks if two trajectories live in the same space and can be merged. """
 
         if not isinstance(other_trajectory, Trajectory):
             raise TypeError('Can only merge trajectories, the other trajectory'
                             ' is of type `%s`.' % str(type(other_trajectory)))
 
-        if self._stored:
+        if self._stored and not consecutive_merge:
             self.f_load_skeleton()
         if other_trajectory._stored:
             other_trajectory.f_load_skeleton()
@@ -1552,10 +1722,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # Load all parameters of the current and the other trajectory
         if self._stored:
             # To suppress warnings if nothing needs to be loaded
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 self.f_load_items(self._parameters.keys(), only_empties=True)
         if other_trajectory._stored:
-            with self._nn_interface._disable_logger:
+            with self._nn_interface._disable_logging:
                 other_trajectory.f_load_items(other_trajectory._parameters.keys(),
                                               only_empties=True)
 
@@ -1636,14 +1806,59 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._storage_service.store(pypetconstants.BACKUP, self, trajectory_name=self.v_name,
                                     **kwargs)
 
-    def _make_reversed_wildcards(self):
+    def _make_reversed_wildcards(self, old_length=-1):
         """Creates a full mapping from all wildcard translations to the corresponding wildcards"""
+        if len(self._reversed_wildcards) > 0:
+            # We already created reversed wildcards, so we don't need to do all of them
+            # again
+            start = old_length
+        else:
+            start = -1
         for wildcards, func in self._wildcard_functions.items():
-            for irun in range(-1, len(self)):
+            for irun in range(start, len(self)):
                 translated_name = func(irun)
                 if not translated_name in self._reversed_wildcards:
                     self._reversed_wildcards[translated_name] = ([], wildcards)
                 self._reversed_wildcards[translated_name][0].append(irun)
+
+    @not_in_run
+    def f_merge_many(self, other_trajectories,
+                ignore_data=(),
+                move_data=False,
+                delete_other_trajectory=False,
+                keep_info=True,
+                keep_other_trajectory_info=True,
+                merge_config=True,
+                backup=True):
+        """Can be used to merge several `other_trajectories` into your current one.
+
+        IMPORTANT `backup=True` only backs up the current trajectory not any of
+        the `other_trajectories`. If you need a backup of these, do it manually.
+
+        Parameters as for :func:`~pypet.trajectory.Trajectory.f_merge`.
+
+        """
+        other_length = len(other_trajectories)
+        self._logger.info('Merging %d trajectories into the current one.' % other_length)
+        self.f_load_skeleton()
+
+        if backup:
+            self.f_backup()
+
+        for idx, other in enumerate(other_trajectories):
+            self.f_merge(other, ignore_data=ignore_data,
+                         move_data=move_data,
+                         delete_other_trajectory=delete_other_trajectory,
+                         keep_info=keep_info,
+                         keep_other_trajectory_info=keep_other_trajectory_info,
+                         merge_config=merge_config,
+                         backup=False,
+                         consecutive_merge=True)
+            self._logger.log(21,'Merged %d out of %d' % (idx + 1, other_length))
+        self._logger.info('Storing data to disk')
+        self._reversed_wildcards = {}
+        self.f_store()
+        self._logger.info('Finished final storage')
 
     @not_in_run
     @kwargs_api_change('backup_filename', 'backup')
@@ -1657,7 +1872,9 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 delete_other_trajectory=False,
                 keep_info=True,
                 keep_other_trajectory_info=True,
-                merge_config=True):
+                merge_config=True,
+                consecutive_merge=False,
+                slow_merge=False):
         """Merges another trajectory into the current trajectory.
 
         Both trajectories must live in the same space. This means both need to have the same
@@ -1726,6 +1943,20 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             in case you want to keep all the information. Setting of `keep_other_trajectory_info`
             is irrelevant in case `keep_info=False`.
 
+        :param consecutive_merge:
+            Can be set to `True` if you are about to merge several trajectories into the current
+            one within a loop to avoid quadratic complexity.
+            But remember to store your trajectory manually after
+            all merges. Also make sure that all parameters and derived parameters are available
+            in your current trajectory and load them before the consecutive merging.
+            Also avoid specifying a `trial_parameter` and set `backup=False`
+            to avoid quadratic complexity in case of consecutive merges.
+
+        :param slow_merge:
+            Enforces a slow merging. This means all data is loaded one after the other to
+            memory and stored to disk. Otherwise it is tried to directly copy the data
+            from one file into another without explicitly loading the data.
+
         If you cannot directly merge trajectories within one HDF5 file, a slow merging process
         is used. Results are loaded, stored, and emptied again one after the other. Might take
         some time!
@@ -1736,16 +1967,25 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         of single runs are copied, so you don't have to worry about these.
 
         """
+        if consecutive_merge and trial_parameter is not None:
+            self._logger.warning('If you do a consecutive merge and specify a trial parameter, '
+                                 'your merging will still suffer from quadratic time complexity!')
+        if consecutive_merge and backup:
+            self._logger.warning('If you do a consecutive merge and backup, '
+                                 'your merging will still suffer from quadratic time complexity!')
+
         # Keep the timestamp of the merge
         timestamp = time.time()
         original_ignore_data = set(ignore_data)
         ignore_data = original_ignore_data.copy()
 
+        old_len = len(self)
+
         # Check if trajectories can be merged
-        self._check_if_both_have_same_parameters(other_trajectory, ignore_data)
+        self._check_if_both_have_same_parameters(other_trajectory, ignore_data, consecutive_merge)
 
         # Create a full mapping set for renaming
-        self._make_reversed_wildcards()
+        self._make_reversed_wildcards(old_length=old_len)
         other_trajectory._make_reversed_wildcards()
 
         # BACKUP if merge is possible
@@ -1767,9 +2007,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if len(used_runs) == 0:
             raise ValueError('Your merge discards all runs of the other trajectory, maybe you '
                              'try to merge a trajectory with itself?')
-
-
-
 
         # Dictionary containing the mappings between run names in the other trajectory
         # and their new names in the current trajectory
@@ -1804,40 +2041,46 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         self._logger.info('Updating Trajectory information and changed parameters in storage')
         self._storage_service.store(pypetconstants.PREPARE_MERGE, self,
                                     trajectory_name=self.v_name,
-                                    changed_parameters=changed_parameters)
+                                    changed_parameters=changed_parameters,
+                                    old_length=old_len)
 
-        try:
-            # Merge the single run derived parameters and all results
-            # within the same hdf5 file based on `renamed_dict`
-            self._storage_service.store(pypetconstants.MERGE, None, trajectory_name=self.v_name,
-                                        other_trajectory_name=other_trajectory.v_name,
-                                        rename_dict=rename_dict, move_nodes=move_data,
-                                        delete_trajectory=delete_other_trajectory)
+        if not slow_merge:
+            try:
+                # Merge the single run derived parameters and all results
+                # within the same hdf5 file based on `renamed_dict`
+                try:
+                    # try to get the other file
+                    other_filename = other_trajectory.v_storage_service.filename
+                except AttributeError:
+                    self._logger.warning('Could not determine the filename of the other '
+                                         'trajectory, I will assume it`s in the same file.')
+                    other_filename = None
+                self._storage_service.store(pypetconstants.MERGE, 'FAST MERGE', trajectory_name=self.v_name,
+                                            other_trajectory_name=other_trajectory.v_name,
+                                            rename_dict=rename_dict, move_nodes=move_data,
+                                            delete_trajectory=delete_other_trajectory,
+                                            other_filename=other_filename)
 
+            except pex.NoSuchServiceError as exc:
+                # If the storage service does not support merge we end up here
+                self._logger.exception('My storage service does not support merging of trajectories, '
+                                     'I will use the f_load mechanism of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
+            except ValueError as exc:
+                # If both trajectories are stored in separate files we end up here
+                self._logger.exception('Could not perfom fast merging. '
+                                     'I will use the `f_load` method of the other trajectory and '
+                                     'store the results slowly item by item. '
+                                     'Note that thereby the other '
+                                     'trajectory will be altered (in RAM).')
+                slow_merge = True
 
-        except pex.NoSuchServiceError:
-            # If the storage service does not support merge we end up here
-            self._logger.warning('My storage service does not support merging of trajectories, '
-                                 'I will use the f_load mechanism of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
-
+        if slow_merge:
             self._merge_slowly(other_trajectory, rename_dict)
-
-        except ValueError as exc:
-            # If both trajectories are stored in separate files we end up here
-            self._logger.warning(repr(exc))
-
-            self._logger.warning('Could not perfom fast merging. '
-                                 'I will use the `f_load` method of the other trajectory and '
-                                 'store the results slowly item by item. '
-                                 'Note that thereby the other '
-                                 'trajectory will be altered (in RAM).')
-
-            self._merge_slowly(other_trajectory, rename_dict)
-
 
         # We will merge the git commits and other config data
         if merge_config:
@@ -1929,10 +2172,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                       comment='Comment of other trajectory')
 
         # Write out the merged data to disk
-        self._logger.info('Writing merged data to disk')
-        self.f_store(store_data=pypetconstants.STORE_DATA)
-
-        self._reversed_wildcards = {}
+        if not consecutive_merge:
+            self._logger.info('Writing merged data to disk')
+            self.f_store(store_data=pypetconstants.STORE_DATA)
+            self._reversed_wildcards = {}
         other_trajectory._reversed_wildcards = {}
 
         self._logger.info('Finished Merging!')
@@ -2229,8 +2472,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             if other_instance.f_is_empty():
                 # To suppress warnings if nothing needs to be loaded
-                with self._nn_interface._disable_logger:
-                    other_trajectory.f_load_items(other_instance)
+                with self._nn_interface._disable_logging:
+                    other_trajectory.f_load_item(other_instance)
 
             if not self.f_contains(new_key):
                 class_name = other_instance.f_get_class_name()
@@ -2335,14 +2578,14 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             # Extract the ranges of both trial parameters
             if my_trial_parameter.f_has_range():
-                my_trial_list = my_trial_parameter.f_get_range()
+                my_trial_list = my_trial_parameter.f_get_range(copy=False)
             else:
                 # If we only have a single trial, we need to make a range of length 1
                 # This is probably a very exceptional case
                 my_trial_list = [my_trial_parameter.f_get()]
 
             if other_trial_parameter.f_has_range():
-                other_trial_list = other_trial_parameter.f_get_range()
+                other_trial_list = other_trial_parameter.f_get_range(copy=False)
             else:
                 other_trial_list = [other_trial_parameter.f_get()]
 
@@ -2483,7 +2726,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 # In case we do not use all runs we need to filter the ranges of the
                 # parameters of the other trajectory
                 if other_param.f_has_range():
-                    other_range = (x for jdx, x in enumerate(other_param.f_get_range())
+                    other_range = (x for jdx, x in enumerate(other_param.f_get_range(copy=False))
                                                              if jdx in used_runs)
                 else:
                     other_range = (other_param.f_get() for _ in compat.xrange(adding_length))
@@ -2622,18 +2865,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         """
         if self._is_run:
-            self._storage_service.store(pypetconstants.SINGLE_RUN, self,
+            if self._new_nodes or self._new_links:
+                self._storage_service.store(pypetconstants.SINGLE_RUN, self,
                                         trajectory_name=self.v_name,
-                                        store_final=False,
                                         recursive=not only_init,
                                         store_data=store_data,
                                         max_depth=max_depth)
         else:
-
-            if self._stored and self._expansion_not_stored:
-                self._store_expansion()
-                self._expansion_not_stored = False
-
             self._storage_service.store(pypetconstants.TRAJECTORY, self,
                                         trajectory_name=self.v_name,
                                         only_init=only_init,
@@ -2671,14 +2909,12 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if param is not None:
                 param._set_parameter_access(idx)
 
-    def _make_single_run(self, idx):
+    def _make_single_run(self):
         """ Modifies the trajectory for single runs executed by the environment """
         self._is_run = False # to be able to use f_set_crun
         self._new_nodes = OrderedDict()
         self._new_links = OrderedDict()
-        self.f_set_crun(idx)
         self._is_run = True
-        self._set_start_time()
         return self
 
     def f_get_run_names(self, sort=True):
@@ -2806,7 +3042,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                 (name, str(type(param))))
 
             if param.f_has_range():
-                iter_list.append(iter(param.f_get_range()))
+                iter_list.append(iter(param.f_get_range(copy=False)))
             else:
                 iter_list.append(itools.repeat(param.f_get(), len(self)))
 
@@ -2838,21 +3074,142 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._single_run_ids[name_or_idx]
 
-    def _set_start_time(self):
+    def f_start_run(self, run_name_or_idx=None, turn_into_run=True):
+        """ Can be used to manually allow running of an experiment without using an environment.
+
+        :param run_name_or_idx:
+
+            Can manually set a trajectory to a particular run. If `None` the current run
+            the trajectory is set to is used.
+
+        :param turn_into_run:
+
+            Turns the trajectory into a run, i.e. reduces functionality but makes storing
+            more efficient.
+
+        """
+        if self._run_started:
+            return self
+
+        if run_name_or_idx is None:
+            if self.v_idx == -1:
+                raise ValueError('Cannot start run if trajectory is not set to a particular run')
+        else:
+            self.f_set_crun(run_name_or_idx)
+
+        self._run_started = True
+
+        if turn_into_run:
+            self._make_single_run()
+
+        self._set_start()
+
+        return self
+
+    def f_finalize_run(self, store_meta_data=True, clean_up=True):
+        """ Can be called to finish a run if manually started.
+
+        Does NOT reset the index of the run,
+        i.e. ``f_restore_default`` should be called manually if desired.
+
+        Does NOT store any data (except meta data) so you have to call
+        ``f_store`` manually before to avoid data loss.
+
+        :param store_meta_data:
+
+            If meta data like the runtime should be stored
+
+        :param clean_up:
+
+            If data added during the run should be cleaned up.
+            Only works if ``turn_into_run`` was set to ``True``.
+
+        """
+        if not self._run_started:
+            return self
+
+        self._set_finish()
+
+        if clean_up and self._is_run:
+            self._finalize_run()
+
+        self._is_run = False
+        self._run_started = False
+
+        self._updated_run_information.add(self.v_idx)
+
+        if store_meta_data:
+            self.f_store(only_init=True)
+
+        return self
+
+    def _set_start(self):
         """ Sets the start timestamp and formatted time to the current time. """
         init_time = time.time()
         formatted_time = datetime.datetime.fromtimestamp(init_time).strftime('%Y_%m_%d_%Hh%Mm%Ss')
-        self._timestamp_run = init_time
-        self._time_run = formatted_time
+        run_info_dict = self._run_information[self.v_crun]
+        run_info_dict['timestamp'] = init_time
+        run_info_dict['time'] = formatted_time
+        if self._environment_hexsha is not None:
+            run_info_dict['short_environment_hexsha'] = self._environment_hexsha[0:7]
 
-    def _set_finish_time(self):
+    def _summarize_explored_parameters(self):
+        """Summarizes the parameter settings.
+
+        :param run_name: Name of the single run
+
+        :param paramlist: List of explored parameters
+
+        :param add_table: Whether to add the overview table
+
+        :param create_run_group:
+
+            If a group with the particular name should be created if it does not exist.
+            Might be necessary when trajectories are merged.
+
+        """
+
+        runsummary = ''
+        for idx, expparam in enumerate(compat.itervalues(self._explored_parameters)):
+
+            # Create the run summary for the `run` overview
+            if idx > 0:
+                runsummary += ',   '
+
+            valstr = expparam.f_val_to_str()
+
+            if len(valstr) >= pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH:
+                valstr = valstr[0:pypetconstants.HDF5_STRCOL_MAX_COMMENT_LENGTH - 3]
+                valstr += '...'
+
+            if expparam.v_name in runsummary:
+                param_name = expparam.v_full_name
+            else:
+                param_name = expparam.v_name
+
+            runsummary = runsummary + param_name + ': ' + valstr
+
+        return runsummary
+
+    def _set_finish(self):
         """ Sets the finish time and computes the runtime in human readable format """
-        self._finish_timestamp_run = time.time()
 
-        findatetime = datetime.datetime.fromtimestamp(self._finish_timestamp_run)
-        startdatetime = datetime.datetime.fromtimestamp(self._timestamp_run)
+        run_info_dict = self._run_information[self.v_crun]
+        timestamp_run = run_info_dict['timestamp']
 
-        self._runtime_run = str(findatetime - startdatetime)
+        run_summary = self._summarize_explored_parameters()
+
+        finish_timestamp_run = time.time()
+
+        findatetime = datetime.datetime.fromtimestamp(finish_timestamp_run)
+        startdatetime = datetime.datetime.fromtimestamp(timestamp_run)
+
+        runtime_run = str(findatetime - startdatetime)
+
+        run_info_dict['parameter_summary'] = run_summary
+        run_info_dict['completed'] = 1
+        run_info_dict['finish_timestamp'] = finish_timestamp_run
+        run_info_dict['runtime'] = runtime_run
 
     def _construct_instance(self, constructor, full_name, *args, **kwargs):
         """ Creates a new node. Checks if the new node needs to know the trajectory.
@@ -2886,11 +3243,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @v_shortcuts.setter
     def v_shortcuts(self, shortcuts):
         self._shortcuts = bool(shortcuts)
-
-    @property
-    @deprecated('No longer supported, please don`t use it anymore.')
-    def v_backwards_search(self):
-        return False
 
     @property
     def v_max_depth(self):
@@ -2969,6 +3321,18 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def v_standard_leaf(self, leaf):
         """Sets standard result"""
         self._standard_leaf = leaf
+
+    @property
+    def v_no_clobber(self):
+        """If `f_add_leaf` should not throw an error in case something is added
+        that is already part of the Trajectory. If `True` no error is thrown and
+        the new data is ignored."""
+        return self._no_clobber
+
+    @v_no_clobber.setter
+    def v_no_clobber(self, value):
+        """Sets no_clobber"""
+        self._no_clobber = bool(value)
 
     @property
     def v_auto_run_prepend(self):
@@ -3063,24 +3427,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 resdict[key] = val
 
             return resdict
-
-    @property
-    @deprecated(msg='Please use `v_name`.')
-    def v_trajectory_name(self):
-        """Name of the (parent) trajectory"""
-        return self.v_name
-
-    @property
-    @deprecated(msg='Please use `v_time`.')
-    def v_trajectory_time(self):
-        """Time (parent) trajectory was created"""
-        return self.v_time
-
-    @property
-    @deprecated(msg='Please use `v_timestamp`.')
-    def v_trajectory_timestamp(self):
-        """Float timestamp when (parent) trajectory was created"""
-        return self.v_timestamp
 
     def _finalize_run(self):
         """Called by the environment after storing to perform some rollback operations.
@@ -3265,17 +3611,6 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._return_item_dictionary(self._results, fast_access, copy)
 
-    def _store_final(self, store_data=pypetconstants.STORE_NOTHING):
-        """Signals the storage service that single run is completed
-
-        :param do_store_data: If all data should be stored as in `f_store`.
-
-        """
-        self._storage_service.store(pypetconstants.SINGLE_RUN, self,
-                                    trajectory_name=self.v_name,
-                                    store_final=True,
-                                    store_data=store_data)
-
     def f_store_item(self, item, *args, **kwargs):
         """Stores a single item, see also :func:`~pypet.trajectory.Trajectory.f_store_items`."""
         self.f_store_items([item], *args, **kwargs)
@@ -3380,7 +3715,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         you want to load must already exist in your trajectory (in RAM), probably they
         are just empty skeletons waiting desperately to handle data.
         If they do not exist in RAM yet, but have been stored to disk before,
-        you can call :func:`~pypet.trajectory.Trajectory.f_update_skeleton` in order to
+        you can call :func:`~pypet.trajectory.Trajectory.f_load_skeleton` in order to
         bring your trajectory tree skeleton up to date. In case of a single run you can
         use the :func:`~pypet.naturalnaming.NNGroupNode.f_load_child` method to recursively
         load a subtree without any data.

@@ -8,6 +8,43 @@ import logging
 import time
 
 
+def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
+    """Can be used to decorate a function as a manual run function.
+
+    This can be helpful if you want the run functionality without using an environment.
+
+    :param turn_into_run:
+
+        If the trajectory should become a `single run` with more specialized functionality
+        during a single run.
+
+    :param store_meta_data:
+
+        If meta-data like runtime should be automatically stored
+
+    :param clean_up:
+
+        If all data added during the single run should be removed, only works
+        if ``turn_into_run=True``.
+
+    """
+    def wrapper(func):
+        @functools.wraps(func)
+        def new_func(traj, *args, **kwargs):
+            do_wrap = not traj._run_by_environment
+            if do_wrap:
+                traj.f_start_run(turn_into_run=turn_into_run)
+            result = func(traj, *args, **kwargs)
+            if do_wrap:
+                traj.f_finalize_run(store_meta_data=store_meta_data,
+                                    clean_up=clean_up)
+            return result
+
+        return new_func
+
+    return wrapper
+
+
 def deprecated(msg=''):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
@@ -120,12 +157,7 @@ def kwargs_api_change(old_name, new_name=None):
                     warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
                                  'please use keyword `%s` instead.' % \
                                  (old_name, func.__name__, new_name)
-                warnings.warn(
-                    warning_string,
-                    category=DeprecationWarning,
-                    # filename=compat.func_code(func).co_filename,
-                    # lineno=compat.func_code(func).co_firstlineno + 1
-                )
+                warnings.warn(warning_string, category=DeprecationWarning)
                 value = kwargs.pop(old_name)
                 if new_name is not None:
                     kwargs[new_name] = value
@@ -135,6 +167,7 @@ def kwargs_api_change(old_name, new_name=None):
         return new_func
 
     return wrapper
+
 
 def not_in_run(func):
     """This is a decorator that signaling that a function is not available during a single run.
@@ -157,6 +190,7 @@ def not_in_run(func):
         return func(self, *args, **kwargs)
 
     return new_func
+
 
 def with_open_store(func):
     """This is a decorator that signaling that a function is only available if the storage is open.
@@ -203,21 +237,51 @@ def retry(n, errors, wait=0.0, logger_name=None):
                     result = func(*args, **kwargs)
                     if retries and logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.error('Retry of `%s` successful' % func.__name__)
+                        logger.debug('Retry of `%s` successful' % func.__name__)
                     return result
                 except errors:
                     if retries >= n:
+                        if logger_name:
+                            logger = logging.getLogger(logger_name)
+                            logger.exception('I could not execute `%s` with args %s and kwargs %s, '
+                                             'starting next try. ' % (func.__name__,
+                                                                      str(args),
+                                                                      str(kwargs)))
                         raise
-                    retries += 1
-
-                    if logger_name:
+                    elif logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.exception('I could not execute `%s` with args %s and kwargs %s, '
+                        logger.debug('I could not execute `%s` with args %s and kwargs %s, '
                                          'starting next try. ' % (func.__name__,
                                                                   str(args),
                                                                   str(kwargs)))
+                    retries += 1
                     if wait:
                         time.sleep(wait)
         return new_func
 
     return wrapper
+
+
+def _prfx_getattr_(obj, item):
+    """Replacement of __getattr__"""
+    if item.startswith('f_') or item.startswith('v_'):
+        return getattr(obj, item[2:])
+    raise AttributeError('`%s` object has no attribute `%s`' % (obj.__class__.__name__, item))
+
+
+def _prfx_setattr_(obj, item, value):
+    """Replacement of __setattr__"""
+    if item.startswith('v_'):
+        return setattr(obj, item[2:], value)
+    else:
+        return super(obj.__class__, obj).__setattr__(item, value)
+
+
+def prefix_naming(cls):
+    """Decorate that adds the prefix naming scheme"""
+    if hasattr(cls, '__getattr__'):
+        raise TypeError('__getattr__ already defined')
+    cls.__getattr__ = _prfx_getattr_
+    cls.__setattr__ = _prfx_setattr_
+    return cls
+

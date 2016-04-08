@@ -61,15 +61,12 @@ def euler_scheme(traj, diff_func):
 # to simply keep track of the source code we use ('git' would be, of course, the better solution
 # but this is just an illustrative example)
 class FunctionParameter(Parameter):
-    # We can go for a a cheap solution and make use of the function `_convert_data` of the parent.
-    # This gets called before adding data to the parameter to turn numpy arrays
-    # into read-only numpy arrays. But we will use the function for our purpose to extract
-    # the source code:
-    def _convert_data(self, val):
-        if callable(val):
-            return inspect.getsource(val)
-        else:
-            return super(FunctionParameter,self)._convert_data(val)
+    # We need to override the `f_set` function and simply extract the the source code if our
+    # item is callable and store this instead.
+    def f_set(self, data):
+        if callable(data):
+            data = inspect.getsource(data)
+        return super(FunctionParameter, self).f_set(data)
 
     # For more complicate parameters you might consider implementing:
     # `f_supports` (we do not need it since we convert the data to stuff the parameter already
@@ -154,10 +151,11 @@ def main():
     env = Environment(trajectory='Example_05_Euler_Integration',
                       filename=filename,
                       file_title='Example_05_Euler_Integration',
+                      overwrite_file=True,
                       comment='Go for Euler!')
 
 
-    traj = env.v_trajectory
+    traj = env.trajectory
     trajectory_name = traj.v_name
 
     # 1st a) phase parameter addition
@@ -179,7 +177,7 @@ def main():
     # 2nd phase let's run the experiment
     # We pass `euler_scheme` as our top-level simulation function and
     # the Lorenz equation 'diff_lorenz' as an additional argument
-    env.f_run(euler_scheme, diff_lorenz)
+    env.run(euler_scheme, diff_lorenz)
 
     # We don't have a 3rd phase of post-processing here
 
@@ -245,7 +243,7 @@ def main():
     # You have to click through the images to stop the example_05 module!
 
     # Finally disable logging and close all log-files
-    env.f_disable_logging()
+    env.disable_logging()
 
 
 if __name__ == '__main__':

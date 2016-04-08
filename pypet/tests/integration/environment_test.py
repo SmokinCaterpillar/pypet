@@ -10,7 +10,7 @@ from pypet.trajectory import Trajectory, load_trajectory
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
 from pypet.storageservice import HDF5StorageService
-from pypet import pypetconstants, Result
+from pypet import pypetconstants, Result, manual_run
 
 import pypet.pypetexceptions as pex
 
@@ -19,6 +19,15 @@ if (sys.version_info < (2, 7, 0)):
     import unittest2 as unittest
 else:
     import unittest
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+try:
+    import dill
+except ImportError:
+    dill = None
 
 import scipy.sparse as spsp
 import random
@@ -31,11 +40,12 @@ import tables as pt
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_dir,  make_trajectory_name,\
      get_root_logger, parse_args, get_log_config, get_log_path
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply,\
-    simple_calculations, TrajectoryComparator
+    simple_calculations, TrajectoryComparator, multiply_args, multiply_with_storing, \
+    multiply_with_graceful_exit
 
 
 def add_one_particular_item(traj, store_full):
-    traj.hi = 42, 'hi!'
+    traj.hi = Result('hi', 42, 'hi!')
     traj.f_store()
     traj.f_remove_child('hi')
 
@@ -57,9 +67,7 @@ class FullStorageTest(TrajectoryComparator):
 
             traj = env.v_trajectory
 
-            traj.v_lazy_adding = True
-
-            traj.par.x = 3, 'jj'
+            traj.par.x = Parameter('x', 3, 'jj')
 
             traj.f_explore({'x': [1,2,3]})
 
@@ -70,16 +78,46 @@ class FullStorageTest(TrajectoryComparator):
             self.assertTrue('hi' in traj)
 
 
+def with_niceness(traj):
+    if traj.multiproc:
+        if hasattr(os, 'nice'):
+            trajnice = traj.niceness
+            osnice = os.nice(0)
+        else:
+            trajnice = traj.niceness
+            osnice = psutil.Process().nice()
+        if trajnice != osnice:
+            if traj.use_scoop:
+                import scoop
+                if (not scoop.IS_RUNNING or scoop.IS_ORIGIN):
+                    return
+            raise RuntimeError('traj niceness != os niceness; '
+                               '%s != %s' % (str(trajnice), str(osnice)))
+
+
 def add_large_data(traj):
-    np_array = np.random.rand(100,1000,10)
+    np_array = np.random.rand(100, 1000, 10)
     traj.f_add_result('l4rge', np_array)
     traj.f_store_item('l4rge')
     traj.f_remove_item('l4rge')
 
     array_list = []
-    for irun in range(1000):
+    for irun in range(111):
         array_list.append(np.random.rand(10))
     traj.f_add_result('m4ny', *array_list)
+
+
+class SimpleEnvironmentTest(TrajectoryComparator):
+
+    tags = 'integration', 'hdf5', 'environment', 'quick'
+
+    def test_make_default_file_when_giving_directory_without_slash(self):
+        filename = make_temp_dir('test.hdf5')
+        head, tail = os.path.split(filename)
+        env = Environment(filename=head)
+        the_file_name = env.v_traj.v_name + '.hdf5'
+        head, tail = os.path.split(env.v_traj.v_storage_service.filename)
+        self.assertEqual(tail, the_file_name)
 
 
 class EnvironmentTest(TrajectoryComparator):
@@ -89,9 +127,11 @@ class EnvironmentTest(TrajectoryComparator):
     def set_mode(self):
         self.mode = 'LOCK'
         self.multiproc = False
+        self.gc_interval = None
         self.ncores = 1
         self.use_pool=True
-        self.freeze_pool_input=False
+        self.use_scoop=False
+        self.freeze_input=False
         self.pandas_format='fixed'
         self.pandas_append=False
         self.complib = 'zlib'
@@ -101,6 +141,11 @@ class EnvironmentTest(TrajectoryComparator):
         self.encoding = 'utf8'
         self.log_stdout=False
         self.wildcard_functions = None
+        self.niceness = None
+        self.port = None
+        self.timeout = None
+        self.add_time=True
+        self.graceful_exit = False
 
     def explore_complex_params(self, traj):
         matrices_csr = []
@@ -170,8 +215,6 @@ class EnvironmentTest(TrajectoryComparator):
 
         traj.f_explore(self.explore_dict)
 
-
-
     def explore(self, traj):
         self.explored ={'Normal.trial': [0],
             'Numpy.double': [np.array([1.0,2.0,3.0,4.0]), np.array([-1.0,3.0,5.0,7.0])],
@@ -218,14 +261,21 @@ class EnvironmentTest(TrajectoryComparator):
                           ncores=self.ncores,
                           wrap_mode=self.mode,
                           use_pool=self.use_pool,
-                          freeze_pool_input=self.freeze_pool_input,
+                          gc_interval=self.gc_interval,
+                          freeze_input=self.freeze_input,
                           fletcher32=self.fletcher32,
                           complevel=self.complevel,
                           complib=self.complib,
                           shuffle=self.shuffle,
                           pandas_append=self.pandas_append,
                           pandas_format=self.pandas_format,
-                          encoding=self.encoding)
+                          encoding=self.encoding,
+                          niceness=self.niceness,
+                          use_scoop=self.use_scoop,
+                          port=self.port,
+                          add_time=self.add_time,
+                          timeout=self.timeout,
+                          graceful_exit=self.graceful_exit)
 
         traj = env.v_trajectory
 
@@ -240,6 +290,15 @@ class EnvironmentTest(TrajectoryComparator):
         #remember the trajectory and the environment
         self.traj = traj
         self.env = env
+
+    @unittest.skipIf(not hasattr(os, 'nice') and psutil is None, 'Niceness not supported under non Unix.')
+    def test_niceness(self):
+        ###Explore
+        self.explore(self.traj)
+
+        self.env.f_run(with_niceness)
+
+        self.assertTrue(self.traj.f_is_completed())
 
     def test_file_overwriting(self):
         self.traj.f_store()
@@ -303,7 +362,8 @@ class EnvironmentTest(TrajectoryComparator):
         ### Make a test run
         simple_arg = -13
         simple_kwarg= 13.0
-        self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        results =  self.env.f_run(simple_calculations,simple_arg,simple_kwarg=simple_kwarg)
+        self.are_results_in_order(results)
 
     def test_a_large_run(self):
         get_root_logger().info('Testing large run')
@@ -311,6 +371,8 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore_large(self.traj)
         self.make_run_large_data()
+
+        self.assertTrue(self.traj.f_is_completed())
 
         # Check if printing and repr work
         get_root_logger().info(str(self.env))
@@ -363,7 +425,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
-        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        # newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
@@ -377,6 +439,32 @@ class EnvironmentTest(TrajectoryComparator):
         self.compare_trajectories(mp_traj, self.traj)
         self.multiproc = old_multiproc
 
+    def test_errors(self):
+        tmp = make_temp_dir('cont')
+        if dill is not None:
+            env1 = Environment(continuable=True, continue_folder=tmp,
+                           log_config=None, filename=self.filename)
+            with self.assertRaises(ValueError):
+                env1.f_run_map(multiply_args, [1], [2], [3])
+        with self.assertRaises(ValueError):
+            Environment(multiproc=True, use_pool=False, freeze_input=True,
+                           filename=self.filename, log_config=None)
+        env3 = Environment(log_config=None, filename=self.filename)
+        with self.assertRaises(ValueError):
+            env3.f_run_map(multiply_args)
+        with self.assertRaises(ValueError):
+            Environment(use_scoop=True, immediate_postproc=True)
+        with self.assertRaises(ValueError):
+            Environment(use_pool=True, immediate_postproc=True)
+        with self.assertRaises(ValueError):
+            Environment(continuable=True, wrap_mode='QUEUE', continue_folder=tmp)
+        with self.assertRaises(ValueError):
+            Environment(use_scoop=True, wrap_mode='QUEUE')
+        with self.assertRaises(ValueError):
+            Environment(automatic_storing=False,
+                        continuable=True, continue_folder=tmp)
+        with self.assertRaises(ValueError):
+            Environment(port='www.nosi.de', wrap_mode='LOCK')
 
     def test_run(self):
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -384,6 +472,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.explore(self.traj)
 
         self.make_run()
+
+        self.assertTrue(self.traj.f_is_completed())
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
@@ -398,6 +488,8 @@ class EnvironmentTest(TrajectoryComparator):
 
     def test_just_one_run(self):
         self.make_run()
+        self.assertTrue(self.traj.f_is_completed())
+
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -421,9 +513,10 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
+        self.assertTrue(self.traj.f_is_completed())
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
-        self.traj.f_update_skeleton()
+        self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         self.compare_trajectories(self.traj, newtraj)
@@ -455,7 +548,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
-        self.compare_trajectories(self.traj,newtraj)
+        self.compare_trajectories(self.traj, newtraj)
 
     def test_expand_after_reload(self):
 
@@ -501,6 +594,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.expanded['csr_mat'][1]=self.expanded['csr_mat'][1].tocsr()
 
         self.traj.f_expand(cartesian_product(self.expanded))
+        self.traj.f_store()
 
 
     ################## Overview TESTS #############################
@@ -510,7 +604,8 @@ class EnvironmentTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_set_large_overview(True)
+        self.env._traj.config.hdf5.overview.results_overview = 1
+        self.env._traj.config.hdf5.overview.derived_parameters_overview = 1
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)
@@ -530,7 +625,14 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.f_add_parameter('TEST', 'test_switch_off_ALL_tables')
         self.explore(self.traj)
 
-        self.env.f_switch_off_all_overview()
+        self.env._traj.config.hdf5.overview.results_overview = 0
+        self.env._traj.config.hdf5.overview.derived_parameters_overview = 0
+        self.env._traj.config.hdf5.overview.derived_parameters_summary = 0
+        self.env._traj.config.hdf5.overview.results_summary = 0
+        self.env._traj.config.hdf5.purge_duplicate_comments = 0
+        self.env._traj.config.hdf5.overview.parameters_overview = 0
+        self.env._traj.config.hdf5.overview.config_overview = 0
+        self.env._traj.config.hdf5.overview.explored_parameters_overview = 0
         self.make_run()
 
         hdf5file = pt.openFile(self.filename)
@@ -661,7 +763,6 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.overview.results_summary=0
         self.make_run()
 
-
         hdf5file = pt.openFile(self.filename, mode='a')
 
         ncomments = {}
@@ -709,6 +810,7 @@ class TestOtherHDF5Settings(EnvironmentTest):
         self.shuffle=False
         self.fletcher32 = False
         self.encoding='latin1'
+        self.graceful_exit = True
 
 
 
@@ -733,7 +835,6 @@ class TestOtherHDF5Settings2(EnvironmentTest):
         self.wildcard_functions = {('$', 'crun') : my_run_func, ('$set', 'crunset'): my_set_func}
 
 
-
 class ResultSortTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment'
@@ -744,7 +845,11 @@ class ResultSortTest(TrajectoryComparator):
         self.ncores = 1
         self.use_pool=True
         self.log_stdout=False
-        self.freeze_pool_input=False
+        self.freeze_input=False
+        self.use_scoop = False
+        self.log_config = True
+        self.port = None
+        self.graceful_exit = True
 
     def tearDown(self):
         self.env.f_disable_logging()
@@ -753,19 +858,22 @@ class ResultSortTest(TrajectoryComparator):
     def setUp(self):
         self.set_mode()
 
-        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','test.hdf5'))
+        self.filename = make_temp_dir(os.path.join('experiments','tests','HDF5','sort_tests.hdf5'))
 
         self.trajname = make_trajectory_name(self)
 
         env = Environment(trajectory=self.trajname,filename=self.filename,
                           file_title=self.trajname,
                           log_stdout=self.log_stdout,
-                          log_config=get_log_config(),
+                          log_config=get_log_config() if self.log_config else None,
                           multiproc=self.multiproc,
                           wrap_mode=self.mode,
                           ncores=self.ncores,
                           use_pool=self.use_pool,
-                          freeze_pool_input=self.freeze_pool_input,)
+                          use_scoop=self.use_scoop,
+                          port=self.port,
+                          freeze_input=self.freeze_input,
+                          graceful_exit=self.graceful_exit)
 
         traj = env.v_trajectory
 
@@ -791,6 +899,9 @@ class ResultSortTest(TrajectoryComparator):
         self.explore_dict={'x':[0,1,2,3,4],'y':[1,1,2,2,3]}
         traj.f_explore(self.explore_dict)
 
+    def explore_cartesian(self,traj):
+        self.explore_dict=cartesian_product({'x':[0,1,2,3,4, 5, 6],'y':[1,1,2,2,3,4,4]})
+        traj.f_explore(self.explore_dict)
 
     def expand(self,traj):
         self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12,13]}
@@ -800,15 +911,17 @@ class ResultSortTest(TrajectoryComparator):
         self.expand_dict={'x':[10,11,12,13],'y':[11,11,12,12]}
         traj.f_expand(self.expand_dict)
 
-
-    def test_if_results_are_sorted_correctly(self):
-
+    def test_if_results_are_sorted_correctly_manual_runs(self):
         ###Explore
         self.explore(self.traj)
-
-
-        self.env.f_run(multiply)
+        self.traj.f_store(only_init=True)
+        man_multiply = manual_run()(multiply_with_storing)
+        for idx in self.traj.f_iter_runs(yields='idx'):
+            self.assertTrue(isinstance(idx, int))
+            man_multiply(self.traj)
         traj = self.traj
+        traj.f_store()
+        self.assertTrue(len(traj), 5)
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
         self.traj.f_load_skeleton()
@@ -821,13 +934,85 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
+    def test_if_results_are_sorted_correctly_using_map(self):
+        ###Explore
+        self.explore(self.traj)
+
+        args1=[10*x for x in range(len(self.traj))]
+        args2=[100*x for x in range(len(self.traj))]
+        args3=list(range(len(self.traj)))
+
+        results = self.env.f_run_map(multiply_args, args1, arg2=args2, arg3=args3)
+        self.assertEqual(len(results), len(self.traj))
+
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct_map(traj, args1, args2, args3)
+
+        for res in results:
+            self.assertEqual(len(res), 2)
+            self.assertTrue(isinstance(res[0], int))
+            self.assertTrue(isinstance(res[1], int))
+            idx = res[0]
+            self.assertEqual(self.traj.res.runs[idx].z, res[1])
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.assertEqual(len(traj), 5)
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_if_results_are_sorted_correctly(self):
+
+        ###Explore
+        self.explore(self.traj)
+
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+        self.assertEqual(len(results), len(self.traj))
+
+
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        for res in results:
+            self.assertEqual(len(res), 2)
+            self.assertTrue(isinstance(res[0], int))
+            self.assertTrue(isinstance(res[1], int))
+            idx = res[0]
+            self.assertEqual(self.traj.res.runs[idx].z, res[1])
+
+        newtraj = self.load_trajectory(trajectory_name=self.traj.v_name,as_new=False)
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+
+        self.compare_trajectories(self.traj,newtraj)
+
+    def test_graceful_exit(self):
+
+        ###Explore
+        self.explore_cartesian(self.traj)
+
+        results = self.env.f_run(multiply_with_graceful_exit)
+        self.are_results_in_order(results)
+        self.assertFalse(self.traj.f_is_completed())
+
     def test_f_iter_runs(self):
 
          ###Explore
         self.explore(self.traj)
 
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
@@ -840,8 +1025,7 @@ class ResultSortTest(TrajectoryComparator):
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
 
         for idx, run_name in enumerate(self.traj.f_iter_runs()):
-            newtraj.v_as_run=run_name
-            self.traj.v_as_run == run_name
+            newtraj.v_crun=run_name
             self.traj.v_idx = idx
             newtraj.v_idx = idx
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
@@ -851,17 +1035,48 @@ class ResultSortTest(TrajectoryComparator):
             self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
                                                   (str(newtraj.crun.z),str(traj.x),str(traj.y)))
 
+        for idx, traj in enumerate(self.traj.f_iter_runs(yields='self')):
+            run_name = traj.f_idx_to_run(idx)
+            self.assertTrue(traj is self.traj)
+            newtraj.v_crun=run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(traj.v_crun == run_name)
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+
+        for idx, traj in enumerate(self.traj.f_iter_runs(yields='copy')):
+            run_name = traj.f_idx_to_run(idx)
+            self.assertTrue(traj is not self.traj)
+            newtraj.v_crun=run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(traj.v_crun == run_name)
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+
+        traj = self.traj
         self.assertTrue(traj.v_idx == -1)
         self.assertTrue(traj.v_crun is None)
         self.assertTrue(traj.v_crun_ == pypetconstants.RUN_NAME_DUMMY)
         self.assertTrue(newtraj.v_idx == idx)
 
 
+
     def test_expand(self):
         ###Explore
         self.explore(self.traj)
 
-        get_root_logger().info(self.env.f_run(multiply))
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
+        get_root_logger().info(results)
         traj = self.traj
         self.assertEqual(len(traj), len(list(compat.listvalues(self.explore_dict)[0])))
 
@@ -881,7 +1096,9 @@ class ResultSortTest(TrajectoryComparator):
 
         self.expand(self.traj)
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
 
@@ -900,7 +1117,9 @@ class ResultSortTest(TrajectoryComparator):
         ###Explore
         self.explore(self.traj)
 
-        self.env.f_run(multiply)
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+
         traj = self.traj
         self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
 
@@ -925,14 +1144,24 @@ class ResultSortTest(TrajectoryComparator):
 
         self.compare_trajectories(self.traj,newtraj)
 
-
-    def check_if_z_is_correct(self,traj):
-        for x in range(len(traj)):
+    def check_if_z_is_correct_map(self,traj, args1, args2, args3):
+        for x, arg1, arg2, arg3 in zip(range(len(traj)), args1, args2, args3):
             traj.v_idx=x
-
-            self.assertTrue(traj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
+            self.assertTrue(traj.crun.z==traj.x*traj.y+arg1+arg2+arg3,' z != x*y: %s != %s * %s' %
                                                   (str(traj.crun.z),str(traj.x),str(traj.y)))
         traj.v_idx=-1
+
+    def check_if_z_is_correct(self,traj):
+        traj.v_shortcuts=False
+        for x in range(len(traj)):
+            traj.v_idx=x
+            z = traj.res.runs.crun.z
+            x = traj.par.x
+            y = traj.par.y
+            self.assertTrue(z==x*y,' z != x*y: %s != %s * %s' %
+                                                  (str(z),str(x),str(y)))
+        traj.v_idx=-1
+        traj.v_shortcuts=True
 
 
 # def test_runfunc(traj, list_that_changes):
