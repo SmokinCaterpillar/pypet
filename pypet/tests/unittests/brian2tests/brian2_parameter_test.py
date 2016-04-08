@@ -206,7 +206,7 @@ class Brian2ResultTest(ResultTest):
 
         self.data['mV_array'] = np.ones(20) * mV
         self.data['integer'] = 444
-        self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**2.7343
+        self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**-2.7343
 
         super(Brian2ResultTest, self).setUp()
 
