@@ -43,6 +43,13 @@ def unit_from_expression(expr):
         return ALLUNITS[expr.id]
     elif expr.__class__ is ast.Num:
         return expr.n
+    elif expr.__class__ is ast.UnaryOp:
+        op = expr.op.__class__.__name__
+        operand = unit_from_expression(expr.operand)
+        if op=='USub' or op=='Sub':
+            return -operand
+        else:
+            raise SyntaxError("Unsupported operation "+op)
     elif expr.__class__ is ast.BinOp:
         op = expr.op.__class__.__name__
         left = unit_from_expression(expr.left)

@@ -8,7 +8,4 @@ if __name__ == '__main__':
     opt_dict = parse_args()
     suite = discover_tests(predicate=lambda class_name, test_name, tags:
                                                 class_name != TEST_IMPORT_ERROR)
-    suite = discover_tests(predicate=lambda class_name, test_name, tags:
-                                                'henri' in tags)
-    print(suite)
     run_suite(suite=suite, **opt_dict)
