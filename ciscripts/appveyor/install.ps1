@@ -16,10 +16,6 @@ function DownloadMiniconda ($python_version, $platform_suffix) {
 
     $basedir = $pwd.Path + "\"
     $filepath = $basedir + $filename
-    if (Test-Path $filename) {
-        Write-Host "Reusing" $filepath
-        return $filepath
-    }
 
     # Download and retry up to 3 times in case of network transient errors.
     Write-Host "Downloading" $filename "from" $url
