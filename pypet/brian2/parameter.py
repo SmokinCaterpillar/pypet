@@ -205,27 +205,6 @@ class Brian2Result(Result):
             return True
         return False
 
-    def _values_of_same_type(self, val1, val2):
-
-        if isinstance(val1, Quantity):
-            try:
-                if not val1.has_same_dimensions(val2):
-                    return False
-            except TypeError:
-                return False
-
-        elif isinstance(val2, Quantity):
-            try:
-                if not val2.has_same_dimensions(val1):
-                    return False
-            except TypeError:
-                return False
-
-        elif not super(Brian2Result, self)._values_of_same_type(val1, val2):
-            return False
-
-        return True
-
     def _store(self):
 
         store_dict = {}
