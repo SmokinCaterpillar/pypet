@@ -1,6 +1,6 @@
-=======================
-Brian Network Framework
-=======================
+========================
+Brian2 Network Framework
+========================
 
 .. automodule:: pypet.brian.network
 
@@ -11,7 +11,7 @@ Quicklinks
 
 These function can directly be called or used by the user.
 
-.. currentmodule:: pypet.brian.network
+.. currentmodule:: pypet.brian2.network
 
 
 .. autosummary::
@@ -39,11 +39,12 @@ These functions can be implemented in the subclasses:
     NetworkComponent.pre_build
     NetworkAnalyser.analyse
 
+
 --------------
 NetworkManager
 --------------
 
-.. autoclass:: pypet.brian.network.NetworkManager
+.. autoclass:: pypet.brian2.network.NetworkManager
     :members:
     :private-members:
     :special-members:
@@ -52,7 +53,7 @@ NetworkManager
 NetworkRunner
 -------------
 
-.. autoclass:: pypet.brian.network.NetworkRunner
+.. autoclass:: pypet.brian2.network.NetworkRunner
     :members:
     :private-members:
     :special-members:
@@ -61,12 +62,12 @@ NetworkRunner
 NetworkComponent
 ----------------
 
-.. autoclass:: pypet.brian.network.NetworkComponent
+.. autoclass:: pypet.brian2.network.NetworkComponent
     :members:
 
 ---------------
 NetworkAnalyser
 ---------------
 
-.. autoclass:: pypet.brian.network.NetworkAnalyser
+.. autoclass:: pypet.brian2.network.NetworkAnalyser
     :members:

@@ -5,7 +5,7 @@ Build parts of a network via subclassing :class:`~pypet.brian2.network.NetworkCo
 
 Specify a :class:`~pypet.brian2.network.NetworkRunner` (subclassing optionally) that handles
 the execution of your experiment in different subruns. Subruns can be defined
-as :class:`~pypet.brian2.parameter.BrianParameter` instances in a particular
+as :class:`~pypet.brian2.parameter.Brian2Parameter` instances in a particular
 trajectory group. You must add to every parameter's :class:`~pypet.annotations.Annotations` the
 attribute `order`. This order must be an integer specifying the index or order
 the subrun should about to be executed in.
@@ -20,6 +20,8 @@ Pass the :func:`~pypet.brian2.network.run_network` function together with a
 parameter exploration. Be aware that in case of a *pre-built* network,
 successful parameter exploration
 requires parallel processing (see :class:`~pypet.brian2.network.NetworkManager`).
+
+.._`BRIAN2 network`: https://brian2.readthedocs.org/
 
 """
 
@@ -133,12 +135,12 @@ class NetworkComponent(HasLogger):
 
         :param current_subrun:
 
-            :class:`~pypet.brian2.parameter.BrianParameter` specifying the very next
+            :class:`~pypet.brian2.parameter.Brian2Parameter` specifying the very next
             subrun to be simulated.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian2.parameter.BrianParameter` objects that are to
+            List of :class:`~pypet.brian2.parameter.Brian2Parameter` objects that are to
             be run after the current subrun.
 
         :param network_dict:
@@ -163,12 +165,12 @@ class NetworkComponent(HasLogger):
 
         :param current_subrun:
 
-            :class:`~pypet.brian2.parameter.BrianParameter` specifying the current subrun
+            :class:`~pypet.brian2.parameter.Brian2Parameter` specifying the current subrun
             that was executed shortly before.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian2.parameter.BrianParameter` objects that are to
+            List of :class:`~pypet.brian2.parameter.Brian2Parameter` objects that are to
             be run after the current subrun.
 
         :param network_dict:
@@ -198,12 +200,12 @@ class NetworkAnalyser(NetworkComponent):
 
         :param current_subrun:
 
-            :class:`~pypet.brian2.parameter.BrianParameter` specifying the current subrun
+            :class:`~pypet.brian2.parameter.Brian2Parameter` specifying the current subrun
             that was executed shortly before.
 
         :param subrun_list:
 
-            List of :class:`~pypet.brian2.parameter.BrianParameter` objects that are to
+            List of :class:`~pypet.brian2.parameter.Brian2Parameter` objects that are to
             be run after the current subrun. Can be deleted or added to change the actual course
             of the experiment.
 
@@ -218,12 +220,12 @@ class NetworkAnalyser(NetworkComponent):
 class NetworkRunner(NetworkComponent):
     """Specific NetworkComponent to carry out the running of a BRIAN2 network experiment.
 
-    A NetworRunner only handles the execution of a network simulation, the `BRIAN2 network`_ is
+    A NetworRunner only handles the execution of a network simulation, the `BRIAN2 network` is
     created by a :class:`~pypet.brian2.network.NetworkManager`.
 
     Can potentially be subclassed to allow the adding of parameters via
     :func:`~pypet.brian2.network.NetworkComponent.add_parameters`. These parameters
-    should specify an experimental run with a :class:~pypet.brian2.parameter.BrianParameter`
+    should specify an experimental run with a :class:~pypet.brian2.parameter.Brian2Parameter`
     to define the order and duration of network subruns. For the actual experimental runs,
     all subruns must be stored in a particular trajectory group.
     By default this `traj.parameters.simulation.durations`. For a pre-run
@@ -245,7 +247,7 @@ class NetworkRunner(NetworkComponent):
 
     :param durations_group_name:
 
-        Name where to look for :class:`~pypet.brian2.parameter.BrianParameter` instances
+        Name where to look for :class:`~pypet.brian2.parameter.Brian2Parameter` instances
         in the trajectory which specify the order and durations of subruns.
 
     :param pre_durations_group_name:
@@ -269,8 +271,6 @@ class NetworkRunner(NetworkComponent):
 
         self._durations_group_name = durations_group_name
         self._pre_durations_group_name = pre_durations_group_name
-        self._was_pre_run = False
-
 
         self._set_logger()
 
@@ -282,7 +282,7 @@ class NetworkRunner(NetworkComponent):
         Similar to :func:`~pypet.brian2.network.NetworkRunner.run_network`.
 
         Subruns and their durations are extracted from the trajectory. All
-        :class:`~pypet.brian2.parameter.BrianParameter` instances found under
+        :class:`~pypet.brian2.parameter.Brian2Parameter` instances found under
         `traj.parameters.simulation.pre_durations` (default, you can change the
         name of the group where to search for durations at runner initialisation).
         The order is determined from
@@ -310,10 +310,10 @@ class NetworkRunner(NetworkComponent):
         Called by a :class:`~pypet.brian2.network.NetworkManager`.
 
         A network run is divided into several subruns which are defined as
-        :class:`~pypet.brian2.parameter.BrianParameter` instances.
+        :class:`~pypet.brian2.parameter.Brian2Parameter` instances.
 
         These subruns are extracted from the trajectory. All
-        :class:`~pypet.brian2.parameter.BrianParameter` instances found under
+        :class:`~pypet.brian2.parameter.Brian2Parameter` instances found under
         `traj.parameters.simulation.durations` (default, you can change the
         name of the group where to search for durations at runner initialisation).
         The order is determined from
@@ -430,9 +430,6 @@ class NetworkRunner(NetworkComponent):
 
         """
 
-        if self._was_pre_run and not pre_run:
-            network.restore('pre_run')
-
         # Initially extract the `subrun_list`
         subrun_list = self._extract_subruns(traj, pre_run=pre_run)
 
@@ -487,9 +484,6 @@ class NetworkRunner(NetworkComponent):
 
             subrun_number += 1
 
-        if pre_run:
-            network.store('pre_run')
-            self._was_pre_run = True
 
 class NetworkManager(HasLogger):
     """Manages a BRIAN2 network experiment and creates the network.
@@ -501,7 +495,7 @@ class NetworkManager(HasLogger):
         Special component that handles the execution of several subruns.
         A NetworkRunner can be subclassed to implement the
         :func:`~pypet.brian2.network.NetworkComponent.add_parameters` method to add
-        :class:`~pypet.brian2.parameter.BrianParameter` instances defining the
+        :class:`~pypet.brian2.parameter.Brian2Parameter` instances defining the
         order and duration of subruns.
 
     :param component_list:
@@ -512,48 +506,26 @@ class NetworkManager(HasLogger):
 
         :class:`~pypet.brian2.network.NetworkComponent` always needs to be sublcassed and
         defines only an abstract interface. For instance, one could create her or his
-        own subclass called NeuronGroupComponent that creates NeuronGroups_, Whereas
+        own subclass called NeuronGroupComponent that creates NeuronGroups, Whereas
         a SynapseComponent creates Synapses between the before built NeuronGroups.
         Accordingly, the SynapseComponent instance is listed after
         the NeuronGroupComponent.
 
     :param analyser_list:
 
-        List of :class:`~pypet.brian2.network.Analyser` instances for recording and
+        List of :class:`~pypet.brian2.network.NetworkAnalyser` instances for recording and
         statistical evaluation of a BRIAN2 network. They should be used to add monitors
         to a network and to do further processing of the monitor data.
 
     This division allows to create compartmental network models where one can easily
     replace parts of a network simulation.
-
-    :param force_single_core:
-
-        In case you :func:`~pypet.brian2.network.NetworkManager.pre_build` or even
-        :func:`~pypet.brian2.network.NetworkManager.pre_run` a network, you usually cannot
-        use single core processing.
-        The problem with single core processing is that iterative exploration of the
-        parameter space alters the network on every iteration and the network cannot be
-        reset to the initial conditions holding before the very first experimental run.
-        This is an inherent problem of BRIAN2. The only way to overcome this problem is
-        multiprocessing and copying (either by pickling or by forking) the whole
-        BRIAN2 environment.
-
-        If you are not bothered by not starting every experimental run with the very same
-        network, you can set `force_single_core=True`. The NetworkManager will
-        do iterative single processing and ignore the ongoing modification of the network
-        throughout all runs.
-
-        In case `multiproc=True` for your environment, the setting of `force_single_core`
-        is irrelevant and has no effect.
-
     :param network_constructor:
 
         If you have a custom network constructor apart from the Brian one,
         pass it here.
 
     """
-    def __init__(self, network_runner, component_list, analyser_list=(),
-                 force_single_core=False, network_constructor=None):
+    def __init__(self, network_runner, component_list, analyser_list=(), network_constructor=None):
         self.components = component_list
         self.network_runner = network_runner
         self.analysers = analyser_list
@@ -563,7 +535,6 @@ class NetworkManager(HasLogger):
         self._pre_built = False
         self._pre_run = False
         self._network = None
-        self._force_single_core = force_single_core
         if network_constructor is None:
             self._network_constructor = Network
         else:
@@ -603,9 +574,7 @@ class NetworkManager(HasLogger):
         by the user, either calling it directly or by using
         :func:`~pypet.brian2.network.NetworkManager.pre_run`.
 
-        This function does not create a `BRIAN2 network`_, but only it's components.
-
-        .. `BRIAN2 network`_: http://briansimulator.org/docs/reference-network.html#brian2.Network
+        This function does not create a `BRIAN2 network`, but only it's components.
 
         :param traj: Trajectory container
 
@@ -693,6 +662,8 @@ class NetworkManager(HasLogger):
                           '-----------------------------')
 
         self._pre_run = True
+        if hasattr(self._network, 'store'):
+            self._network.store('pre_run')
 
 
     def run_network(self, traj):
@@ -718,34 +689,12 @@ class NetworkManager(HasLogger):
 
         # Check if the network was pre-built
         if self._pre_built:
-            # If yes check for multiprocessing or if a single core processing is forced
-            multiproc = traj.f_get('config.environment.%s.multiproc' %
-                                   traj.v_environment_name).f_get()
-            if multiproc:
-                self._run_network(traj)
-            else:
-                if self._force_single_core:
-                    self._logger.warning('Running Single Core Mode. Be aware that the network '
-                                         'evolves over ALL your runs and is not reset. '
-                                         'Use this setting only for debugging purposes '
-                                         'because your results will be not correct in case '
-                                         'your trajectory contains more than a single run. ')
-                    self._run_network(traj)
-                else:
-                    raise RuntimeError('You cannot run a pre-built network without '
-                                       'multiprocessing.\n'
-                                       'The network configuration must be copied either by '
-                                       'pickling (using a `multiproc=True` and `use_pool=True` in '
-                                       'your environment) or by forking ( multiprocessing with '
-                                       '`use_pool=False`).\n If your network '
-                                       'cannot be pickled use the latter. '
-                                       'In order to come close to iterative processing '
-                                       'you could use multiprocessing with `ncores=1`. \n'
-                                       'If you do not care about messing up initial conditions '
-                                       '(i.e. you are debugging) use `force_single_core=True` '
-                                       'in your network manager.')
+            if self._pre_run and hasattr(self._network, 'restore'):
+                self._network.restore('pre_run')
+            self._run_network(traj)
         else:
-            reinit()
+            if self._network is not None and hasattr(self._network, 'reinit'):
+                self._network.reinit()
             self._run_network(traj)
 
     def _pretty_print_explored_parameters(self, traj):

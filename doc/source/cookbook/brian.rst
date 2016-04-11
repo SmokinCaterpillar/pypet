@@ -3,23 +3,20 @@
 
 
 
-======================
-Using BRIAN with pypet
-======================
+=========================
+Using BRIAN(2) with pypet
+=========================
 
--------------------
-IMPORTANT
--------------------
+----------------
+pypet and BRIAN2
+----------------
 
-Although the general *pypet* API is supposed to remain stable, this promise excludes the BRIAN
-part. The *pypet* BRIAN subpackage is still considered to be **alpha**. I probably won't
-change too much within the ``pypet.brian.parameter`` module, but expect the ``pypet.brian.network``
-module to undergo many changes and updates. Furthermore, the *pypet.brian* package has only been
-used with BRIAN **1.X**, no guarantee for BRIAN 2.
+*pypet* works with BRIAN2_ as well. All explenations given below apply analogously but
+one hase to use the ``pypet.brian2`` sub-package instead.
 
------------------
+---------------
 pypet and BRIAN
------------------
+---------------
 
 BRIAN_ as it comes is nice for small scripts and quick simulations, but it can
 be really hard to manage and maintain large scale projects based on
@@ -204,6 +201,9 @@ distribute parameter exploration of network simulations onto several cpus.
 Even if parts of your network cannot be pickled, multiprocessing
 can be easily achieved by setting ``use_pool=False`` for your
 :class:`~pypet.environment.Environment`.
+
+Single core processing is problematic with BRIAN1; however, it works fine with
+BRIAN2. Hence, if you are using BRIAN2, ignore the following two paragraphs.
 
 Yet, single core processing is more subtle. In fact if you want to
 ``pre_build`` parts of your network or even *pre run* a whole network,
@@ -432,14 +432,6 @@ executed in increasing order. The orders do not need to be consecutive, but a Ru
 is thrown in case two subruns have the same order. There is also an Error raised if there exists a
 parameter where ``order`` cannot be found in it's ``v_annotations`` property.
 
-In previous versions of *pypet.brian* there was a so called ``BrianDurationParameter`` that
-possessed a special attribute ``v_order``. This was basically a normal
-:class:`~pypet.brian.parameter.BrianParameter` with a little bit of overhead. Thus,
-the ``BrianDurationParameter`` became a victim of refactoring. There is still an implementation
-left for backwards-compatibility. Please, do *NOT* use the old ``BrianDurationParameter``,
-but a normal :class:`~pypet.brian.parameter.BrianParameter` and replace calls to
-``v_order`` with ``v_annotations.order``.
-
 For instance, in ``traj.parameter.simulation.durations`` there are three
 :class:`~pypet.brian.parameter.BrianParameter` instances.
 
@@ -529,3 +521,5 @@ Cheers,
 .. _`BRIAN network`: http://briansimulator.org/docs/reference-network.html#brian.Network
 
 .. _SpikeMonitor: http://briansimulator.org/docs/reference-monitors.html#brian.SpikeMonitor
+
+.. _BRIAN2: http://brian2.readthedocs.org

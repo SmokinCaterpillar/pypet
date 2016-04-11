@@ -17,7 +17,7 @@ def coverage_multiprocessing_process(): # pragma: no cover
         class Process_WithCoverage(multiprocessing.Process):
             def _bootstrap(self):
                 cov = coverage(data_suffix=True,
-                    omit='*/network.py,*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py'.split(','))
+                    omit='*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py'.split(','))
 
                 cov.start()
                 try:
@@ -55,6 +55,8 @@ if __name__ == '__main__':
                     'MultiprocSCOOPSortLocalTest',
                     'MultiprocFrozenSCOOPSortNetlockTest',
                     'MultiprocFrozenSCOOPSortNetqueueTest',
+                    'Brain2NetworkTest',
+                    'BrainNetworkTest',
                     'CapTest'))
     pred = lambda class_name, test_name, tags: (class_name in tests_include or
                                                  'multiproc' not in tags)

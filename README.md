@@ -20,7 +20,7 @@ analyses becomes a piece of cake!
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, or 3.4, and
+Python 2.6, 2.7, 3.3, 3.4, or 3.5, and
 
 * tables >= 2.3.1
 
@@ -175,7 +175,7 @@ Main Features
 
     * pandas DataFrames (http://pandas.pydata.org/)
 
-    * BRIAN quantities and monitors (http://briansimulator.org/)
+    * BRIAN (1 and 2) quantities and monitors (http://briansimulator.org/)
 
 * Easily **extendable** to other data formats!
 
@@ -353,6 +353,10 @@ Acknowledgements
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project
+    
+*   Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
+
+*   Thanks to Henri Bunting for his work on the BRIAN2 subpackage
 
 *   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
     the Research Training Group GRK 1589/1, and the
@@ -379,7 +383,7 @@ with `-k` to keep the HDF5 and log files created by the tests
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.
 
-Running all tests can take up to 20 minutes. The test suite encompasses more than **900** tests
+Running all tests can take up to 20 minutes. The test suite encompasses more than **1000** tests
 and has a code coverage of about **90%**!
 
 Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3 and 3.4 for **Linux** using

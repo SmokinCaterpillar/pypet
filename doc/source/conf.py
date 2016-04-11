@@ -279,6 +279,8 @@ class Mock(object):
     def __call__(self, *args, **kwargs):
         return Mock()
 
+    __all__ = ()
+
     @classmethod
     def __getattr__(cls, name):
         if name in ('__file__', '__path__'):
@@ -293,8 +295,11 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['tables', 'numpy', 'brian' ,'pandas', 'brian.units', 'brian.fundamentalunits',
-                'brian.monitor', 'scipy', 'scipy.sparse', 'tables.parameters']
+MOCK_MODULES = ['tables', 'numpy', 'brian' ,'pandas', 'brian.units', 'brian.stdunits',
+                'brian.fundamentalunits',
+                'brian.monitor', 'scipy', 'scipy.sparse', 'tables.parameters', 'brian2',
+                'brian2.numpy_', 'brian2.units.fundamentalunits', 'brian2.units',
+                'brian2.monitors', 'brian2.units.allunits']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
 

@@ -52,7 +52,7 @@ Main Features
 
     * pandas_ Series, DataFrames, and Panels
 
-    * BRIAN_ quantities and monitors
+    * BRIAN_ and BRIAN2_ quantities and monitors
 
 * Easily **extendable** to other data formats!
 
@@ -514,6 +514,8 @@ Cheers,
 .. _pandas: http://pandas.pydata.org/
 
 .. _BRIAN: http://briansimulator.org/
+
+.. _BRIAN2: http://brian2.readthedocs.org/
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 

@@ -53,7 +53,7 @@ def run_network(traj):
 
 
 @unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
-class BrianFullNetworkTest(TrajectoryComparator):
+class Brian2FullNetworkTest(TrajectoryComparator):
 
     tags = 'integration', 'brian2', 'parameter', 'network', 'hdf5', 'henri'
 

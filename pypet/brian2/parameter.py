@@ -1,10 +1,10 @@
 """Module containing results and parameters that can be used to store `BRIAN2 data`_.
 
 Parameters handling BRIAN2 data are instantiated by the
-:class:`~pypet.brian.parameter.Brian2Parameter` class for any BRIAN2 Quantity.
+:class:`~pypet.brian2.parameter.Brian2Parameter` class for any BRIAN2 Quantity.
 
-The :class:`~pypet.brian.parameter.Brian2Result` can store BRIAN2 Quantities
-and the :class:`~pypet.brian.parameter.Brian2MonitorResult` extracts data from
+The :class:`~pypet.brian2.parameter.Brian2Result` can store BRIAN2 Quantities
+and the :class:`~pypet.brian2.parameter.Brian2MonitorResult` extracts data from
 BRIAN2 Monitors.
 
 .. _`BRIAN2 data`: http://brian2.readthedocs.org/
@@ -18,7 +18,6 @@ import ast
 import brian2.numpy_ as np
 from brian2.units.fundamentalunits import Quantity, get_unit_fast, have_same_dimensions
 from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
-from brian2.equations.unitcheck import parse_expression_unit
 import brian2.units.allunits as allunits
 
 import pypet.pypetexceptions as pex
@@ -262,7 +261,6 @@ class Brian2MonitorResult(Brian2Result):
 
     >>> brian_result = BrianMonitorResult('example.brian_test_test.mymonitor',
                                             monitor=SpikeMonitor(...),
-                                            storage_mode='TABLE',
                                             comment='Im a SpikeMonitor Example!')
     >>> brian_result.num_spikes
     1337
@@ -307,7 +305,7 @@ class Brian2MonitorResult(Brian2Result):
 
             If variables are recorded at spike time, this is the list of their names
 
-        * ``varname``
+        * "varname"
 
             Array of variable recorded at spike time
 
@@ -330,7 +328,7 @@ class Brian2MonitorResult(Brian2Result):
 
             List of recorded variable names
 
-        * ``varname``
+        * "varname"
 
             Array of variable recorded
 

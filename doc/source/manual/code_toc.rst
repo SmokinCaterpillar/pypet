@@ -17,4 +17,6 @@ Library Reference
     ../pypetdoc/storageservicedoc
     ../pypetdoc/brianparameterdoc
     ../pypetdoc/briannetworkdoc
+    ../pypetdoc/brian2parameterdoc
+    ../pypetdoc/brian2networkdoc
 
