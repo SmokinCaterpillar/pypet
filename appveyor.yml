@@ -81,6 +81,7 @@ branches:
   only:
     - master
     - production
+    - brian2
 
 
 test_script:
