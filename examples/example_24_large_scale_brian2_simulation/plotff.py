@@ -12,7 +12,6 @@ from pypet import Trajectory, Environment
 from pypet.brian2.parameter import Brian2MonitorResult, Brian2Parameter
 
 
-
 def main():
 
     filename = os.path.join('hdf5', 'Clustered_Network.hdf5')

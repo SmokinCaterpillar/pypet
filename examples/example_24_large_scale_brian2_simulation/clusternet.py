@@ -373,15 +373,15 @@ class CNConnections(NetworkComponent):
         neurons_i = network_dict['neurons_i']
         neurons_e = network_dict['neurons_e']
 
-        print 'Connecting ii'
+        print('Connecting ii')
         self.conn_ii = Synapses(neurons_i,neurons_i, pre='y_i += %f' % connections.J_ii)
         self.conn_ii.connect('i != j', p=connections.p_ii)
 
-        print 'Connecting ei'
+        print('Connecting ei')
         self.conn_ei = Synapses(neurons_i,neurons_e, pre='y_i += %f' % connections.J_ei)
         self.conn_ei.connect('i != j', p=connections.p_ei)
 
-        print 'Connecting ie'
+        print('Connecting ie')
         self.conn_ie = Synapses(neurons_e,neurons_i, pre='y_e += %f' % connections.J_ie)
         self.conn_ie.connect('i != j', p=connections.p_ie)
 
@@ -421,7 +421,7 @@ class CNConnections(NetworkComponent):
                 cluster = neurons_e[low_index:high_index]
 
                 # Connections within cluster
-                print 'Connecting ee cluster #%d of %d' % (irun, clusters)
+                print('Connecting ee cluster #%d of %d' % (irun, clusters))
                 conn = Synapses(cluster,cluster,
                                 pre='y_e += %f' % (connections.J_ee*connections.strength_factor))
                 conn.connect('i != j', p=p_in)
@@ -435,7 +435,7 @@ class CNConnections(NetworkComponent):
                 # lower or higher indices
                 if low_index > 0:
                     rest_low = neurons_e[0:low_index]
-                    print 'Connecting cluster with other neurons of lower index'
+                    print('Connecting cluster with other neurons of lower index')
                     low_conn = Synapses(cluster,rest_low,
                                 pre='y_e += %f' % connections.J_ee)
                     low_conn.connect('i != j', p=p_out)
@@ -444,7 +444,7 @@ class CNConnections(NetworkComponent):
 
                 if high_index < model.N_e:
                     rest_high = neurons_e[high_index:model.N_e]
-                    print 'Connecting cluster with other neurons of higher index'
+                    print('Connecting cluster with other neurons of higher index')
 
                     high_conn = Synapses(cluster,rest_high,
                                 pre='y_e += %f' % connections.J_ee)
@@ -459,7 +459,7 @@ class CNConnections(NetworkComponent):
             conns_list+=cluster_conns_list
         else:
             # Here we don't cluster and connection probabilities are homogeneous
-            print 'Connectiong ee'
+            print('Connectiong ee')
 
             self.conn_ee = Synapses(neurons_e,neurons_e,
                                 pre='y_e += %f' % connections.J_ee)
@@ -656,7 +656,7 @@ class CNFanoFactorComputer(NetworkAnalyser):
                                                                       'Factor over all '
                                                                       'exc neurons')
 
-            print 'R_ee: %f, Mean FF: %f' % (traj.R_ee, mean_ff)
+            print('R_ee: %f, Mean FF: %f' % (traj.R_ee, mean_ff))
 
 
 class CNMonitorAnalysis(NetworkAnalyser):
@@ -786,28 +786,28 @@ class CNMonitorAnalysis(NetworkAnalyser):
 
         filename=os.path.join(print_folder,'spike.png')
 
-        print 'Current plot: %s ' % filename
+        print('Current plot: %s ' % filename)
         plt.savefig(filename)
         plt.close()
 
         fig=plt.figure()
         self._plot_result(traj, 'monitors.V')
         filename=os.path.join(print_folder,'V.png')
-        print 'Current plot: %s ' % filename
+        print('Current plot: %s ' % filename)
         fig.savefig(filename)
         plt.close()
 
         plt.figure()
         self._plot_result(traj, 'monitors.I_syn_e')
         filename=os.path.join(print_folder,'I_syn_e.png')
-        print 'Current plot: %s ' % filename
+        print('Current plot: %s ' % filename)
         plt.savefig(filename)
         plt.close()
 
         plt.figure()
         self._plot_result(traj, 'monitors.I_syn_i')
         filename=os.path.join(print_folder,'I_syn_i.png')
-        print 'Current plot: %s ' % filename
+        print('Current plot: %s ' % filename)
         plt.savefig(filename)
         plt.close()
 
@@ -858,7 +858,7 @@ class CNMonitorAnalysis(NetworkAnalyser):
             traj.f_add_result(Brian2MonitorResult, 'monitors.I_syn_i', self.I_syn_i_monitor,
                               comment = 'I_syn_i of four neurons from 2 clusters')
 
-            print 'Plotting'
+            print('Plotting')
 
             if traj.parameters.analysis.make_plots:
                 self._print_graphs(traj)

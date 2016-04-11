@@ -55,7 +55,7 @@ def run_net(traj):
     neuron.Vr=linspace(-48.3*mV,-47.7*mV,traj.N) # bifurcation parameter
 
     # Run the network initially for 100 milliseconds
-    print 'Initial Run'
+    print('Initial Run')
     net = Network(neuron)
     net.run(100*ms, report='text') # we discard the first spikes
 
@@ -67,7 +67,7 @@ def run_net(traj):
     net.add(MStateV)
 
     # Now record for 500 milliseconds
-    print 'Measurement run'
+    print('Measurement run')
     net.run(500*ms,report='text')
 
     # Add the BRAIN monitors
