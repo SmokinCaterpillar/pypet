@@ -11,8 +11,9 @@ try:
     import brian2
     from brian2 import ms, mV, NeuronGroup, Synapses, PopulationRateMonitor, SpikeMonitor, \
         StateMonitor, Network
-    from pypet.brian2 import NetworkComponent, NetworkAnalyser, NetworkRunner, NetworkManager, \
-        Brian2Result, Brian2Parameter, Brian2MonitorResult
+    from pypet.brian2.parameter import Brian2Result, Brian2Parameter, Brian2MonitorResult
+    from pypet.brian2.network import NetworkComponent, NetworkAnalyser, NetworkRunner, \
+        NetworkManager
 except ImportError:
     brian2 = None
     NetworkComponent = object

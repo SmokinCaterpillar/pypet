@@ -73,8 +73,6 @@ def unit_from_expression(expr):
         raise RuntimeError('You shall not pass')
 
 
-
-
 class Brian2Parameter(Parameter):
     """A Parameter class that supports BRIAN2 Quantities.
 

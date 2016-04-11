@@ -16,6 +16,12 @@ except ImportError:
     print('No BRIAN module found, will skip the example')
     brian = None
 
+try:
+    import brian2
+except ImportError:
+    print('No BRIAN module found, will skip the example')
+    brian2 = None
+
 system = platform.system()
 print('*** Running under %s ***' % str(system))
 
@@ -24,6 +30,9 @@ to_skip.add('21')
 if brian is None:
     to_skip.add('07')
     to_skip.add('11')
+if brian2 is None:
+    to_skip.add('23')
+    to_skip.add('24')
 if system == 'Windows':
     # Appveyor is too slow for this example, so we skip it
     to_skip.add('13')
@@ -134,6 +143,20 @@ def main():
         print("########## Running %s ###########" % ex11)
 
         os.chdir(ex11)
+        sys.path.append(os.getcwd())
+        print("Running script")
+        execute_example('runscript.py')
+        print("Running analysis")
+        execute_example('plotff.py')
+        os.chdir('..')
+
+    ex24 = 'example_24_large_scale_brian2_simulation'
+    if skip(ex24):
+        print("------- Skipping %s -------" % ex24)
+    else:
+        print("########## Running %s ###########" % ex24)
+
+        os.chdir(ex24)
         sys.path.append(os.getcwd())
         print("Running script")
         execute_example('runscript.py')
