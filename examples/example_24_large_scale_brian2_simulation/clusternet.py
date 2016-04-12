@@ -73,8 +73,8 @@ class CNNeuronGroup(NetworkComponent):
                              comment = "String representation of reset function")
         traj.f_add_parameter('model.refractory', 5*ms, comment = "Absolute refractory period")
 
-        traj.f_add_parameter('model.N_e', int(1000*scale), comment = "Amount of excitatory neurons")
-        traj.f_add_parameter('model.N_i', int(250*scale), comment = "Amount of inhibitory neurons")
+        traj.f_add_parameter('model.N_e', int(2000*scale), comment = "Amount of excitatory neurons")
+        traj.f_add_parameter('model.N_i', int(500*scale), comment = "Amount of inhibitory neurons")
 
         traj.f_add_parameter('model.tau_e', 15*ms, comment = "Membrane time constant, excitatory")
         traj.f_add_parameter('model.tau_i', 10*ms, comment = "Membrane time constant, inhibitory")
@@ -261,17 +261,17 @@ class CNConnections(NetworkComponent):
 
         traj.f_add_parameter('connections.R_ee', 1.0, comment='Scaling factor for clustering')
 
-        traj.f_add_parameter('connections.clustersize_e', 75, comment='Size of a cluster')
-        traj.f_add_parameter('connections.strength_factor', 1.9,
+        traj.f_add_parameter('connections.clustersize_e', 100, comment='Size of a cluster')
+        traj.f_add_parameter('connections.strength_factor', 2.5,
                              comment='Factor for scaling cluster weights')
 
-        traj.f_add_parameter('connections.p_ii', 0.5,
+        traj.f_add_parameter('connections.p_ii', 0.25,
                             comment='Connection probability from inhibitory to inhibitory' )
-        traj.f_add_parameter('connections.p_ei', 0.5,
+        traj.f_add_parameter('connections.p_ei', 0.25,
                             comment='Connection probability from inhibitory to excitatory' )
-        traj.f_add_parameter('connections.p_ie', 0.5,
+        traj.f_add_parameter('connections.p_ie', 0.25,
                             comment='Connection probability from excitatory to inhibitory' )
-        traj.f_add_parameter('connections.p_ee', 0.2,
+        traj.f_add_parameter('connections.p_ee', 0.1,
                             comment='Connection probability from excitatory to excitatory' )
 
         traj.f_add_parameter('connections.J_ii', 0.027/np.sqrt(scale),
@@ -396,7 +396,7 @@ class CNConnections(NetworkComponent):
             model=traj.model
 
             # Compute the number of clusters
-            clusters = model.N_e/connections.clustersize_e
+            clusters = int(model.N_e/connections.clustersize_e)
             traj.f_add_derived_parameter('connections.clusters', clusters, comment='Number of clusters')
 
             # Compute outgoing connection probability
@@ -489,7 +489,7 @@ class CNNetworkRunner(NetworkRunner):
                                             'measurement conditions.')
 
         par.v_annotations.order=0
-        par=traj.f_add_parameter(Brian2Parameter,'simulation.durations.measurement_run', 1000*ms,
+        par=traj.f_add_parameter(Brian2Parameter,'simulation.durations.measurement_run', 1500*ms,
                              comment='Measurement run that is considered for '
                                                 'statistical evaluation')
         par.v_annotations.order=1
