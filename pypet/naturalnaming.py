@@ -2402,6 +2402,11 @@ class NaturalNamingInterface(HasLogger):
             try:
                 result = node.f_load_child('.'.join(split_name),
                                            load_data=pypetconstants.LOAD_DATA)
+                if (self._root_instance.v_idx != -1 and
+                            result.v_is_leaf and
+                            result.v_is_parameter and
+                            result.v_explored):
+                    result._set_parameter_access(self._root_instance.v_idx)
             except:
                 self._logger.error('Error while auto-loading `%s` under `%s`.' %
                                    (name, node.v_full_name))
@@ -2415,6 +2420,10 @@ class NaturalNamingInterface(HasLogger):
 
                 try:
                     self._root_instance.f_load_item(result)
+                    if (self._root_instance.v_idx != -1 and
+                            result.v_is_parameter and
+                            result.v_explored):
+                        result._set_parameter_access(self._root_instance.v_idx)
                 except:
                     self._logger.error('Error while auto-loading `%s` under `%s`. I found the '
                                        'item but I could not load the data.' %

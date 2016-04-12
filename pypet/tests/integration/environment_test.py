@@ -880,27 +880,27 @@ class ResultSortTest(TrajectoryComparator):
 
         traj.v_standard_parameter=Parameter
 
-        traj.f_add_parameter('x',0)
-        traj.f_add_parameter('y',0)
+        traj.f_add_parameter('x',99)
+        traj.f_add_parameter('y',99)
 
         self.env=env
         self.traj=traj
 
-    def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False):
+    def load_trajectory(self,trajectory_index=None,trajectory_name=None,as_new=False, how=2):
         ### Load The Trajectory and check if the values are still the same
         newtraj = Trajectory()
         newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
         newtraj.f_load(name=trajectory_name, index=trajectory_index, as_new=as_new,
-                       load_derived_parameters=2, load_results=2)
+                       load_derived_parameters=how, load_results=how)
         return newtraj
 
 
     def explore(self,traj):
-        self.explore_dict={'x':[0,1,2,3,4],'y':[1,1,2,2,3]}
+        self.explore_dict={'x':[-1,1,2,3,4],'y':[1,1,2,2,3]}
         traj.f_explore(self.explore_dict)
 
     def explore_cartesian(self,traj):
-        self.explore_dict=cartesian_product({'x':[0,1,2,3,4, 5, 6],'y':[1,1,2,2,3,4,4]})
+        self.explore_dict=cartesian_product({'x':[-1,1,2,3,4, 5, 6],'y':[1,1,2,2,3,4,4]})
         traj.f_explore(self.explore_dict)
 
     def expand(self,traj):
@@ -1060,6 +1060,46 @@ class ResultSortTest(TrajectoryComparator):
             self.assertTrue(traj.v_crun == run_name)
             self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
                                                   (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+
+        traj = self.traj
+        self.assertTrue(traj.v_idx == -1)
+        self.assertTrue(traj.v_crun is None)
+        self.assertTrue(traj.v_crun_ == pypetconstants.RUN_NAME_DUMMY)
+        self.assertTrue(newtraj.v_idx == idx)
+
+
+    def test_f_iter_runs_auto_load(self):
+
+         ###Explore
+        self.explore(self.traj)
+
+        results = self.env.f_run(multiply)
+        self.are_results_in_order(results)
+        traj = self.traj
+        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+
+        self.traj.f_load_skeleton()
+        self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
+        self.check_if_z_is_correct(traj)
+
+        newtraj = Trajectory()
+        newtraj.v_storage_service=HDF5StorageService(filename=self.filename)
+        newtraj.f_load(name=self.traj.v_name, index=None, as_new=False, load_data=0)
+        newtraj.v_auto_load = True
+
+        newtraj.par.f_load_child('y', load_data=1)
+
+        for idx, run_name in enumerate(self.traj.f_iter_runs()):
+            newtraj.v_crun=run_name
+            self.traj.v_idx = idx
+            newtraj.v_idx = idx
+            nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
+            self.assertTrue('run_%08d' % (idx+1) not in nameset)
+            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(traj.v_crun == run_name)
+            self.assertTrue(newtraj.res.runs.crun.z==newtraj.par.x*newtraj.par.y,' z != x*y: %s != %s * %s' %
+                                                  (str(newtraj.crun.z),str(newtraj.x),str(newtraj.y)))
+
 
         traj = self.traj
         self.assertTrue(traj.v_idx == -1)

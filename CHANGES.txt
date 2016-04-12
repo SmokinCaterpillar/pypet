@@ -1,6 +1,14 @@
+pypet 0.3.0
+
+*   Support for BRIAN2
+
+*   BUG FIX: Auto loading parameters will set the parameter to the current run.
+
+
 pypet 0.2.0
 
 *   No longer beta
+
 
 pypet 0.2b1
 
