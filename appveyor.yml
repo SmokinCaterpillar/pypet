@@ -80,7 +80,7 @@ build: false
 branches:
   only:
     - master
-    - production
+    - develop
     - brian2
 
 
