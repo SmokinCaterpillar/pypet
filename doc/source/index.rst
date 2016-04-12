@@ -13,6 +13,8 @@ Welcome to *pypet*'s documentation
    :target: https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master
 .. image:: https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master
    :target: https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master
+.. image:: http://depsy.org/api/package/pypi/pypet/badge.svg
+   :target: http://depsy.org/package/python/pypet
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
