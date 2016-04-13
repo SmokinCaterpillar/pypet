@@ -15,14 +15,6 @@ except ImportError as exc:
     #print('Import Error: %s' % str(exc))
     brian2 = None
 
-try:
-    from importlib import reload
-except ImportError:
-    try:
-        from imp import reload
-    except ImportError:
-        pass
-
 from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite
 
 import inspect
@@ -42,9 +34,6 @@ class TestAllBrian2Import(unittest.TestCase):
         for item in pypet.brian2.__dict__.values():
             if inspect.isclass(item) or inspect.isfunction(item):
                 self.assertTrue(item.__name__ in pypet.brian2.__all__)
-
-    def test_import_net_module(self):
-        reload(pypet.brian2.network)
 
 if __name__ == '__main__':
     opt_args = parse_args()
