@@ -64,13 +64,13 @@ class TheConnection(NetworkComponent):
         self.pre_built = False
 
     def add_parameters(self, traj):
-        traj.f_add_parameter('pret', 'v += 1*mV', comment='net weight')
+        traj.f_add_parameter('pre', 'v -= 1*mV', comment='net weight')
         traj.f_add_parameter('prob', 0.1, comment='Connection probability')
 
     def build(self, traj, brian_list, network_dict):
         if not self.pre_built:
             group = network_dict['group']
-            syn = Synapses(group, group, pre='v-=1*mV')
+            syn = Synapses(group, group, pre=traj.pre)
             syn.connect('i != j', p=traj.prob)
             brian_list.append(syn)
             network_dict['synapses'] = syn
