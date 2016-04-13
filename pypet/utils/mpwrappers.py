@@ -334,7 +334,6 @@ class ReliableClient(HasLogger):
 
         """
         if self._context is not None:
-            self._logger.debug('Closing client')
             if self._socket is not None:
                 self._close_socket(confused=False)
             self._context.term()
