@@ -18,7 +18,10 @@ except ImportError as exc:
 try:
     from importlib import reload
 except ImportError:
-    pass
+    try:
+        from imp import reload
+    except ImportError:
+        pass
 
 from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite
 
