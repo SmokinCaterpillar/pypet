@@ -153,8 +153,7 @@ These are standard python packages, so chances are high that they are already in
 By the way, in case you use the python package manager ``pip``
 you can list all installed packages with ``pip freeze``.
 
-Next, simply install *pypet* via ``pip install --pre pypet``
-(``--pre`` since the current version is still *beta*)
+Next, simply install *pypet* via ``pip install pypet``
 
 **Or**
 

@@ -46,7 +46,8 @@ def get_runtime(length):
     return total/float(min(len(traj), max_run)), total/float(min(len(traj), max_run)) * len(traj)
 
 def main():
-    lengths = [1000000, 500000, 100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10, 5, 1]
+    #lengths = [1000000, 500000, 100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10, 5, 1]
+    lengths = [100000, 50000, 10000, 5000, 1000, 500, 100, 50, 10, 5, 1]
     runtimes = [get_runtime(x) for x in lengths]
     avg_runtimes = [x[0] for x in runtimes]
     summed_runtime = [x[1] for x in runtimes]
