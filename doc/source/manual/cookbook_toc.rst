@@ -1,9 +1,9 @@
 
 .. _cookbook:
 
-========
-Cookbook
-========
+==========================
+Cookbook (Detailed Manual)
+==========================
 
 Here you can find some more detailed explanations of various concepts of *pypet*.
 
