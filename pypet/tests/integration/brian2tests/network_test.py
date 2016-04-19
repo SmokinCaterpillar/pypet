@@ -70,7 +70,7 @@ class TheConnection(NetworkComponent):
     def build(self, traj, brian_list, network_dict):
         if not self.pre_built:
             group = network_dict['group']
-            syn = Synapses(group, group, pre=traj.pre)
+            syn = Synapses(group, group, on_pre=traj.pre)
             syn.connect('i != j', p=traj.prob)
             brian_list.append(syn)
             network_dict['synapses'] = syn

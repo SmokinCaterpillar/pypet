@@ -374,15 +374,15 @@ class CNConnections(NetworkComponent):
         neurons_e = network_dict['neurons_e']
 
         print('Connecting ii')
-        self.conn_ii = Synapses(neurons_i,neurons_i, pre='y_i += %f' % connections.J_ii)
+        self.conn_ii = Synapses(neurons_i,neurons_i, on_pre='y_i += %f' % connections.J_ii)
         self.conn_ii.connect('i != j', p=connections.p_ii)
 
         print('Connecting ei')
-        self.conn_ei = Synapses(neurons_i,neurons_e, pre='y_i += %f' % connections.J_ei)
+        self.conn_ei = Synapses(neurons_i,neurons_e, on_pre='y_i += %f' % connections.J_ei)
         self.conn_ei.connect('i != j', p=connections.p_ei)
 
         print('Connecting ie')
-        self.conn_ie = Synapses(neurons_e,neurons_i, pre='y_e += %f' % connections.J_ie)
+        self.conn_ie = Synapses(neurons_e,neurons_i, on_pre='y_e += %f' % connections.J_ie)
         self.conn_ie.connect('i != j', p=connections.p_ie)
 
         conns_list = [self.conn_ii, self.conn_ei, self.conn_ie]
@@ -423,7 +423,7 @@ class CNConnections(NetworkComponent):
                 # Connections within cluster
                 print('Connecting ee cluster #%d of %d' % (irun, clusters))
                 conn = Synapses(cluster,cluster,
-                                pre='y_e += %f' % (connections.J_ee*connections.strength_factor))
+                                on_pre='y_e += %f' % (connections.J_ee*connections.strength_factor))
                 conn.connect('i != j', p=p_in)
                 cluster_conns_list.append(conn)
 
@@ -437,7 +437,7 @@ class CNConnections(NetworkComponent):
                     rest_low = neurons_e[0:low_index]
                     print('Connecting cluster with other neurons of lower index')
                     low_conn = Synapses(cluster,rest_low,
-                                pre='y_e += %f' % connections.J_ee)
+                                on_pre='y_e += %f' % connections.J_ee)
                     low_conn.connect('i != j', p=p_out)
 
                     cluster_conns_list.append(low_conn)
@@ -447,7 +447,7 @@ class CNConnections(NetworkComponent):
                     print('Connecting cluster with other neurons of higher index')
 
                     high_conn = Synapses(cluster,rest_high,
-                                pre='y_e += %f' % connections.J_ee)
+                                on_pre='y_e += %f' % connections.J_ee)
                     high_conn.connect('i != j', p=p_out)
 
                     cluster_conns_list.append(high_conn)
@@ -462,7 +462,7 @@ class CNConnections(NetworkComponent):
             print('Connectiong ee')
 
             self.conn_ee = Synapses(neurons_e,neurons_e,
-                                pre='y_e += %f' % connections.J_ee)
+                                on_pre='y_e += %f' % connections.J_ee)
             self.conn_ee.connect('i != j', p=connections.p_ee)
 
             conns_list.append(self.conn_ee)

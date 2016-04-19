@@ -34,7 +34,7 @@ def run_network(traj):
     group.v0 = traj.par.v0
     group.v = np.random.rand(100) * 10.0 * mV
 
-    syn = Synapses(group, group, pre='v-=1*mV')
+    syn = Synapses(group, group, on_pre='v-=1*mV')
     syn.connect('i != j', p=0.2)
 
     spike_monitor = SpikeMonitor(group, variables=['v'])
