@@ -26,7 +26,7 @@ In the meantime you can cite the software as given below. For *bibtex* you can u
 Otherwise you can cite it as:
 
 *   Robert Meyer and Klaus Obermayer. *pypet*: The Python Parameter
-    Exploration Toolkit, 2015. http://pypet.readthedocs.org/.
+    Exploration Toolkit, 2016. http://pypet.readthedocs.org/.
 
 
 --------------------------------
