@@ -424,7 +424,7 @@ class Brian2MonitorResult(Brian2Result):
         self.f_set(name=monitor.name)
 
         if len(monitor.record_variables) > 0:
-            self.f_set(record_variables=monitor.record_variables)
+            self.f_set(record_variables=list(monitor.record_variables))
 
         times = monitor.t[:]
 
