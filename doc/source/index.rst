@@ -13,6 +13,8 @@ Welcome to *pypet*'s documentation
    :target: https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master
 .. image:: https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master
    :target: https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master
+.. image:: https://api.codacy.com/project/badge/grade/86268960751442799fcf6192b36e386f
+   :target: https://www.codacy.com/app/robert-meyer/pypet
 .. image:: http://depsy.org/api/package/pypi/pypet/badge.svg
    :target: http://depsy.org/package/python/pypet
 
@@ -25,9 +27,10 @@ lets you access all your parameters and results
 from a single source. Data I/O of your simulations and
 analyses become a piece of cake!
 
-Latest version: `0.3.0`_
+Latest version:
 
-.. _`0.3.0`: https://pypi.python.org/pypi/pypet
+.. image:: https://badge.fury.io/py/pypet.svg
+    :target: https://badge.fury.io/py/pypet
 
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
