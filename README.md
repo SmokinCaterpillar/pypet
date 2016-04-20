@@ -7,6 +7,7 @@ pypet
 [![Coverage Status](https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master)](https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/86268960751442799fcf6192b36e386f)](https://www.codacy.com/app/robert-meyer/pypet)
 [![Research software impact](http://depsy.org/api/package/pypi/pypet/badge.svg)](http://depsy.org/package/python/pypet)
+[![PyPI version](https://badge.fury.io/py/pypet.svg)](https://badge.fury.io/py/pypet)
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
