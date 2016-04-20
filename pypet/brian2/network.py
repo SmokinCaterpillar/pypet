@@ -691,6 +691,8 @@ class NetworkManager(HasLogger):
         if self._pre_built:
             if self._pre_run and hasattr(self._network, 'restore'):
                 self._network.restore('pre_run')
+                # Temprorary fix for https://github.com/brian-team/brian2/issues/681
+                self._network.store('pre_run')
             self._run_network(traj)
         else:
             self._run_network(traj)
