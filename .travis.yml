@@ -69,7 +69,7 @@ install:
   - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then travis_retry pip install brian; fi
   - echo "+++++++++++ Installing Brian2 of NOT Python 2.6 +++++++++++"
-  - if (! [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]) && (! [[ $TRAVIS_PYTHON_VERSION == 3.5* ]]); then travis_retry pip install brian2; fi
+  - if (! [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]); then travis_retry pip install brian2; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
