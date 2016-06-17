@@ -194,7 +194,10 @@ class _Progressbar(object):
                 statement = fmt_string % statement
             if logger == 'print':
                 if reprint and not ending:
-                    print(statement, end='\r')
+                    if compat.python_major == 3:
+                        print(statement, end='\r', flush=True)
+                    else:
+                        print(statement, end='\r')
                 else:
                     print(statement)
             elif logger is not None:

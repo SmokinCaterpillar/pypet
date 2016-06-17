@@ -2472,7 +2472,11 @@ class HDF5StorageService(StorageService, HasLogger):
         # We do not want to mess up the stored trajectory but raise an Error
         if not traj._stored and self._trajectory_group is not None:
             raise RuntimeError('You want to store a completely new trajectory with name'
-                               ' `%s` but this trajectory is already found in file `%s`' %
+                               ' `%s` but this trajectory is already found in file `%s`.'
+                               'Did you try to accidentally overwrite existing data? If '
+                               'you DO want to override existing data, use `overwrite_file=True`.'
+                               'Note that this deletes the whole HDF5 file not just the particular '
+                               'trajectroy therein! ' %
                                (traj.v_name, self._filename))
 
         # Extract HDF5 settings from the trajectory
@@ -2485,8 +2489,6 @@ class HDF5StorageService(StorageService, HasLogger):
                                                            name=self._trajectory_name,
                                                            title=self._trajectory_name,
                                                            filters=self._all_get_filters())
-        traj._stored = True
-
         # Store meta information
         self._trj_store_meta_data(traj)
 
@@ -2727,8 +2729,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                      _hdf5_group=hdf5_group)
 
                 if recursive and current_depth < max_depth:
+                    new_depth = current_depth + 1
                     for children in (hdf5_group._v_groups, hdf5_group._v_links):
-                        new_depth = current_depth + 1
                         for new_hdf5_group_name in children:
                             new_hdf5_group = children[new_hdf5_group_name]
                             loading_list.append((traj_group, new_depth, new_hdf5_group))

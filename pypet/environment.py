@@ -1899,7 +1899,8 @@ class Environment(HasLogger):
 
         finish_time = self._start_timestamp - self._finish_timestamp
         self._sumatra_record.duration = finish_time
-        self._sumatra_record.output_data = self._sumatra_record.datastore.find_new_data(self._sumatra_record.timestamp)
+        self._sumatra_record.output_data = self._sumatra_record.datastore.find_new_data(
+                                                                self._sumatra_record.timestamp)
         self._loaded_sumatatra_project.add_record(self._sumatra_record)
         self._loaded_sumatatra_project.save()
         sumatra_label = self._sumatra_record.label

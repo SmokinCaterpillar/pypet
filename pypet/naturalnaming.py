@@ -2442,20 +2442,44 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     """
 
-    __slots__ = ('_children', '_links', '_groups', '_leaves',
+    __slots__ = ('_children_', '_links_', '_groups_', '_leaves_',
                  '_nn_interface', '_kids')
 
     def __init__(self, full_name='', trajectory=None, comment=''):
         super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
-        self._children = {}
-        self._links = {}
-        self._groups = {}
-        self._leaves = {}
+        self._children_ = None
+        self._links_ = None
+        self._groups_ = None
+        self._leaves_ = None
         self._kids = None
         if trajectory is not None:
             self._nn_interface = trajectory._nn_interface
         else:
             self._nn_interface = None
+
+    @property
+    def _children(self):
+        if self._children_ is None:
+            self._children_ = {}
+        return self._children_
+
+    @property
+    def _links(self):
+        if self._links_ is None:
+            self._links_ = {}
+        return self._links_
+
+    @property
+    def _groups(self):
+        if self._groups_ is None:
+            self._groups_ = {}
+        return self._groups_
+
+    @property
+    def _leaves(self):
+        if self._leaves_ is None:
+            self._leaves_ = {}
+        return self._leaves_
 
     @property
     def kids(self):
