@@ -119,7 +119,7 @@ class NNTreeNodeKids(HasSlots):
                                             self._node.v_name))
 
     def __dir__(self):
-        return compat.listkeys(self._node._children)
+        return self._node.f_dir_data()
 
 
 class NNTreeNodeFunc(NNTreeNodeKids):
@@ -2546,6 +2546,19 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     def f_dir_data(self):
         """Returns a list of all children names"""
+        if (self._nn_interface is not None and
+                    self._nn_interface._root_instance is not None
+                        and self.v_root.v_auto_load):
+            try:
+                if self.v_is_root:
+                    self.f_load(recursive=True, max_depth=1,
+                                load_data=pypetconstants.LOAD_SKELETON,
+                                with_meta_data=False,
+                                with_run_information=False)
+                else:
+                    self.f_load(recursive=True, max_depth=1, load_data=pypetconstants.LOAD_SKELETON)
+            except Exception as exc:
+                pass
         return compat.listkeys(self._children)
 
     def __dir__(self):

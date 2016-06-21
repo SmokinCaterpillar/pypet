@@ -1525,6 +1525,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                force=False,
                dynamic_imports=None,
                with_run_information=True,
+               with_meta_data=True,
                storage_service=None, **kwargs):
         """Loads a trajectory via the storage service.
 
@@ -1641,6 +1642,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             Moreover, setting `v_idx` does not work either. If you load the trajectory
             without this information, be careful, this is not recommended.
 
+        :param wiht_meta_data:
+
+            If meta data should be loaded.
+
         :param storage_service:
 
             Pass a storage service used by the trajectory. Alternatively pass a constructor
@@ -1691,6 +1696,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                    recursive=recursive,
                                    max_depth=max_depth,
                                    with_run_information=with_run_information,
+                                   with_meta_data=with_meta_data,
                                    force=force)
 
         # If a trajectory is newly loaded, all parameters are unlocked.
