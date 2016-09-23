@@ -1,3 +1,8 @@
+pypet 0.3.1
+
+*   BUG FIX: Correct progressbar printing in Python3 using reprint
+
+
 pypet 0.3.0
 
 *   Support for BRIAN2
@@ -9,7 +14,6 @@ pypet 0.3.0
 *   New BRIAN2 Network framework
 
 *   BUG FIX: Auto loading parameters will set the parameter to the current run.
-
 
 
 pypet 0.2.0
