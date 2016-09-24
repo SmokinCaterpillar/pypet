@@ -321,7 +321,7 @@ def port_to_tcp(port=None):
     try:
         addr_list = socket.getaddrinfo(domain_name, None)
     except Exception:
-        addr_list = socket.getaddrinfo('localhost', None)
+        addr_list = socket.getaddrinfo('127.0.0.1', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     address =  'tcp://' + sockaddr[0]
     if port is None:
