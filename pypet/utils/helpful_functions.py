@@ -312,6 +312,19 @@ def format_time(timestamp):
     return formatted_time
 
 
+def convert_ipv6(host):
+    if ':' in host:
+        #IP 6 address
+        host = host.split('%')[0]
+        host = '[%s]' % host
+
+    return  host
+
+
+def is_ipv6(url):
+    return '[' in url
+
+
 def port_to_tcp(port=None):
     """Returns local tcp address for a given `port`, automatic port if `None`"""
     #address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
@@ -321,14 +334,7 @@ def port_to_tcp(port=None):
     except Exception:
         addr_list = socket.getaddrinfo('127.0.0.1', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
-    host = sockaddr[0]
-    if ':' in host:
-        #IP 6 address
-        #host = host.split('%')[0]
-        ipv6 = True
-        #host = '[%s]' % host
-    else:
-        ipv6 = False
+    host = convert_ipv6(sockaddr[0])
     address =  'tcp://' + host
     if port is None:
         port = ()
@@ -337,7 +343,7 @@ def port_to_tcp(port=None):
         context = zmq.Context()
         try:
             socket_ = context.socket(zmq.REP)
-            socket_.ipv6 = ipv6
+            socket_.ipv6 = is_ipv6(address)
             port = socket_.bind_to_random_port(address, *port)
         except Exception:
             print('Could not connect to {} using {}'.format(address, addr_list))

@@ -21,6 +21,7 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data,
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.utils.mpwrappers import LockerClient, LockerServer, TimeOutLockerServer
 from pypet.pypetlogging import DisableAllLogging
+from pypet.utils.helpful_functions import is_ipv6
 
 
 class FaultyServer(LockerServer):
@@ -42,6 +43,7 @@ class FaultyServer(LockerServer):
             time.sleep(2.5)
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REP)
+            self._socket.ipv6 = is_ipv6(self._url)
             self._socket.bind(self._url)
             respond = False
         elif self._srep % load_every == 0:
@@ -249,6 +251,7 @@ class TestNetLock(TrajectoryComparator):
         self.start_server(url)
         ctx = zmq.Context()
         sck = ctx.socket(zmq.REQ)
+        sck.ipv6 = is_ipv6(url)
         sck.connect(url)
         sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test'
                         + LockerServer.DELIMITER + 'hi' + LockerServer.DELIMITER + '12344')

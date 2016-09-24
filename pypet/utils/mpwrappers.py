@@ -32,6 +32,7 @@ import socket
 import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import HasLogger
 from pypet.utils.decorators import retry
+from pypet.utils.helpful_functions import is_ipv6
 
 
 class MultiprocWrapper(object):
@@ -79,6 +80,7 @@ class ZMQServer(HasLogger):
         self._logger.info('Starting Server at `%s`' % self._url)
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REP)
+        self._socket.ipv6 = is_ipv6(self._url)
         self._socket.bind(self._url)
 
     def _close(self):
@@ -357,6 +359,7 @@ class ReliableClient(HasLogger):
 
     def _start_socket(self):
         self._socket = self._context.socket(zmq.REQ)
+        self._socket.ipv6 = is_ipv6(self.url)
         self._socket.connect(self.url)
         self._poll.register(self._socket, zmq.POLLIN)
 
