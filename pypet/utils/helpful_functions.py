@@ -322,9 +322,11 @@ def port_to_tcp(port=None):
         addr_list = socket.getaddrinfo('127.0.0.1', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     host = sockaddr[0]
+    ipv6 = False
     if ':' in host:
         #IP 6 address
         host = host.split('%')[0]
+        ipv6 = True
         #host = '[%s]' % host
     address =  'tcp://' + host
     if port is None:
@@ -334,6 +336,7 @@ def port_to_tcp(port=None):
         context = zmq.Context()
         try:
             socket_ = context.socket(zmq.REP)
+            socket_.ipv6 = ipv6
             port = socket_.bind_to_random_port(address, *port)
         except Exception:
             print('Could not connect to {} using {}'.format(address, addr_list))
