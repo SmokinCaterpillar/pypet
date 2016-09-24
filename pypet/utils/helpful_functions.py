@@ -321,7 +321,11 @@ def port_to_tcp(port=None):
     except Exception:
         addr_list = socket.getaddrinfo('127.0.0.1', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
-    address =  'tcp://' + sockaddr[0]
+    host = sockaddr[0]
+    if host == 'localhost':
+        #ZMQ needs an ip address not `localhost`
+        host = '127.0.0.1'
+    address =  'tcp://' + host
     if port is None:
         port = ()
     if not isinstance(port, int):
