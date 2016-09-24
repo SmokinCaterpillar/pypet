@@ -322,12 +322,13 @@ def port_to_tcp(port=None):
         addr_list = socket.getaddrinfo('127.0.0.1', None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     host = sockaddr[0]
-    ipv6 = False
     if ':' in host:
         #IP 6 address
-        host = host.split('%')[0]
+        #host = host.split('%')[0]
         ipv6 = True
         #host = '[%s]' % host
+    else:
+        ipv6 = False
     address =  'tcp://' + host
     if port is None:
         port = ()
