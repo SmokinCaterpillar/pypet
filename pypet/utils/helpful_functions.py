@@ -15,8 +15,6 @@ except ImportError:
     zmq = None
 
 import pypet.compat as compat
-from pypet.utils.decorators import deprecated
-from pypet.utils.comparisons import nested_equal as nested_equal_new
 
 
 def is_debug():
@@ -329,8 +327,13 @@ def port_to_tcp(port=None):
     if not isinstance(port, int):
         # determine port automatically
         context = zmq.Context()
-        socket_ = context.socket(zmq.REP)
-        port = socket_.bind_to_random_port(address, *port)
+        try:
+            socket_ = context.socket(zmq.REP)
+            port = socket_.bind_to_random_port(address, *port)
+        except Exception:
+            pypet_root_logger = logging.getLogger('pypet')
+            pypet_root_logger.exception('Could not connect to {}'.format(address))
+            raise
         socket_.close()
         context.term()
     return address + ':' + str(port)
