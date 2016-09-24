@@ -335,7 +335,7 @@ def port_to_tcp(port=None):
             socket_ = context.socket(zmq.REP)
             port = socket_.bind_to_random_port(address, *port)
         except Exception:
-            print('Could not connect to {}'.format(address))
+            print('Could not connect to {} using {}'.format(address, addr_list))
             pypet_root_logger = logging.getLogger('pypet')
             pypet_root_logger.exception('Could not connect to {}'.format(address))
             raise
