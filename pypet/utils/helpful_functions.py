@@ -323,9 +323,9 @@ def port_to_tcp(port=None):
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     host = sockaddr[0]
     if ':' in host:
-        #IP 6 address we need square brackets
+        #IP 6 address
         host = host.split('%')[0]
-        host = '[%s]' % host
+        #host = '[%s]' % host
     address =  'tcp://' + host
     if port is None:
         port = ()
