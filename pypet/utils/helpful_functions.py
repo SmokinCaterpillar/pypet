@@ -263,16 +263,37 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
                         time=time, length=length, fmt_string=fmt_string, reset=reset)
 
 
+def get_argspec(func):
+    """Helper function to support both Python versions"""
+    if compat.python_major == 2 or compat.python_minor < 4:
+        argspec = inspect.getargspec(func)
+        uses_starstar = bool(argspec.keywords)
+        args = argspec.args
+    elif compat.python_major == 3:
+        parameters = inspect.signature(func).parameters
+        args = []
+        uses_starstar = False
+        for par in parameters.values():
+            if (par.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or
+                        par.kind == inspect.Parameter.KEYWORD_ONLY):
+                args.append(par.name)
+            elif par.kind == inspect.Parameter.VAR_KEYWORD:
+                uses_starstar = True
+    else:
+        raise RuntimeError('You shall not pass!')
+    return args, uses_starstar
+
+
 def get_matching_kwargs(func, kwargs):
     """Takes a function and keyword arguments and returns the ones that can be passed."""
     if inspect.isclass(func):
         func = func.__init__
     try:
-        argspec = inspect.getargspec(func)
-        if argspec.keywords is not None:
+        args, uses_startstar = get_argspec(func)
+        if uses_startstar:
             return kwargs.copy()
         else:
-            matching_kwargs = dict((k, kwargs[k]) for k in argspec.args if k in kwargs)
+            matching_kwargs = dict((k, kwargs[k]) for k in args if k in kwargs)
             return matching_kwargs
     except TypeError:
         # Class has no init function
