@@ -263,13 +263,23 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
                         time=time, length=length, fmt_string=fmt_string, reset=reset)
 
 
-def get_argspec(func):
+def _get_argspec(func):
     """Helper function to support both Python versions"""
+    if inspect.isclass(func):
+        func = func.__init__
     if compat.python_major == 2 or compat.python_minor < 4:
-        argspec = inspect.getargspec(func)
-        uses_starstar = bool(argspec.keywords)
-        args = argspec.args
+        try:
+            argspec = inspect.getargspec(func)
+            uses_starstar = bool(argspec.keywords)
+            args = argspec.args
+        except TypeError:
+            # Class has no init function
+            uses_starstar = False
+            args = []
     elif compat.python_major == 3:
+        if not inspect.isfunction(func):
+            # Init function not existing
+            return [], False
         parameters = inspect.signature(func).parameters
         args = []
         uses_starstar = False
@@ -286,18 +296,12 @@ def get_argspec(func):
 
 def get_matching_kwargs(func, kwargs):
     """Takes a function and keyword arguments and returns the ones that can be passed."""
-    if inspect.isclass(func):
-        func = func.__init__
-    try:
-        args, uses_startstar = get_argspec(func)
-        if uses_startstar:
-            return kwargs.copy()
-        else:
-            matching_kwargs = dict((k, kwargs[k]) for k in args if k in kwargs)
-            return matching_kwargs
-    except TypeError:
-        # Class has no init function
-        return {}
+    args, uses_startstar = _get_argspec(func)
+    if uses_startstar:
+        return kwargs.copy()
+    else:
+        matching_kwargs = dict((k, kwargs[k]) for k in args if k in kwargs)
+        return matching_kwargs
 
 
 def result_sort(result_list, start_index=0):

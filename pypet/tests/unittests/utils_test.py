@@ -22,7 +22,7 @@ else:
 
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary, \
-    result_sort
+    result_sort, get_matching_kwargs
 from pypet.utils.comparisons import nested_equal
 from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
@@ -578,6 +578,67 @@ class NamingSchemeTest(unittest.TestCase):
         self.assertEqual(cp.vars.my_property, cp.v_my_property)
         with self.assertRaises(AttributeError):
             cp.v_my_other
+
+
+class MyClass(object):
+        def __init__(self, a, b, c, d=42):
+            pass
+
+
+class MyClassNoInit(object):
+    pass
+
+
+def kwargs_func(a, b, c=43, *args, **kwargs):
+    pass
+
+
+def argsfunc(a, b=42, *args):
+    pass
+
+
+def dummy(a, b, c, d=42):
+    pass
+
+
+class MatchingkwargsTest(unittest.TestCase):
+    tags = 'unittest', 'utils', 'naming',  'argspec'
+
+    def test_more_than_def(self):
+        kwargs = dict(a=42, f=43)
+        res = get_matching_kwargs(dummy, kwargs)
+        self.assertEqual(len(res), 1)
+        self.assertIn('a', res)
+        self.assertEqual(res['a'], 42)
+
+    def test_more_than_def_args(self):
+        kwargs = dict(a=42, f=43)
+        res = get_matching_kwargs(argsfunc, kwargs)
+        self.assertEqual(len(res), 1)
+        self.assertIn('a', res)
+        self.assertEqual(res['a'], 42)
+
+    def test_init_method(self):
+        kwargs = dict(a=42, f=43)
+        res = get_matching_kwargs(MyClass, kwargs)
+        self.assertEqual(len(res), 1)
+        self.assertIn('a', res)
+        self.assertEqual(res['a'], 42)
+
+    def test_no_match_no_init(self):
+        kwargs = dict(a=42, f=43)
+        res = get_matching_kwargs(MyClassNoInit, kwargs)
+        self.assertEqual(len(res), 0)
+
+    def test_kwargs(self):
+        kwargs = dict(a=42, f=43)
+        res = get_matching_kwargs(kwargs_func, kwargs)
+        self.assertEqual(len(res), 2)
+        self.assertIn('a', res)
+        self.assertEqual(res['a'], 42)
+        self.assertIn('f', res)
+        self.assertEqual(res['f'], 43)
+
 
 
 if __name__ == '__main__':
