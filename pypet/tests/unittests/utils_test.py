@@ -21,7 +21,6 @@ from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary, \
     result_sort, get_matching_kwargs
 from pypet.utils.comparisons import nested_equal
-from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
 from pypet.utils.decorators import retry
 from pypet import HasSlots

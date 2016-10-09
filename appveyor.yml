@@ -9,22 +9,22 @@ clone_depth: 16
 environment:
 
     matrix:
-        - PYTHON: "C:\\Python34_64"
-          PYTHON_VERSION: "3.4"
+        - PYTHON: "C:\\Python35_64"
+          PYTHON_VERSION: "3.5"
           PYTHON_ARCH: "64"
           MULTIPROC: "OFF"
           SINGLECORE: "1"
           EXAMPLES: "ON"
 
-        - PYTHON: "C:\\Python34_32"
-          PYTHON_VERSION: "3.4"
+        - PYTHON: "C:\\Python35_32"
+          PYTHON_VERSION: "3.5"
           PYTHON_ARCH: "32"
           MULTIPROC: "1"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
-        - PYTHON: "C:\\Python34_64"
-          PYTHON_VERSION: "3.4"
+        - PYTHON: "C:\\Python35_64"
+          PYTHON_VERSION: "3.5"
           PYTHON_ARCH: "64"
           MULTIPROC: "3"
           SINGLECORE: "OFF"

@@ -16,7 +16,7 @@ addons:
 matrix:
   include:
     - python: 3.3
-      env: NEWEST=FALSE PANDAS_VERSION=0.15.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.1 CYTHON_VERSION=0.15.1 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+      env: NEWEST=FALSE PANDAS_VERSION=0.15.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.1 CYTHON_VERSION=0.13 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
@@ -30,11 +30,7 @@ matrix:
 # command to install dependencies
 before_install:
   - echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.* ]]; then
-      travis_retry wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-      travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
+  - travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
@@ -60,10 +56,8 @@ install:
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry pip install tables==$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
-  - echo "+++++++++++ Installing Brian if Python 2.7 +++++++++++"
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7* ]]; then travis_retry pip install brian; fi
   - echo "+++++++++++ Installing Brian2 of NOT Python 2.6 +++++++++++"
-  - if (! [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]); then travis_retry pip install brian2; fi
+  - travis_retry pip install brian2; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
