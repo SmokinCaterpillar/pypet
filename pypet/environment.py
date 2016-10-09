@@ -2279,7 +2279,7 @@ class Environment(HasLogger):
         n_processes = len(process_dict)
         total_utilization = psutil.virtual_memory().percent
         sum = 0.0
-        for proc in process_dict.values:
+        for proc in process_dict.values():
             try:
                 sum += psutil.Process(proc.pid).memory_percent()
             except (psutil.NoSuchProcess, ZeroDivisionError):
