@@ -9,22 +9,22 @@ clone_depth: 16
 environment:
 
     matrix:
-        - PYTHON: "C:\\Python27_64"
-          PYTHON_VERSION: "2.7"
+        - PYTHON: "C:\\Python34_64"
+          PYTHON_VERSION: "3.4"
           PYTHON_ARCH: "64"
           MULTIPROC: "OFF"
           SINGLECORE: "1"
           EXAMPLES: "ON"
 
-        - PYTHON: "C:\\Python27_32"
-          PYTHON_VERSION: "2.7"
+        - PYTHON: "C:\\Python34_32"
+          PYTHON_VERSION: "3.4"
           PYTHON_ARCH: "32"
           MULTIPROC: "1"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
-        - PYTHON: "C:\\Python27_64"
-          PYTHON_VERSION: "2.7"
+        - PYTHON: "C:\\Python34_64"
+          PYTHON_VERSION: "3.4"
           PYTHON_ARCH: "64"
           MULTIPROC: "3"
           SINGLECORE: "OFF"
@@ -82,6 +82,7 @@ branches:
     - master
     - develop
     - brian2
+    - py3only
 
 
 test_script:

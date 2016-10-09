@@ -5,17 +5,8 @@ set -u # Treat references to unset variables as an error
 
 if [[ $TEST_SUITE == ON ]]
     then
-        if [[ $TRAVIS_PYTHON_VERSION == 2.6* ]]
-            then
-                # try with many files, i.e. do not remove data after every test
-                # but only for one particular setting of the test matrix python = 2.7 and newest
-                # packages
-                echo "Running test suite and keeping all files"
-                python ../../pypet/tests/all_tests.py -k
-            else
-                echo "Running test suite (with SCOOP)"
-                python -m scoop -n 3 ../../pypet/tests/all_tests.py
-            fi
+        echo "Running test suite (with SCOOP)"
+        python -m scoop -n 3 ../../pypet/tests/all_tests.py
     fi
 
 if [[ $GIT_TEST == ON ]]
@@ -26,12 +17,8 @@ if [[ $GIT_TEST == ON ]]
         cd git_sumatra_test
         echo "Initialise git repo"
         git init
-        if [[ $TRAVIS_PYTHON_VERSION == 2* ]]
-            then
-                # Only use sumatra in case of Python 2
-                echo "Initialise Sumatra Repo"
-                smt init GitTest
-            fi
+        echo "Initialise Sumatra Repo"
+        smt init GitTest
         git config --global user.email "you@example.com"
         git config --global user.name "Your Name"
         echo "DummyDummyDummy">>dummy.txt # Create a new dummy file

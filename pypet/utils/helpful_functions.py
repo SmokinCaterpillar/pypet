@@ -14,8 +14,6 @@ try:
 except ImportError:
     zmq = None
 
-import pypet.compat as compat
-
 
 def is_debug():
     """Checks if user is currently debugging.
@@ -192,14 +190,11 @@ class _Progressbar(object):
                 statement = fmt_string % statement
             if logger == 'print':
                 if reprint:
-                    if compat.python_major == 3:
-                        print('\r' + statement, end='', flush=True)
-                    else:
-                        print('\r' + statement, end='')
+                    print('\r' + statement, end='', flush=True)
                 else:
                     print(statement)
             elif logger is not None:
-                if isinstance(logger, compat.base_type):
+                if isinstance(logger, str):
                     logger = logging.getLogger(logger)
                 logger.log(msg=statement, level=log_level)
 
@@ -267,30 +262,18 @@ def _get_argspec(func):
     """Helper function to support both Python versions"""
     if inspect.isclass(func):
         func = func.__init__
-    if compat.python_major == 2 or compat.python_minor < 4:
-        try:
-            argspec = inspect.getargspec(func)
-            uses_starstar = bool(argspec.keywords)
-            args = argspec.args
-        except TypeError:
-            # Class has no init function
-            uses_starstar = False
-            args = []
-    elif compat.python_major == 3:
-        if not inspect.isfunction(func):
-            # Init function not existing
-            return [], False
-        parameters = inspect.signature(func).parameters
-        args = []
-        uses_starstar = False
-        for par in parameters.values():
-            if (par.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or
-                        par.kind == inspect.Parameter.KEYWORD_ONLY):
-                args.append(par.name)
-            elif par.kind == inspect.Parameter.VAR_KEYWORD:
-                uses_starstar = True
-    else:
-        raise RuntimeError('You shall not pass!')
+    if not inspect.isfunction(func):
+        # Init function not existing
+        return [], False
+    parameters = inspect.signature(func).parameters
+    args = []
+    uses_starstar = False
+    for par in parameters.values():
+        if (par.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or
+                    par.kind == inspect.Parameter.KEYWORD_ONLY):
+            args.append(par.name)
+        elif par.kind == inspect.Parameter.VAR_KEYWORD:
+            uses_starstar = True
     return args, uses_starstar
 
 

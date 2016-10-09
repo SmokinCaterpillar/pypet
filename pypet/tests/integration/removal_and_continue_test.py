@@ -10,7 +10,6 @@ import shutil
 
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
-import pypet.compat as compat
 from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter

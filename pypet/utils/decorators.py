@@ -64,8 +64,6 @@ def deprecated(msg=''):
             warnings.warn(
                 warning_string,
                 category=DeprecationWarning,
-                # filename=compat.func_code(func).co_filename,
-                # lineno=compat.func_code(func).co_firstlineno + 1
             )
             return func(*args, **kwargs)
 

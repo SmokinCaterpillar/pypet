@@ -4,19 +4,10 @@ __author__ = 'Robert Meyer'
 
 from collections import Sequence, Mapping
 
-try:
-    from future_builtins import zip
-except ImportError:  # not 2.6+ or is 3.x
-    try:
-        from itertools import izip as zip  # < 2.5 or 3.x
-    except ImportError:
-        pass
 import numpy as np
 import pandas as pd
 import scipy.sparse as spsp
 
-import pypet.pypetconstants as pypetconstants
-import pypet.compat as compat
 import pypet.slots as slots
 
 
@@ -281,8 +272,8 @@ def nested_equal(a, b):
     if len(attributes_a) != len(attributes_b):
         return False
     if len(attributes_a) > 0:
-        keys_a = compat.listkeys(attributes_a)
-        if set(keys_a) != set(compat.iterkeys(attributes_b)):
+        keys_a = list(attributes_a.keys())
+        if set(keys_a) != set(attributes_b.keys()):
             return False
 
         return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)

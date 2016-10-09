@@ -3,15 +3,13 @@
 __author__ = 'Robert Meyer'
 
 
-import pypet.compat as compat
-
 
 def get_all_slots(cls):
     """Iterates through a class' (`cls`) mro to get all slots as a set."""
     slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
     # `__slots__` might only be a single string,
     # so we need to put the strings into a tuple.
-    slots_converted = ((slots,) if isinstance(slots, compat.base_type) else slots
+    slots_converted = ((slots,) if isinstance(slots, str) else slots
                                 for slots in slots_iterator)
     all_slots = set()
     all_slots.update(*slots_converted)
@@ -56,7 +54,7 @@ def add_metaclass(metaclass):
         cls_dict = cls.__dict__.copy()
         slots = cls_dict.get('__slots__', None)
         if slots is not None:
-            if isinstance(slots, compat.base_type):
+            if isinstance(slots, str):
                 slots = (slots,)
             for slot in slots:
                 cls_dict.pop(slot)
@@ -118,5 +116,5 @@ class HasSlots(object):
         result = set()
         result.update(dir(self.__class__), self.__all_slots__)
         if hasattr(self, '__dict__'):
-            result.update(compat.iterkeys(self.__dict__))
+            result.update(self.__dict__.keys())
         return list(result)

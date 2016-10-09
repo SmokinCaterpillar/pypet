@@ -14,7 +14,6 @@ except ImportError:
 
 from pypet import Environment
 from pypet import cartesian_product, GitDiffError
-import pypet.compat as compat
 
 
 def multiply(traj):
@@ -51,11 +50,7 @@ def fail_on_diff():
 
 def main(fail=False):
     try:
-        if compat.python_major == 3:
-            print('Running Python 3, will not use Sumatra.')
-            sumatra_project = None
-        else:
-            sumatra_project = '.'
+        sumatra_project = '.'
 
         if fail:
             print('There better be not any diffs.')

@@ -22,7 +22,6 @@ import brian2.units.allunits as allunits
 
 import pypet.pypetexceptions as pex
 from pypet.parameter import Parameter, Result, ObjectTable
-import pypet.compat as compat
 
 
 ALLUNITS = {}
@@ -34,7 +33,7 @@ def unit_from_expression(expr):
     """Takes a unit string like ``'1. * volt'`` and returns the BRIAN2 unit."""
     if expr == '1':
         return get_unit_fast(1)
-    elif isinstance(expr, compat.base_type):
+    elif isinstance(expr, str):
         mod = ast.parse(expr, mode='eval')
         expr = mod.body
         return unit_from_expression(expr)

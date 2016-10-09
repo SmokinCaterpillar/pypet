@@ -5,12 +5,8 @@ __author__ = 'Robert Meyer'
 import functools
 import ast
 import os
-try:
-    import ConfigParser as cp
-except ImportError:
-    import configparser as cp
+import configparser as cp
 
-import pypet.compat as compat
 from pypet.pypetlogging import use_simple_logging
 
 
@@ -34,7 +30,7 @@ class ConfigInterpreter(object):
         self.config_file = kwargs.pop('config', None)
         self.parser = None
         if self.config_file:
-            if isinstance(self.config_file, compat.base_type):
+            if isinstance(self.config_file, str):
                 # Check if the config file exists
                 if not os.path.isfile(self.config_file):
                     raise ValueError('`%s` does not exist.' % self.config_file)

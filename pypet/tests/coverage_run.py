@@ -17,7 +17,7 @@ def coverage_multiprocessing_process(): # pragma: no cover
         class Process_WithCoverage(multiprocessing.Process):
             def _bootstrap(self):
                 cov = coverage(data_suffix=True,
-                    omit='*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py'.split(','))
+                    omit='*/pypet/tests/*,*/shareddata.py'.split(','))
 
                 cov.start()
                 try:

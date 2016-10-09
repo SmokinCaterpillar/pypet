@@ -7,10 +7,7 @@ import numpy as np
 import warnings
 
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory
@@ -26,7 +23,6 @@ import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult, Environment
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
-import pypet.compat as compat
 
 import copy as cp
 
@@ -294,7 +290,7 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.dpar.crun.f_remove_child('jjj', recursive=True)
         self.assertEqual(sys.getrefcount(p),2)
 
-        for child in compat.listkeys(self.traj._groups):
+        for child in list(self.traj._groups.keys()):
             self.traj.f_remove_child(child, recursive=True)
         self.assertEqual(len(self.traj._children), 0)
         self.assertEqual(len(self.traj._links), 0)

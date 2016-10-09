@@ -3,19 +3,7 @@
 import logging
 import sys
 import itertools as itools
-if sys.version_info < (2, 7, 0):
-    from ordereddict import OrderedDict
-else:
-    from collections import OrderedDict
-
-try:
-    from future_builtins import zip
-except ImportError:  # not 2.6+ or is 3.x
-    try:
-        from itertools import izip as zip  # < 2.5 or 3.x
-    except ImportError:
-        pass
-import pypet.compat as compat
+from collections import OrderedDict
 
 
 def cartesian_product(parameter_dict, combined_parameters=()):
@@ -52,7 +40,7 @@ def cartesian_product(parameter_dict, combined_parameters=()):
         combined_parameters = list(combined_parameters)
 
     for idx, item in enumerate(combined_parameters):
-        if isinstance(item, compat.base_type):
+        if isinstance(item, str):
             combined_parameters[idx] = (item,)
 
     iterator_list = []
@@ -98,7 +86,7 @@ def find_unique_points(explored_parameters):
             if val_tuple not in unique_elements:
                 unique_elements[val_tuple] = []
             unique_elements[val_tuple].append(idx)
-        return compat.listitems(unique_elements)
+        return list(unique_elements.items())
     except TypeError:
         logger = logging.getLogger('pypet.find_unique')
         logger.error('Your parameter entries could not be hashed, '

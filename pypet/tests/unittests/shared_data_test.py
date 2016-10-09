@@ -1,17 +1,14 @@
 __author__ = ('Robert Meyer', 'Mehmet Nevvaf Timur')
 
 import sys
-if sys.version_info < (2, 7, 0):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 import os
 import platform
 import numpy as np
 import pandas as pd
 import tables as pt
-from pypet import SharedPandasFrame,  ObjectTable, compat,  make_ordinary_result, Result, \
+from pypet import SharedPandasFrame,  ObjectTable,  make_ordinary_result, Result, \
     make_shared_result, compact_hdf5_file, SharedCArray, SharedEArray, \
     SharedVLArray
 
@@ -19,8 +16,7 @@ from pypet.tests.testutils.ioutils import get_root_logger, parse_args, run_suite
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, unittest
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet import Trajectory, SharedResult, SharedTable, SharedArray, load_trajectory, StorageContextManager
-import pypet.utils.ptcompat as ptcompat
-import pypet.compat as compat
+
 
 class MyTable(pt.IsDescription):
 
@@ -30,7 +26,6 @@ class MyTable(pt.IsDescription):
     weight = pt.FloatCol()
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataTrajectoryTests(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5'
@@ -68,7 +63,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.f_add_result('my.mytable', ObjectTable(data=dadict2))
 
         myarray.create_shared_data(data=thedata)
-        mytable.create_shared_data(first_row={'hi': compat.tobytes('hi'), 'huhu': np.ones(3)})
+        mytable.create_shared_data(first_row={'hi': 'hi'.encode('utf-8'), 'huhu': np.ones(3)})
 
         traj.f_store()
 
@@ -169,7 +164,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
 
         traj.f_store(only_init=True)
         myarray.create_shared_data(data=thedata)
-        mytable.create_shared_data(first_row={'hi': compat.tobytes('hi'), 'huhu': np.ones(3)})
+        mytable.create_shared_data(first_row={'hi': 'hi'.encode('utf-8'), 'huhu': np.ones(3)})
         mytable2.create_shared_data(description={'ha': pt.StringCol(2, pos=0), 'haha': pt.FloatCol(pos=1)})
         mytable3.create_shared_data(description={'ha': pt.StringCol(2, pos=0), 'haha': pt.FloatCol(pos=1)})
 
@@ -209,8 +204,8 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.shared.array.traj = traj
 
         self.assertTrue(traj.shared.t2.nrows == 11, '%s != 11' % str(traj.shared.t2.nrows))
-        self.assertTrue(traj.shared.t2[0]['ha'] == compat.tobytes('hu'), traj.shared.t2[0]['ha'])
-        self.assertTrue(traj.shared.t2[1]['ha'] == compat.tobytes('hu'), traj.shared.t2[1]['ha'])
+        self.assertTrue(traj.shared.t2[0]['ha'] == 'hu'.encode('utf-8'), traj.shared.t2[0]['ha'])
+        self.assertTrue(traj.shared.t2[1]['ha'] == 'hu'.encode('utf-8'), traj.shared.t2[1]['ha'])
         self.assertTrue('huhu' in traj.shared.t1.colnames)
         self.assertTrue(traj.shared.array[2, 2] == 10)
 
@@ -221,7 +216,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
         traj.v_storage_service.complevel = 7
 
-        first_row = {'ha': compat.tobytes('hi'), 'haha': np.zeros((3, 3))}
+        first_row = {'ha': 'hi'.encode('utf-8'), 'haha': np.zeros((3, 3))}
 
         traj.f_store(only_init=True)
 
@@ -246,7 +241,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj = load_trajectory(name=trajname, filename=filename, load_all=2)
         with StorageContextManager(traj) as cm:
             tb = traj.myres.get_data_node()
-            ptcompat.remove_rows(tb, 1000, 10000)
+            tb.remove_rows(1000, 10000)
 
             cm.flush_store()
             self.assertTrue(traj.myres.nrows == 1001)
@@ -273,7 +268,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         trajname = traj.v_name
 
         npearray = np.ones((2, 10, 3), dtype=np.float)
-        thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
+        thevlarray = np.array(['j'.encode('utf-8'), 22.2, 'gutter'.encode('utf-8')])
         traj.f_store(only_init=True)
         res = traj.f_add_result(SharedResult, 'arrays')
         res['carray'] = SharedCArray()
@@ -290,7 +285,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj = load_trajectory(name=trajname, filename=filename, load_all=2,
                                dynamic_imports=SharedResult)
 
-        toappned = [44, compat.tobytes('k')]
+        toappned = [44, 'k'.encode('utf-8')]
         with StorageContextManager(traj):
             a1 = traj.arrays.array
             a1[0, 0, 0] = 4.0
@@ -351,7 +346,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj = Trajectory(name=make_trajectory_name(self), filename=filename)
 
         npearray = np.ones((2, 10, 3), dtype=np.float)
-        thevlarray = np.array([compat.tobytes('j'), 22.2, compat.tobytes('gutter')])
+        thevlarray = np.array(['j'.encode('utf-8'), 22.2, 'gutter'.encode('utf-8')])
 
         with self.assertRaises(TypeError):
             traj.f_add_result(SharedResult, 'arrays.vlarray', SharedVLArray()).create_shared_data(obj=thevlarray)
@@ -379,7 +374,6 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         self.assertFalse(traj.v_storage_service.is_open)
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class SharedTableTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5', 'table', 'mehmet'
@@ -453,8 +447,8 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(the_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
-                self.assertEqual(row['name'], compat.tobytes('name %d' % idx))
-                self.assertEqual(row['surname'], compat.tobytes('%d surname' % idx))
+                self.assertEqual(row['name'], ('name %d' % idx).encode('utf-8'))
+                self.assertEqual(row['surname'], ('%d surname' % idx).encode('utf-8'))
                 self.assertEqual(row['weight'], idx*0.5+50.0)
 
         self.traj.f_store()
@@ -466,15 +460,15 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
-                self.assertEqual(row['name'], compat.tobytes('name %d' % idx))
-                self.assertEqual(row['surname'], compat.tobytes('%d surname' % idx))
+                self.assertEqual(row['name'], ('name %d' % idx).encode('utf-8'))
+                self.assertEqual(row['surname'], ('%d surname' % idx).encode('utf-8'))
                 self.assertEqual(row['weight'], idx*0.5+50.0)
 
             second_append_table.append([(30, 'mehmet', 'timur', 65.5)])
 
             self.assertEqual(second_append_table.read(field='id')[-1], 30)
-            self.assertEqual(second_append_table.read(field='name')[-1], compat.tobytes('mehmet'))
-            self.assertEqual(second_append_table.read(field='surname')[-1], compat.tobytes('timur'))
+            self.assertEqual(second_append_table.read(field='name')[-1], 'mehmet'.encode('utf-8'))
+            self.assertEqual(second_append_table.read(field='surname')[-1], 'timur'.encode('utf-8'))
             self.assertEqual(second_append_table.read(field='weight')[-1], 65.5)
 
         traj2.f_store()
@@ -484,15 +478,15 @@ class SharedTableTest(TrajectoryComparator):
         third_append_table = traj3.results.shared_data.table
 
         self.assertEqual((third_append_table.read(field='id')[-1]), 30)
-        self.assertEqual((third_append_table.read(field='name')[-1]), compat.tobytes('mehmet'))
-        self.assertEqual((third_append_table.read(field='surname')[-1]), compat.tobytes('timur'))
+        self.assertEqual((third_append_table.read(field='name')[-1]), 'mehmet'.encode('utf-8'))
+        self.assertEqual((third_append_table.read(field='surname')[-1]), 'timur'.encode('utf-8'))
         self.assertEqual((third_append_table.read(field='weight')[-1]), 65.5)
 
         third_append_table.append([(33, 'Harrison', 'Ford', 95.5)])
 
         self.assertEqual((third_append_table.read(field='id')[-1]), 33)
-        self.assertEqual((third_append_table.read(field='name')[-1]), compat.tobytes('Harrison'))
-        self.assertEqual((third_append_table.read(field='surname')[-1]), compat.tobytes('Ford'))
+        self.assertEqual((third_append_table.read(field='name')[-1]), 'Harrison'.encode('utf-8'))
+        self.assertEqual((third_append_table.read(field='surname')[-1]), 'Ford'.encode('utf-8'))
         self.assertEqual((third_append_table.read(field='weight')[-1]), 95.5)
 
     def test_table_iterrows(self):
@@ -604,8 +598,8 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(second_getitem_table.iterrows(-1)):
                 self.assertEqual(row['id'], 30)
-                self.assertEqual(row['name'], compat.tobytes('mehmet nevvaf'))
-                self.assertEqual(row['surname'], compat.tobytes('timur'))
+                self.assertEqual(row['name'], 'mehmet nevvaf'.encode('utf-8'))
+                self.assertEqual(row['surname'], 'timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5)
 
         traj2.f_store()
@@ -668,8 +662,8 @@ class SharedTableTest(TrajectoryComparator):
         second_setitem_table[0] = [(100, 'Mehmet Nevvaf', 'TIMUR', 75.5)]
 
         self.assertEqual(second_setitem_table.read(field='id')[0], 100)
-        self.assertEqual(second_setitem_table.read(field='name')[0], compat.tobytes('Mehmet Nevvaf'))
-        self.assertEqual(second_setitem_table.read(field='surname')[0], compat.tobytes('TIMUR'))
+        self.assertEqual(second_setitem_table.read(field='name')[0], 'Mehmet Nevvaf'.encode('utf-8'))
+        self.assertEqual(second_setitem_table.read(field='surname')[0], 'TIMUR'.encode('utf-8'))
         self.assertEqual(second_setitem_table.read(field='weight')[0], 75.5)
 
         traj2.f_store()
@@ -679,8 +673,8 @@ class SharedTableTest(TrajectoryComparator):
         third_setitem_table = traj3.results.shared_data.table
 
         self.assertEqual(third_setitem_table.read(field='id')[0], 100)
-        self.assertEqual(third_setitem_table.read(field='name')[0], compat.tobytes('Mehmet Nevvaf'))
-        self.assertEqual(third_setitem_table.read(field='surname')[0], compat.tobytes('TIMUR'))
+        self.assertEqual(third_setitem_table.read(field='name')[0], 'Mehmet Nevvaf'.encode('utf-8'))
+        self.assertEqual(third_setitem_table.read(field='surname')[0], 'TIMUR'.encode('utf-8'))
         self.assertEqual(third_setitem_table.read(field='weight')[0], 75.5)
 
     # def test_table_get_where_list(self):
@@ -780,8 +774,8 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(the_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], compat.tobytes('mehmet %d' % idx))
-                self.assertEqual(row['surname'], compat.tobytes('Timur'))
+                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
         self.traj.f_store()
@@ -793,8 +787,8 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], compat.tobytes('mehmet %d' % idx))
-                self.assertEqual(row['surname'], compat.tobytes('Timur'))
+                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
             row = second_flush_table.row
@@ -808,12 +802,11 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], compat.tobytes('mehmet %d' % idx))
-                self.assertEqual(row['surname'], compat.tobytes('Timur'))
+                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class SharedArrayTest(TrajectoryComparator):
 
     tags = 'unittest', 'trajectory', 'shared', 'hdf5', 'array', 'mehmet'

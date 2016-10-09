@@ -3,7 +3,6 @@ __author__ = 'Robert Meyer'
 import numpy as np
 import itertools as itools
 import hashlib
-import pypet.compat as compat
 from collections import deque
 
 
@@ -90,7 +89,7 @@ class ChainMap(object):
         return length
 
     def __iter__(self):
-        iter_list = [compat.iterkeys(mapping) for mapping in self._maps]
+        iter_list = [mapping.keys() for mapping in self._maps]
         return itools.chain(*iter_list)
 
 

@@ -2,10 +2,7 @@ __author__ = 'Robert Meyer'
 
 import numpy as np
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult, BaseParameter
@@ -18,7 +15,6 @@ import pandas as pd
 import pypet.utils.comparisons as comp
 from pypet.utils.helpful_classes import ChainMap
 from pypet.utils.explore import cartesian_product
-import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 from pypet.tests.testutils.ioutils import run_suite, parse_args, make_temp_dir
 from pypet.tests.testutils.data import TrajectoryComparator
@@ -664,7 +660,7 @@ class ResultTest(TrajectoryComparator):
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs')
         self.results['test.res.setitem']=self.Constructor('test.res.setitem')
 
-        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*list(self.data.values()))
         self.results['test.res.kwargs'].f_set(**self.data)
 
         for key, value in self.data.items():
@@ -803,7 +799,7 @@ class ResultTest(TrajectoryComparator):
         self.data['integer'] = 42
         self.data['float'] = 42.424242
         self.data['string'] = 'TestString! 66'
-        self.data['long'] = compat.long_type(444444444444444444)
+        self.data['long'] = 444444444444444444
         self.data['numpy_array'] = np.array([[3232.3,323232323232.32323232],[4.,4.]])
         self.data['tuple'] = (444,444,443)
         self.data['list'] = ['3','4','666']
@@ -1013,7 +1009,7 @@ class PickleResultTest(ResultTest):
                         'test.res.args':1,
                         'test.res.kwargs':2}
 
-        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*list(self.data.values()))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 class SparseResultTest(ResultTest):
@@ -1060,7 +1056,7 @@ class SparseResultTest(ResultTest):
 
         self.results['test.res.kwargs']=self.Constructor('test.res.kwargs', protocol=2)
 
-        self.results['test.res.args'].f_set(*compat.listvalues(self.data))
+        self.results['test.res.args'].f_set(*list(self.data.values()))
         self.results['test.res.kwargs'].f_set(**self.data)
 
 

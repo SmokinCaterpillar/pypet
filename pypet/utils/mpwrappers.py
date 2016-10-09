@@ -2,19 +2,10 @@
 
 __author__ = 'Robert Meyer', 'Mehmet Nevvaf Timur'
 
-try:
-    from thread import error as ThreadError
-except ImportError:
-    # Python 3 Syntax
-    from threading import ThreadError
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+
+from threading import ThreadError
+import queue
+import pickle
 try:
     import zmq
 except ImportError:

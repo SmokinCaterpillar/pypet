@@ -22,9 +22,7 @@ This module contains two classes:
 
 __author__ = 'Robert Meyer'
 
-from pypet.utils.decorators import deprecated
 from pypet.pypetlogging import HasLogger
-import pypet.compat as compat
 from pypet.slots import HasSlots
 
 class Annotations(HasSlots):
@@ -126,11 +124,11 @@ class Annotations(HasSlots):
 
         if len(args) == 0:
             if len(self._dict) == 1:
-                return self._dict[compat.listkeys(self._dict)[0]]
+                return self._dict[list(self._dict.keys())[0]]
             elif len(self._dict) > 1:
                 raise ValueError('Your annotation contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
-                                 (str(compat.listkeys(self._dict))))
+                                 (str(list(self._dict.keys()))))
             else:
                 raise AttributeError('Your annotation is empty, cannot access data.')
 

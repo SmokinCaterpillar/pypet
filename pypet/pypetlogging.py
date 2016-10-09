@@ -8,24 +8,13 @@ try:
 except NameError:
     FileNotFoundError = IOError
 
-try:
-    import ConfigParser as cp
-except ImportError:
-    import configparser as cp
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+
+import configparser as cp
+from io import StringIO
 import logging
 from logging.config import fileConfig
-try:
-    from logging.config import dictConfig
-except ImportError:
-    from logutils.dictconfig import dictConfig
-try:
-    from logging import NullHandler
-except ImportError:
-    from logutils import NullHandler
+from logging.config import dictConfig
+from logging import NullHandler
 import os
 import math
 import sys
@@ -36,7 +25,6 @@ import functools
 import socket
 
 import pypet.pypetconstants as pypetconstants
-import pypet.compat as compat
 from pypet.utils.helpful_functions import progressbar, racedirs
 from pypet.utils.decorators import retry
 from pypet.slots import HasSlots
@@ -134,7 +122,7 @@ def _change_logging_kwargs(kwargs):
     dictionary = copy.deepcopy(LOGGING_DICT)
     prefixes = ['']
     if not log_multiproc:
-        for key in compat.listkeys(dictionary):
+        for key in list(dictionary.keys()):
             if key.startswith('multiproc_'):
                 del dictionary[key]
     else:
@@ -513,7 +501,7 @@ class LoggingManager(object):
                 self.report_progress = (5, 'pypet', logging.INFO)
             elif isinstance(self.report_progress, (int, float)):
                 self.report_progress = (self.report_progress, 'pypet', logging.INFO)
-            elif isinstance(self.report_progress, compat.base_type):
+            elif isinstance(self.report_progress, str):
                 self.report_progress = (5, self.report_progress, logging.INFO)
             elif len(self.report_progress) == 2:
                 self.report_progress = (self.report_progress[0], self.report_progress[1],
@@ -525,7 +513,7 @@ class LoggingManager(object):
                 init_path = os.path.join(pypet_path, 'logging')
                 self.log_config = os.path.join(init_path, 'default.ini')
 
-            if isinstance(self.log_config, compat.base_type):
+            if isinstance(self.log_config, str):
                 if not os.path.isfile(self.log_config):
                     raise ValueError('Could not find the logger init file '
                                      '`%s`.' % self.log_config)
@@ -549,7 +537,7 @@ class LoggingManager(object):
         if self.log_stdout:
             if self.log_stdout is True:
                 self.log_stdout = ('STDOUT', logging.INFO)
-            if isinstance(self.log_stdout, compat.base_type):
+            if isinstance(self.log_stdout, str):
                 self.log_stdout = (self.log_stdout, logging.INFO)
             if isinstance(self.log_stdout, int):
                 self.log_stdout = ('STDOUT', self.log_stdout)

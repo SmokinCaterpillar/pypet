@@ -73,20 +73,16 @@ Advanced Concepts
 
 
 -----------------
-BRIAN(2) Examples
+BRIAN2 Examples
 -----------------
 
 .. toctree::
     :maxdepth: 1
 
-    ../examplesdoc/example_07
-    ../examplesdoc/example_11
     ../examplesdoc/example_23
     ../examplesdoc/example_24
 
 
 ..
-    Ex7: Small Brian network
-    Ex11: Large Complex Example
     Ex23: Small Brian2 network
     Ex24: Large Complex Brian2 Example

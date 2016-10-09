@@ -1,27 +1,18 @@
 __author__ = 'Robert Meyer'
 
 import os
-import platform
-import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
-import warnings
 
 import numpy as np
 import pandas as pd
 from scipy import sparse as spsp
 import tables as pt
-import logging
 
 from pypet import Trajectory, Parameter, load_trajectory, ArrayParameter, SparseParameter, \
     SparseResult, Result, NNGroupNode, ResultGroup, ConfigGroup, DerivedParameterGroup, \
-    ParameterGroup, Environment, pypetconstants, compat, HDF5StorageService
+    ParameterGroup, Environment, pypetconstants, HDF5StorageService
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, get_root_logger, \
     parse_args, run_suite, get_log_config, get_log_path
-from pypet.utils import ptcompat as ptcompat
 from pypet.utils.comparisons import results_equal
 import pypet.pypetexceptions as pex
 
@@ -455,8 +446,8 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(RuntimeError):
             traj.f_store()
 
-        with ptcompat.open_file(file, mode='r') as fh:
-            jj = ptcompat.get_node(fh, where='/%s/results/j/j' % traj.v_name)
+        with pt.open_file(file, mode='r') as fh:
+            jj = fh.get_node(where='/%s/results/j/j' % traj.v_name)
             self.assertTrue('josie' not in jj)
 
         traj.j.j.f_remove_child('josie')
@@ -466,10 +457,10 @@ class StorageTest(TrajectoryComparator):
         with self.assertRaises(pex.NoSuchServiceError):
             traj.f_store_child('results', recursive=True)
 
-        with ptcompat.open_file(file, mode='r') as fh:
-            jj = ptcompat.get_node(fh, where='/%s/results/j/j' % traj.v_name)
+        with pt.open_file(file, mode='r') as fh:
+            jj = fh.get_node(where='/%s/results/j/j' % traj.v_name)
             self.assertTrue('josie2' in jj)
-            josie2 = ptcompat.get_child(jj, 'josie2')
+            josie2 =jj._f_get_child('josie2')
             self.assertTrue('hey' in josie2)
             self.assertTrue('fail' not in josie2)
 
@@ -489,8 +480,8 @@ class StorageTest(TrajectoryComparator):
         traj.f_store()
 
 
-        store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters_overview
+        store = pt.open_file(filename, mode='r+')
+        table = store.root._f_get_child(traj.v_name).overview.parameters_overview
         self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
 
@@ -500,8 +491,8 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        store = ptcompat.open_file(filename, mode='r+')
-        table = ptcompat.get_child(store.root,traj.v_name).overview.parameters_overview
+        store = pt.open_file(filename, mode='r+')
+        table = store.root._f_get_child(traj.v_name).overview.parameters_overview
         self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
 
@@ -785,8 +776,8 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        with ptcompat.open_file(filename) as fh:
-            daroot = ptcompat.get_child(fh.root, traj.v_name)
+        with pt.open_file(filename) as fh:
+            daroot = fh.root._f_get_child(traj.v_name)
             dpar_table = daroot.overview.derived_parameters_overview
             self.assertTrue(len(dpar_table) == 2)
             res_table = daroot.overview.results_overview
@@ -815,8 +806,8 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue('yourtest.test' not in traj)
         self.assertTrue('yourtest' not in traj)
 
-        with ptcompat.open_file(filename) as fh:
-            daroot = ptcompat.get_child(fh.root, traj.v_name)
+        with pt.open_file(filename) as fh:
+            daroot = fh.root._f_get_child(traj.v_name)
             dpar_table = daroot.overview.derived_parameters_overview
             self.assertTrue(len(dpar_table) == 2)
             res_table = daroot.overview.results_overview
@@ -831,8 +822,8 @@ class StorageTest(TrajectoryComparator):
 
         traj.f_store()
 
-        with ptcompat.open_file(filename) as fh:
-            daroot = ptcompat.get_child(fh.root, traj.v_name)
+        with pt.open_file(filename) as fh:
+            daroot = fh.root._f_get_child(traj.v_name)
             par_table = daroot.overview.parameters_overview
             self.assertTrue(len(par_table) == 4)
 
@@ -841,8 +832,8 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_parameter('saddsdfdsfd', 111)
         traj.f_store()
 
-        with ptcompat.open_file(filename) as fh:
-            daroot = ptcompat.get_child(fh.root, traj.v_name)
+        with pt.open_file(filename) as fh:
+            daroot = fh.root._f_get_child(traj.v_name)
             par_table = daroot.overview.parameters_overview
             self.assertTrue(len(par_table) == 5)
 
@@ -1068,11 +1059,11 @@ class StorageTest(TrajectoryComparator):
 
             self.assertTrue(row['complevel'] == 4)
 
-            self.assertTrue(row['complib'] == compat.tobytes('zlib'))
+            self.assertTrue(row['complib'] == 'zlib'.encode('utf-8'))
 
             self.assertTrue(row['shuffle'])
             self.assertTrue(row['fletcher32'])
-            self.assertTrue(row['pandas_format'] == compat.tobytes('t'))
+            self.assertTrue(row['pandas_format'] == 't'.encode('utf-8'))
 
             for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
                 self.assertTrue(row[table_name])

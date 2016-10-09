@@ -1,15 +1,12 @@
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 import logging
 
 import numpy as np
 import time
 import pandas as pd
 from scipy import sparse as spsp
-from pypet import compat as compat, ArrayParameter, Parameter, SparseParameter, PickleParameter, \
+from pypet import ArrayParameter, Parameter, SparseParameter, PickleParameter, \
     PickleResult, SparseResult, ObjectTable, BaseParameter, BaseResult
 from pypet.tests.testutils.ioutils import remove_data, get_root_logger
 from pypet.utils.comparisons import parameters_equal, results_equal
@@ -35,7 +32,7 @@ def create_param_dict(param_dict):
     normal_dict = param_dict['Normal']
     normal_dict['string'] = 'Im a test string!'
     normal_dict['int'] = 42
-    normal_dict['long'] = compat.long_type(42)
+    normal_dict['long'] = 42
     normal_dict['double'] = 42.42
     normal_dict['bool'] =True
     normal_dict['trial'] = 0
@@ -101,7 +98,7 @@ def add_params(traj,param_dict):
         if isinstance(val, (np.ndarray, tuple)) or (isinstance(val, list) and
                                                         (len(val) < 4 or val[3] != ())):
             traj.f_add_parameter(ArrayParameter,key,val, comment='comment')
-        elif isinstance(val, (str,bool,float)+compat.int_types):
+        elif isinstance(val, (str,bool,float, int)):
             traj.f_add_parameter(Parameter,key,val, comment='Im a comment!')
         elif spsp.isspmatrix(val):
             traj.f_add_parameter(SparseParameter,key,val, comment='comment').v_annotations.f_set(
@@ -207,7 +204,7 @@ def simple_calculations(traj, arg1, simple_kwarg):
         my_dict['__FLOATaRRAy'] = np.array([1.0,2.0,41.0])
         my_dict['__FLOATaRRAy_nested'] = np.array([np.array([1.0,2.0,41.0]),np.array([1.0,2.0,41.0])])
         my_dict['__STRaRRAy'] = np.array(['sds','aea','sf'])
-        my_dict['__LONG'] = compat.long_type(4266)
+        my_dict['__LONG'] = 4266
         my_dict['__UNICODE'] = u'sdfdsf'
         my_dict['__BYTES'] = b'zweiundvierzig'
         my_dict['__NUMPY_UNICODE'] = np.array([u'$%&ddss'])
@@ -347,7 +344,7 @@ class TrajectoryComparator(unittest.TestCase):
     def clear_handlers(self):
         """Deletes all handlers and closes all log-files"""
         root = logging.getLogger()
-        for logger in compat.listvalues(root.manager.loggerDict) + [root]:
+        for logger in list(root.manager.loggerDict.values()) + [root]:
             if hasattr(logger, 'handlers'):
                 handlers = logger.handlers
                 for handler in handlers:
