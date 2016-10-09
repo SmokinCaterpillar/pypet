@@ -16,7 +16,7 @@ addons:
 matrix:
   include:
     - python: 3.3
-      env: NEWEST=FALSE PANDAS_VERSION=0.15.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.1 CYTHON_VERSION=0.13 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+      env: NEWEST=FALSE PANDAS_VERSION=0.15.0 TABLES_VERSION=3.1.1 NUMEXPR_VERSION=2.2.1 CYTHON_VERSION=0.14 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
@@ -57,7 +57,7 @@ install:
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian2 of NOT Python 2.6 +++++++++++"
-  - travis_retry pip install brian2; fi
+  - travis_retry pip install brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
