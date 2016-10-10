@@ -55,7 +55,7 @@ install:
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry conda install pytables=$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry pip install pandas==$PANDAS_VERSION; fi
+  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry conda install pandas=$PANDAS_VERSION; fi
   - echo "+++++++++++ Installing Brian2 of NOT Python 2.6 +++++++++++"
   - travis_retry pip install brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
