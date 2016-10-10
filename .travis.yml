@@ -16,7 +16,7 @@ addons:
 matrix:
   include:
     - python: 3.3
-      env: NEWEST=FALSE PANDAS_VERSION=0.15 TABLES_VERSION=3.0 NUMEXPR_VERSION=2.2.1 CYTHON_VERSION=0.15 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
+      env: NEWEST=FALSE PANDAS_VERSION=0.15 TABLES_VERSION=3.0 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
       env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=ON SCOOP=OFF
     - python: 3.5
@@ -39,7 +39,7 @@ before_install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy numexpr cython
   - source activate test-environment
   - pip freeze
 
@@ -48,15 +48,11 @@ install:
   - echo "Python $TRAVIS_PYTHON_VERSION"
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
   - if [[ $COVERAGE == ON ]]; then travis_retry pip install coveralls; fi
-  - echo "+++++++++++ Installing NumExpr $NUMEXPR_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install numexpr; else travis_retry pip install numexpr==$NUMEXPR_VERSION; fi
-  - echo "+++++++++++ Installing Cython $CYTHON_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install cython; else travis_retry pip install cython==$CYTHON_VERSION; fi
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry conda install pytables=$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry conda install pandas=$PANDAS_VERSION; fi
-  - echo "+++++++++++ Installing Brian2 of NOT Python 2.6 +++++++++++"
+  - echo "+++++++++++ Installing Brian2  +++++++++++"
   - travis_retry pip install brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
