@@ -3443,8 +3443,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             child_name = child.v_name
             parent.f_remove_child(child_name, recursive=True)
 
-    def f_to_dict(self, fast_access=False, short_names=False, copy=True,
-                  with_links=True):
+    def f_to_dict(self, fast_access=False, short_names=False, nested=False,
+                  copy=True, with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances/values.
 
 
@@ -3457,6 +3457,10 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             If true, keys are not full names but only the names. Raises a ValueError
             if the names are not unique.
+
+        :param nested:
+
+            If true, a nested dictionary is returned.
 
         :param copy:
 
@@ -3476,6 +3480,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access,
                                            short_names=short_names,
+                                           nested=nested,
                                            copy=copy, with_links=with_links)
 
     def f_get_config(self, fast_access=False, copy=True):

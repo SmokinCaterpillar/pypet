@@ -290,7 +290,8 @@ class HasLogger(HasSlots):
         """
         state_dict = super(HasLogger, self).__getstate__()
         if '_logger' in state_dict:
-            # Pickling does not work with loggers objects, so we just keep the logger's name:
+            # Pickling does not work with loggers objects,
+            # so we just keep the logger's name:
             state_dict['_logger'] = self._logger.name
         return state_dict
 
@@ -302,7 +303,8 @@ class HasLogger(HasSlots):
         """
         super(HasLogger, self).__setstate__(statedict)
         if '_logger' in statedict:
-            # If we re-instantiate the component the logger attribute only contains a name,
+            # If we re-instantiate the component the
+            # logger attribute only contains a name,
             # so we also need to re-create the logger:
             self._set_logger(statedict['_logger'])
 
@@ -325,7 +327,8 @@ class LoggingManager(object):
     :param trajectory: Trajectory container of Mock
     :param log_config: Logging configuration
 
-        Can be a a full name of an `ini` file. An already instantiated config parser,
+        Can be a a full name of an `ini` file.
+        An already instantiated config parser,
         or a logging dictionary.
 
     :param log_stdout: If `stdout` should be logged.
@@ -361,7 +364,8 @@ class LoggingManager(object):
         self.run_name = trajectory.f_wildcard('$')
 
     def __getstate__(self):
-        """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
+        """ConfigParsers are not guaranteed to
+        be picklable so we need to remove these."""
         state_dict = self.__dict__.copy()
         if isinstance(state_dict['log_config'], cp.RawConfigParser):
             # Config Parsers are not guaranteed to be picklable
@@ -391,7 +395,8 @@ class LoggingManager(object):
     def add_null_handler(self):
         """Adds a NullHandler to the root logger.
 
-        This is simply added to avoid warnings that no logger has been configured.
+        This is simply added to avoid warnings that no
+        logger has been configured.
 
         """
         root = logging.getLogger()

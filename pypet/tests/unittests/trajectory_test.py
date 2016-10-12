@@ -23,6 +23,7 @@ import pypet.utils.comparisons as comp
 from pypet import pypetconstants, BaseResult, Environment
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import parse_args, run_suite, get_log_config, make_temp_dir
+from pypet.utils.comparisons import nested_equal
 
 import copy as cp
 
@@ -1094,10 +1095,6 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertTrue(len(traj._linked_by) == 0)
 
-
-
-
-
     def test_remove_of_explored_stuff_if_saved(self):
 
         self.traj = Trajectory()
@@ -1152,7 +1149,6 @@ class TrajectoryTest(unittest.TestCase):
 
         self.assertFalse(peterpaulcopy in self.traj)
 
-
     def test_get_children(self):
 
         for node in self.traj.f_iter_nodes():
@@ -1197,6 +1193,36 @@ class TrajectoryTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.traj.f_to_dict(short_names=True)
+
+    def test_short_names_and_nested_failure(self):
+
+        with self.assertRaises(ValueError):
+            self.traj.f_to_dict(short_names=True, nested=True)
+
+    def test_to_nested_dict(self):
+        traj = Trajectory()
+        traj.f_add_parameter('my.param', 42)
+        traj.f_add_parameter('my.fff', 44)
+        traj.f_add_result('runs.$.myresult',55)
+
+        lookout = {
+            'parameters': {
+                'my': {
+                    'param': 42,
+                    'fff': 44
+                }
+            },
+            'results': {
+                'runs':{
+                    'run_ALL':{
+                        'myresult': 55
+                    }
+                }
+            }
+        }
+        result = traj.f_to_dict(nested=True, fast_access=True)
+        self.assertTrue(nested_equal(result, lookout),
+                        '{} != {}'.format(result, lookout))
 
     def test_iter_leaves(self):
 

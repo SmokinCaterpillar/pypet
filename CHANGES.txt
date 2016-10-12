@@ -2,6 +2,8 @@ pypet 0.3.1
 
 *   BUG FIX: Correct progressbar printing in Python3 using reprint
 
+*   ENH: New ``nested`` option for ``f_to_dict``
+
 
 pypet 0.3.0
 

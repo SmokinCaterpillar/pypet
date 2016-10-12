@@ -59,7 +59,7 @@ import pypet.pypetexceptions as pex
 import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap, IteratorChain
-from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_functions import is_debug, nest_dictionary
 from pypet.pypetlogging import HasLogger, DisableAllLogging
 from pypet.slots import HasSlots
 
@@ -1741,8 +1741,8 @@ class NaturalNamingInterface(HasLogger):
             else:
                 return (x[2] for x in iterator) # Here we only want the objects themselves
 
-    def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
-                 with_links=True):
+    def _to_dict(self, node, fast_access=True, short_names=False, nested=False,
+                 copy=True, with_links=True):
         """ Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -1755,6 +1755,10 @@ class NaturalNamingInterface(HasLogger):
             If true keys are not full names but only the names.
             Raises a ValueError if the names are not unique.
 
+        :param nested:
+
+            If true returns a nested dictionary.
+
         :param with_links:
 
             If links should be considered
@@ -1765,9 +1769,13 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if (fast_access or short_names) and not copy:
+        if (fast_access or short_names or nested) and not copy:
             raise ValueError('You can not request the original data with >>fast_access=True<< or'
-                             ' >>short_names=True<<.')
+                             ' >>short_names=True<< of >>nested=True<<.')
+
+        if nested and short_names:
+            raise ValueError('You cannot use short_names and nested at the '
+                             'same time.')
 
         # First, let's check if we can return the `flat_leaf_storage_dict` or a copy of that, this
         # is faster than creating a novel dictionary by tree traversal.
@@ -1794,10 +1802,14 @@ class NaturalNamingInterface(HasLogger):
                 new_key = val.v_full_name
 
             if new_key in result_dict:
-                raise ValueError('Your short names are not unique. Duplicate key `%s`!' % new_key)
+                raise ValueError('Your short names are not unique. '
+                                 'Duplicate key `%s`!' % new_key)
 
             new_val = self._apply_fast_access(val, fast_access)
             result_dict[new_key] = new_val
+
+        if nested:
+           result_dict = nest_dictionary(result_dict, '.')
 
         return result_dict
 
@@ -3214,7 +3226,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         else:
             return self._links
 
-    def f_to_dict(self, fast_access=False, short_names=False, with_links=True):
+    def f_to_dict(self, fast_access=False, short_names=False, nested=False, with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         This will iteratively traverse the tree and add all nodes below this group to
@@ -3229,6 +3241,10 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             If true keys are not full names but only the names. Raises a ValueError
             if the names are not unique.
 
+        :param nested:
+
+            If dictionary should be nested
+
         :param with_links:
 
             If links should be considered
@@ -3239,7 +3255,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
-                                           with_links=with_links)
+                                           nested=nested, with_links=with_links)
 
     def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA,
                       max_depth=None):
