@@ -3,7 +3,6 @@
 __author__ = 'Robert Meyer'
 
 
-
 def get_all_slots(cls):
     """Iterates through a class' (`cls`) mro to get all slots as a set."""
     slots_iterator = (getattr(c, '__slots__', ()) for c in cls.__mro__)
@@ -14,54 +13,6 @@ def get_all_slots(cls):
     all_slots = set()
     all_slots.update(*slots_converted)
     return all_slots
-
-
-def add_metaclass(metaclass):
-    """Adds a metaclass to a given class.
-
-    This decorator is used instead of `__metaclass__` to allow for
-    Python 2 and 3 compatibility.
-
-    Inspired by the *six* module:
-    (https://bitbucket.org/gutworth/six/src/784c6a213c4527ea18f86a800f51bf16bc1df5bc/six.py?at=default)
-
-    For example:
-
-    .. code-block:: python
-
-         @add_metaclass(MyMetaClass)
-         class MyClass(object):
-             pass
-
-    is equivalent to
-
-    .. code-block:: python
-
-         class MyClass(object):
-             __metaclass__ = MyMetaClass
-
-    in Python 2 or
-
-    .. code-block:: python
-
-        class MyClass(object, metaclass=MyMetaClass)
-            pass
-
-    in Python 3.
-
-    """
-    def wrapper(cls):
-        cls_dict = cls.__dict__.copy()
-        slots = cls_dict.get('__slots__', None)
-        if slots is not None:
-            if isinstance(slots, str):
-                slots = (slots,)
-            for slot in slots:
-                cls_dict.pop(slot)
-        cls_dict.pop('__dict__', None)
-        cls_dict.pop('__weakref__', None)
-        return metaclass(cls.__name__, cls.__bases__, cls_dict)
-    return wrapper
 
 
 class MetaSlotMachine(type):
@@ -76,8 +27,7 @@ class MetaSlotMachine(type):
         cls.__all_slots__ = get_all_slots(cls)
 
 
-@add_metaclass(MetaSlotMachine)
-class HasSlots(object):
+class HasSlots(object, metaclass=MetaSlotMachine):
     """Top-class that allows mixing of classes with and without slots.
 
     Takes care that instances can still be pickled with the lowest

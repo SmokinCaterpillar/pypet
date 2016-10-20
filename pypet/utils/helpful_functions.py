@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 __author__ = 'Robert Meyer'
 
 import sys
