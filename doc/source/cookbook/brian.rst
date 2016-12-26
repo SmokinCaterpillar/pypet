@@ -330,7 +330,7 @@ Every component can implement these 5 methods:
         You can now add your monitor to the ``network`` via its ``add`` functionality, see
         the the `BRIAN network`_ class.
 
-        The :func:`~pypet.brian.network.NetworkComponent.add_to_network` relies on
+        The :func:`~pypet.brian2.network.NetworkComponent.add_to_network` relies on
         the following arguments
 
         - ``traj``
@@ -375,7 +375,7 @@ NetworkAnalyser
 The :class:`~pypet.brian2.network.NetworkAnalyser` is a subclass of an ordinary component.
 It augments the component API by the function
 :func:`~pypet.brian2.network.NetworkAnalyser.analyse`.
-The very same parameters as for :func:`~pypet.brian.network.NetworkComponent.add_to_network` are
+The very same parameters as for :func:`~pypet.brian2.network.NetworkComponent.add_to_network` are
 passed to the analyse function. As the name suggests, you can run some analysis here.
 This might involve extracting data from monitors or computing statistics like Fano Factors, etc.
 
@@ -420,13 +420,13 @@ in a specific group in your trajectory. By default this group is
 (or `traj.parameters.simulation.pre_durations` for a *pre-run*),
 but you can pick another group name when you create a :class:`~pypet.brian2.network.NetworkRunner`
 instance. The order of the subruns is inferred from the ``v_annotations.order`` attribute of
-the :class:`~pypet.brian.parameter.Brian2Parameter` instances. The subruns are
+the :class:`~pypet.brian2.parameter.Brian2Parameter` instances. The subruns are
 executed in increasing order. The orders do not need to be consecutive, but a RuntimeError
 is thrown in case two subruns have the same order. There is also an Error raised if there exists a
 parameter where ``order`` cannot be found in it's ``v_annotations`` property.
 
 For instance, in ``traj.parameter.simulation.durations`` there are three
-:class:`~pypet.brian.parameter.Brian2Parameter` instances.
+:class:`~pypet.brian2.parameter.Brian2Parameter` instances.
 
     >>> init_run = traj.parameter.simulation.durations.f_add_parameter('init_run', 500 * ms)
     >>> init_run.v_annotations.order=0

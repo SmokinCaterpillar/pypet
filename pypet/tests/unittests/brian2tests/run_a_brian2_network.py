@@ -59,4 +59,5 @@ def run_network():
 
 
 if __name__ == '__main__':
-    run_network()
+    if brian2 is not None:
+        run_network()

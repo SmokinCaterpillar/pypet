@@ -26,8 +26,8 @@ class Brian2MonitorTest(ResultTest):
 
     @classmethod
     def setUpClass(cls):
-        Brian2MonitorResult.monitors = run_network()
-        pass
+        if brian2 is not None:
+            Brian2MonitorResult.monitors = run_network()
 
     def setUp(self):
         self.monitors = Brian2MonitorResult.monitors

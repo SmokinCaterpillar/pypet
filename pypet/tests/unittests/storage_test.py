@@ -1051,7 +1051,7 @@ class StorageTest(TrajectoryComparator):
 
             traj.f_store()
 
-            hdf5file = pt.openFile(filename=filename)
+            hdf5file = pt.open_file(filename=filename)
 
             table= hdf5file.root._f_getChild(traj.v_name)._f_getChild('overview')._f_getChild('hdf5_settings')
 

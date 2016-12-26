@@ -603,7 +603,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.env._traj.config.hdf5.overview.derived_parameters_overview = 1
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.open_file(self.filename)
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should = ['derived_parameters_overview', 'results_overview']
         for name in should:
@@ -630,7 +630,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.env._traj.config.hdf5.overview.explored_parameters_overview = 0
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.open_file(self.filename)
         overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
@@ -701,7 +701,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
+        hdf5file = pt.open_file(self.filename)
         traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
 
         for node in traj_group._f_walkGroups():
@@ -727,7 +727,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename, mode='a')
+        hdf5file = pt.open_file(self.filename, mode='a')
 
         ncomments = {}
 
@@ -758,7 +758,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.overview.results_summary=0
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename, mode='a')
+        hdf5file = pt.open_file(self.filename, mode='a')
 
         ncomments = {}
 
