@@ -56,11 +56,10 @@ from collections import deque
 
 from pypet.utils.decorators import deprecated, kwargs_api_change
 import pypet.pypetexceptions as pex
-import pypet.compat as compat
 import pypet.pypetconstants as pypetconstants
 from pypet.annotations import WithAnnotations
 from pypet.utils.helpful_classes import ChainMap, IteratorChain
-from pypet.utils.helpful_functions import is_debug
+from pypet.utils.helpful_functions import is_debug, nest_dictionary
 from pypet.pypetlogging import HasLogger, DisableAllLogging
 from pypet.slots import HasSlots
 
@@ -545,7 +544,7 @@ class NaturalNamingInterface(HasLogger):
             a tuple: (msg, item_to_store_load_or_remove, args, kwargs)
 
         """
-        if not isinstance(name, compat.base_type):
+        if not isinstance(name, str):
             raise TypeError('No string!')
 
         node = self._root_instance.f_get(name)
@@ -735,15 +734,15 @@ class NaturalNamingInterface(HasLogger):
             if not predicate(node):
                 return False
             elif node.v_is_group:
-                for name_ in itools.chain(compat.listkeys(node._leaves),
-                                          compat.listkeys(node._groups)):
+                for name_ in itools.chain(list(node._leaves.keys()),
+                                          list(node._groups.keys())):
                     child_ = node._children[name_]
                     child_deleted = _remove_subtree_inner(child_, predicate)
                     if child_deleted:
                         _delete_from_children(node, name_)
                         del child_
 
-                for link_ in compat.listkeys(node._links):
+                for link_ in list(node._links.keys()):
                     node.f_remove_link(link_)
 
                 if len(node._children) == 0:
@@ -823,7 +822,7 @@ class NaturalNamingInterface(HasLogger):
         # Delete all links to the node
         if full_name in root._linked_by:
             linking = root._linked_by[full_name]
-            for linking_name in compat.listkeys(linking):
+            for linking_name in list(linking.keys()):
                 linking_group, link_set = linking[linking_name]
                 for link in list(link_set):
                     linking_group.f_remove_link(link)
@@ -894,7 +893,7 @@ class NaturalNamingInterface(HasLogger):
         if len(split_name) == 0:
             if actual_node.v_is_group and actual_node.f_has_children():
                 if recursive:
-                    for child in compat.listkeys(actual_node._children):
+                    for child in list(actual_node._children.keys()):
                         actual_node.f_remove_child(child, recursive=True)
                 else:
                     raise TypeError('Cannot remove group `%s` it contains children. Please '
@@ -1173,7 +1172,7 @@ class NaturalNamingInterface(HasLogger):
         if create_new:
             if len(args) > 0 and inspect.isclass(args[0]):
                 constructor = args.pop(0)
-            if len(args) > 0 and isinstance(args[0], compat.base_type):
+            if len(args) > 0 and isinstance(args[0], str):
                 name = args.pop(0)
             elif 'name' in kwargs:
                 name = kwargs.pop('name')
@@ -1742,8 +1741,8 @@ class NaturalNamingInterface(HasLogger):
             else:
                 return (x[2] for x in iterator) # Here we only want the objects themselves
 
-    def _to_dict(self, node, fast_access=True, short_names=False, copy=True,
-                 with_links=True):
+    def _to_dict(self, node, fast_access=True, short_names=False, nested=False,
+                 copy=True, with_links=True):
         """ Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         :param fast_access:
@@ -1756,6 +1755,10 @@ class NaturalNamingInterface(HasLogger):
             If true keys are not full names but only the names.
             Raises a ValueError if the names are not unique.
 
+        :param nested:
+
+            If true returns a nested dictionary.
+
         :param with_links:
 
             If links should be considered
@@ -1766,9 +1769,13 @@ class NaturalNamingInterface(HasLogger):
 
         """
 
-        if (fast_access or short_names) and not copy:
+        if (fast_access or short_names or nested) and not copy:
             raise ValueError('You can not request the original data with >>fast_access=True<< or'
-                             ' >>short_names=True<<.')
+                             ' >>short_names=True<< of >>nested=True<<.')
+
+        if nested and short_names:
+            raise ValueError('You cannot use short_names and nested at the '
+                             'same time.')
 
         # First, let's check if we can return the `flat_leaf_storage_dict` or a copy of that, this
         # is faster than creating a novel dictionary by tree traversal.
@@ -1782,7 +1789,7 @@ class NaturalNamingInterface(HasLogger):
                     return temp_dict
 
             else:
-                iterator = compat.itervalues(temp_dict)
+                iterator = temp_dict.values()
         else:
             iterator = node.f_iter_leaves(with_links=with_links)
 
@@ -1795,10 +1802,14 @@ class NaturalNamingInterface(HasLogger):
                 new_key = val.v_full_name
 
             if new_key in result_dict:
-                raise ValueError('Your short names are not unique. Duplicate key `%s`!' % new_key)
+                raise ValueError('Your short names are not unique. '
+                                 'Duplicate key `%s`!' % new_key)
 
             new_val = self._apply_fast_access(val, fast_access)
             result_dict[new_key] = new_val
+
+        if nested:
+           result_dict = nest_dictionary(result_dict, '.')
 
         return result_dict
 
@@ -1812,10 +1823,10 @@ class NaturalNamingInterface(HasLogger):
         """
         cdp1 = current_depth + 1
         if with_links:
-            iterator = ((cdp1, x[0], x[1]) for x in compat.iteritems(node._children))
+            iterator = ((cdp1, x[0], x[1]) for x in node._children.items())
         else:
-            leaves = ((cdp1, x[0], x[1]) for x in compat.iteritems(node._leaves))
-            groups = ((cdp1, y[0], y[1]) for y in compat.iteritems(node._groups))
+            leaves = ((cdp1, x[0], x[1]) for x in node._leaves.items())
+            groups = ((cdp1, y[0], y[1]) for y in node._groups.items())
             iterator = itools.chain(groups, leaves)
         return iterator
 
@@ -2105,7 +2116,7 @@ class NaturalNamingInterface(HasLogger):
                     if climbing:
                         count = 0
                         candidate_length = len(candidate_split_name)
-                        for idx in compat.xrange(candidate_length):
+                        for idx in range(candidate_length):
 
                             if idx + split_length - count > candidate_length:
                                 break
@@ -2559,7 +2570,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                     self.f_load(recursive=True, max_depth=1, load_data=pypetconstants.LOAD_SKELETON)
             except Exception as exc:
                 pass
-        return compat.listkeys(self._children)
+        return list(self._children.keys())
 
     def __dir__(self):
         """Adds all children to auto-completion"""
@@ -2673,9 +2684,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         does not work.
 
         """
-        if isinstance(name_or_item, compat.base_type):
+        if isinstance(name_or_item, str):
             name = name_or_item
-            if isinstance(full_name_or_item, compat.base_type):
+            if isinstance(full_name_or_item, str):
                 instance = self.v_root.f_get(full_name_or_item)
             else:
                 instance =  full_name_or_item
@@ -2967,7 +2978,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     # @no_prefix_getattr
     def __getattr__(self, name):
-        if isinstance(name, compat.base_type) and name.startswith('_'):
+        if isinstance(name, str) and name.startswith('_'):
             raise AttributeError('`%s` is not part of your trajectory or it\'s tree.' % name)
         return self._nn_interface._get(self, name,
                                        fast_access=self.v_root.v_fast_access,
@@ -3215,7 +3226,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
         else:
             return self._links
 
-    def f_to_dict(self, fast_access=False, short_names=False, with_links=True):
+    def f_to_dict(self, fast_access=False, short_names=False, nested=False, with_links=True):
         """Returns a dictionary with pairings of (full) names as keys and instances as values.
 
         This will iteratively traverse the tree and add all nodes below this group to
@@ -3230,6 +3241,10 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             If true keys are not full names but only the names. Raises a ValueError
             if the names are not unique.
 
+        :param nested:
+
+            If dictionary should be nested
+
         :param with_links:
 
             If links should be considered
@@ -3240,7 +3255,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         return self._nn_interface._to_dict(self, fast_access=fast_access, short_names=short_names,
-                                           with_links=with_links)
+                                           nested=nested, with_links=with_links)
 
     def f_store_child(self, name, recursive=False, store_data=pypetconstants.STORE_DATA,
                       max_depth=None):

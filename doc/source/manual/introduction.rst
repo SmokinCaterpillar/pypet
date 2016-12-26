@@ -52,7 +52,7 @@ Main Features
 
     * pandas_ Series, DataFrames, and Panels
 
-    * BRIAN_ and BRIAN2_ quantities and monitors
+    * BRIAN2_ quantities and monitors
 
 * Easily **extendable** to other data formats!
 
@@ -90,28 +90,20 @@ Getting Started
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, 3.4, or 3.5 [#pythonversion]_, and
+3.3, 3.4, or 3.5 [#pythonversion]_, and
 
 * numpy_ >= 1.6.1
 
 * scipy_ >= 0.9.0
 
-* tables_ >= 2.3.1
+* tables_ >= 3.1.1
 
-* pandas_ >= 0.14.1
+* pandas_ >= 0.15.0
 
 * HDF5_ >= 1.8.9
 
-If you use Python 2.6 you also need
-
-* ordereddict_ >= 1.1
-
-* importlib_ >= 1.0.1
-
-* logutils_ >= 0.3.3
-
-* unittest2_
-
+Python 2.6 and 2.7 are no longer supported. Still if you
+need *pypet* for these versions check out the legacy `0.3.0`_ package.
 
 ^^^^^^^^^^^^^^^^^
 Optional Packages
@@ -536,4 +528,4 @@ Cheers,
 
 .. _DEAP: http://deap.readthedocs.org/en/
 
-
+.. _0.3.0: https://pypi.python.org/pypi/pypet/0.3.0

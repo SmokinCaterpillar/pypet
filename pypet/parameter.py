@@ -62,10 +62,7 @@ numpy 64 bit integers, for instance.
 __author__ = 'Robert Meyer'
 
 
-try:
-    import cPickle as pickle  # will fail under python 3
-except ImportError:
-    import pickle
+import pickle
 import pickletools
 
 import numpy as np
@@ -78,7 +75,6 @@ import pypet.utils.comparisons as comparisons
 from pypet.utils.decorators import deprecated, copydoc
 from pypet.utils.helpful_classes import HashArray
 import pypet.pypetexceptions as pex
-import pypet.compat as compat
 
 
 class ObjectTable(DataFrame):
@@ -1597,7 +1593,7 @@ class SparseParameter(ArrayParameter):
         """
         matrix_format = data_list[0]
         data = data_list[1]
-        is_empty = isinstance(data, compat.base_type) and data == '__empty__'
+        is_empty = isinstance(data, str) and data == '__empty__'
 
         if matrix_format == 'csc':
             if is_empty:
@@ -2165,11 +2161,11 @@ class Result(BaseResult):
 
         if len(args) == 0:
             if len(self._data) == 1:
-                return compat.listvalues(self._data)[0]
+                return list(self._data.values())[0]
             elif len(self._data) > 1:
                 raise ValueError('Your result `%s` contains more than one entry: '
                                  '`%s` Please use >>f_get<< with one of these.' %
-                                 (self.v_full_name, str(compat.listkeys(self._data))))
+                                 (self.v_full_name, str(list(self._data.keys()))))
             else:
                 raise AttributeError('Your result `%s` is empty, cannot access data.' %
                                      self.v_full_name)
@@ -2179,7 +2175,7 @@ class Result(BaseResult):
             name = self.f_translate_key(name)
             if not name in self._data:
                 if name == 'data' and len(self._data) == 1:
-                    return self._data[compat.listkeys(self._data)[0]]
+                    return self._data[list(self._data.keys())[0]]
                 else:
                     raise AttributeError('`%s` is not part of your result `%s`.' %
                                          (name, self.v_full_name))
@@ -2385,7 +2381,7 @@ class SparseResult(Result):
         Reconstruction of sparse matrices similar to the :class:`~pypet.parameter.SparseParameter`.
 
         """
-        for key in compat.listkeys(load_dict):
+        for key in list(load_dict.keys()):
             # We delete keys over time:
             if key in load_dict:
                 if SparseResult.IDENTIFIER in key:
@@ -2484,7 +2480,7 @@ class PickleResult(Result):
             self.v_protocol = load_dict.pop(PickleParameter.PROTOCOL)
         except KeyError:
             # For backwards compatibility
-            dump = next(compat.itervalues(load_dict))
+            dump = next(load_dict.values())
             self.v_protocol = PickleParameter._get_protocol(dump)
         for key in load_dict:
             val = load_dict[key]

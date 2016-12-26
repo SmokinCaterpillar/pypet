@@ -9,23 +9,10 @@ except ImportError:
     from distutils.core import setup
 
 install_requires=[
-        'tables >= 2.3.1',
-        'pandas >= 0.14.1',
+        'tables >= 3.1.1',
+        'pandas >= 0.15.0',
         'numpy >= 1.6.1',
         'scipy >= 0.9.0']
-
-# check if importlib exists, if not (aka python 2.6) install it
-try:
-    import importlib
-except ImportError:
-    install_requires.append('importlib')
-
-if (sys.version_info < (2, 7, 0)):
-    # For Python 2.6 we additionally need these packages:
-    install_requires.append(['unittest2'])
-    install_requires.append('ordereddict >= 1.1')
-    install_requires.append('importlib >= 1.0.1')
-    install_requires.append('logutils >= 0.3.3')
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()
@@ -41,7 +28,6 @@ setup(
     name='pypet',
     version=verstr,
     packages=['pypet',
-              'pypet.brian',
               'pypet.brian2',
               'pypet.utils',
               'pypet.tests',
@@ -49,8 +35,6 @@ setup(
               'pypet.tests.integration',
               'pypet.tests.profiling',
               'pypet.tests.testutils',
-              'pypet.tests.unittests.briantests',
-              'pypet.tests.integration.briantests',
               'pypet.tests.unittests.brian2tests',
               'pypet.tests.integration.brian2tests',
               ],
@@ -64,8 +48,6 @@ setup(
     install_requires=install_requires,
     classifiers=[
         'Development Status :: 4 - Beta',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

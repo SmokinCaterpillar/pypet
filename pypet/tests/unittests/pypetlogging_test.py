@@ -1,15 +1,9 @@
 __author__ = 'Robert Meyer'
 
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 from pypet.pypetlogging import LoggingManager
 from pypet.tests.testutils.ioutils import get_log_config, run_suite, parse_args

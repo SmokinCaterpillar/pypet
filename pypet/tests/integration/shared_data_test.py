@@ -5,10 +5,7 @@ import logging
 import random
 
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 import tables as pt
 import scipy.sparse as spsp
@@ -21,10 +18,9 @@ from pypet.shareddata import *
 from pypet import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
      get_root_logger, parse_args, get_log_config, get_random_port_url
-from pypet import compat, Environment, cartesian_product
+from pypet import  Environment, cartesian_product
 from pypet import pypetconstants
 from pypet.tests.testutils.data import create_param_dict, add_params, TrajectoryComparator
-import pypet.utils.ptcompat as ptcompat
 
 
 def copy_one_entry_from_giant_matrices(traj):
@@ -93,14 +89,14 @@ def write_into_shared_storage(traj):
     with StorageContextManager(traj) as cm:
         t1 = tabs.t1
         row = t1.row
-        row['run_name'] = compat.tobytes(traj.v_crun)
+        row['run_name'] = traj.v_crun.encode('utf-8')
         row['idx'] = idx
         row.append()
         t1.flush()
 
     t2 = tabs.t2
     row = t2[idx]
-    if row['run_name'] != compat.tobytes(traj.v_crun):
+    if row['run_name'] != traj.v_crun.encode('utf-8'):
         raise RuntimeError('Names in run table do not match, Run: %s != %s' % (row['run_name'],
                                                                                    traj.v_crun) )
 
@@ -108,7 +104,6 @@ def write_into_shared_storage(traj):
     df.append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class StorageDataEnvironmentTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment', 'shared'
@@ -286,7 +281,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
         with StorageContextManager(traj):
             for row in t1:
-                run_name = compat.tostr(row['run_name'])
+                run_name = row['run_name'].decode('utf-8')
                 idx = row['idx']
                 self.assertTrue(traj.f_idx_to_run(run_name) == idx)
 
@@ -416,7 +411,6 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         # self.compare_trajectories(self.traj, newtraj)
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageLockTest(StorageDataEnvironmentTest):
 
     # def test_run(self):
@@ -434,7 +428,6 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
 
 
 @unittest.skipIf(zmq is None, 'Can only be run with zmq')
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
 
     # def test_run(self):
@@ -452,7 +445,6 @@ class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
         return super(MultiprocStorageNetlockTest, self).test_run_large()
 
 
-@unittest.skipIf(ptcompat.tables_version < 3, 'Only supported for PyTables 3 and newer')
 class MultiprocStorageNoPoolLockTest(StorageDataEnvironmentTest):
 
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'nopool', 'shared', 'lock'

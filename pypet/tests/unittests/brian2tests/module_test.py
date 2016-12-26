@@ -2,10 +2,7 @@ __author__ = 'robert'
 
 
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 try:
     import brian2

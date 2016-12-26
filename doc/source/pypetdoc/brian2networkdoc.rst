@@ -2,7 +2,7 @@
 Brian2 Network Framework
 ========================
 
-.. automodule:: pypet.brian.network
+.. automodule:: pypet.brian2.network
 
 
 ----------

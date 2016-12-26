@@ -15,10 +15,7 @@ from pypet import pypetconstants, Result, manual_run
 import pypet.pypetexceptions as pex
 
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 try:
     import psutil
@@ -31,8 +28,6 @@ except ImportError:
 
 import scipy.sparse as spsp
 import random
-import pypet.compat as compat
-import pypet.utils.ptcompat as ptcompat
 from pypet import Parameter
 
 import tables as pt
@@ -303,7 +298,7 @@ class EnvironmentTest(TrajectoryComparator):
     def test_file_overwriting(self):
         self.traj.f_store()
 
-        with ptcompat.open_file(self.filename, mode='r') as file:
+        with pt.open_file(self.filename, mode='r') as file:
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 0)
 
@@ -314,7 +309,7 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.assertTrue(os.path.exists(self.filename))
 
-        with ptcompat.open_file(self.filename, mode='r') as file:
+        with pt.open_file(self.filename, mode='r') as file:
             nchildren = len(file.root._v_children)
             self.assertTrue(nchildren > 1)
 
@@ -608,8 +603,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.env._traj.config.hdf5.overview.derived_parameters_overview = 1
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
-        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        hdf5file = pt.open_file(self.filename)
+        overview_group = hdf5file.get_node(where='/'+ self.traj.v_name, name='overview')
         should = ['derived_parameters_overview', 'results_overview']
         for name in should:
             self.assertTrue(name in overview_group, '%s not in overviews but it should!' % name)
@@ -635,8 +630,8 @@ class EnvironmentTest(TrajectoryComparator):
         self.env._traj.config.hdf5.overview.explored_parameters_overview = 0
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
-        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        hdf5file = pt.open_file(self.filename)
+        overview_group = hdf5file.get_node(where='/'+ self.traj.v_name, name='overview')
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
             name = name.split('.')[-1] # Get only the name of the table, no the full name
@@ -706,10 +701,10 @@ class EnvironmentTest(TrajectoryComparator):
 
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename)
-        traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
+        hdf5file = pt.open_file(self.filename)
+        traj_group = hdf5file.get_node(where='/', name= self.traj.v_name)
 
-        for node in traj_group._f_walkGroups():
+        for node in traj_group._f_walk_groups():
             if 'SRVC_LEAF' in node._v_attrs:
                 self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
                                     'There is no comment in node %s!' % node._v_name)
@@ -732,15 +727,15 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
 
-        hdf5file = pt.openFile(self.filename, mode='a')
+        hdf5file = pt.open_file(self.filename, mode='a')
 
         ncomments = {}
 
         try:
-            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
+            traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
-            for node in traj_group._f_walkGroups():
+            for node in traj_group._f_walk_groups():
                 if ('/derived_parameters/' in node._v_pathname or
                     '/results/' in node._v_pathname):
                     if 'SRVC_LEAF' in node._v_attrs:
@@ -763,15 +758,15 @@ class EnvironmentTest(TrajectoryComparator):
         self.traj.overview.results_summary=0
         self.make_run()
 
-        hdf5file = pt.openFile(self.filename, mode='a')
+        hdf5file = pt.open_file(self.filename, mode='a')
 
         ncomments = {}
 
         try:
-            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
+            traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
-            for node in traj_group._f_walkGroups():
+            for node in traj_group._f_walk_groups():
                 if ('/derived_parameters/' in node._v_pathname or
                     '/results/' in node._v_pathname):
                     if 'SRVC_LEAF' in node._v_attrs:
@@ -922,7 +917,7 @@ class ResultSortTest(TrajectoryComparator):
         traj = self.traj
         traj.f_store()
         self.assertTrue(len(traj), 5)
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -946,7 +941,7 @@ class ResultSortTest(TrajectoryComparator):
         self.assertEqual(len(results), len(self.traj))
 
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -977,7 +972,7 @@ class ResultSortTest(TrajectoryComparator):
 
 
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1014,7 +1009,7 @@ class ResultSortTest(TrajectoryComparator):
         results = self.env.f_run(multiply)
         self.are_results_in_order(results)
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1076,7 +1071,7 @@ class ResultSortTest(TrajectoryComparator):
         results = self.env.f_run(multiply)
         self.are_results_in_order(results)
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1118,7 +1113,7 @@ class ResultSortTest(TrajectoryComparator):
 
         get_root_logger().info(results)
         traj = self.traj
-        self.assertEqual(len(traj), len(list(compat.listvalues(self.explore_dict)[0])))
+        self.assertEqual(len(traj), len(list(list(self.explore_dict.values())[0])))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1140,7 +1135,8 @@ class ResultSortTest(TrajectoryComparator):
         self.are_results_in_order(results)
 
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+ len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.expand_dict.values())[0])+
+                        len(list(self.explore_dict.values())[0]))
 
 
         self.traj.f_load_skeleton()
@@ -1161,7 +1157,7 @@ class ResultSortTest(TrajectoryComparator):
         self.are_results_in_order(results)
 
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)
@@ -1171,8 +1167,8 @@ class ResultSortTest(TrajectoryComparator):
 
         self.env.f_run(multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.expand_dict)[0])+\
-                        len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.expand_dict.values())[0])+\
+                        len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)

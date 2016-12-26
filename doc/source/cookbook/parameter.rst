@@ -134,8 +134,8 @@ For convenience ``param.data`` works as well instead of :func:`~pypet.parameter.
 Note that ``param.v_data`` is not valid syntax. The idea is that ``.data`` works as an
 extension to the natural naming scheme.
 
-For people using BRIAN_ quantities, there also exists a
-:class:`~pypet.brian.parameter.BrianParameter`.
+For people using BRIAN2_ quantities, there also exists a
+:class:`~pypet.brian2.parameter.Brian2Parameter`.
 
 
 .. _more-on-results:
@@ -249,13 +249,13 @@ The following results exist:
     Note that it is not checked whether data can be pickled, so take care that it works!
 
 
-For those of you using BRIAN_, there exists also the
-:class:`~pypet.brian.parameter.BrianMonitorResult` for monitor data and the
-:class:`~pypet.brian.parameter.BrianResult` to handle brian quantities.
+For those of you using BRIAN2_, there exists also the
+:class:`~pypet.brian2.parameter.Brian2MonitorResult` for monitor data and the
+:class:`~pypet.brian2.parameter.Brian2Result` to handle brian quantities.
 
 
 .. _Scipy: http://docs.scipy.org/doc/scipy/reference/sparse.html
 
-.. _BRIAN: http://briansimulator.org/
+.. _BRIAN2: https://brian2.readthedocs.io/en/stable/
 
 .. _pandas: http://pandas.pydata.org/pandas-docs/dev/index.html

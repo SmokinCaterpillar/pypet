@@ -32,27 +32,17 @@ will only run under **Python 3**!
 Requirements
 ------------
 
-Python 2.6, 2.7, 3.3, 3.4, or 3.5, and
+Python 3.4, or 3.5, and
 
-* tables >= 2.3.1
+* tables >=  3.1.1
 
-* pandas >= 0.14.1
+* pandas >= 0.15.0
 
 * numpy >= 1.6.1
 
 * scipy >= 0.9.0
 
 * HDF5 >= 1.8.9
-
-If you use Python 2.6 you also need
-
-* ordereddict >= 1.1
-
-* importlib >= 1.0.1
-
-* logutils >= 0.3.3
-
-* unittest2
 
 
 There are also some optional packages that you can but do not have to install.

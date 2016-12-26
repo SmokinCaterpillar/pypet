@@ -15,22 +15,15 @@ from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data,
 from pypet.trajectory import Trajectory
 from pypet.parameter import ArrayParameter, Parameter, SparseParameter, PickleParameter
 
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary, \
     result_sort, get_matching_kwargs
 from pypet.utils.comparisons import nested_equal
-from pypet.utils.to_new_tree import FileUpdater
 from pypet.utils.helpful_classes import IteratorChain
 from pypet.utils.decorators import retry
-import pypet.compat as compat
 from pypet import HasSlots
-
-
 
 
 class RaisesNTypeErrors(object):
@@ -237,51 +230,6 @@ class ResultSortFuncTest(unittest.TestCase):
         self.test_sort(500, 1000)
 
 
-@unittest.skipIf(compat.python_major >= 3, 'Only supported for python 2')
-class TestNewTreeTranslation(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'legacy'
-
-    def test_file_translation(self):
-        filename = make_temp_dir('to_new_tree.hdf5')
-        mytraj = Trajectory('SCRATCH', filename=filename)
-
-        mytraj.f_add_parameter('Test.Group.Test', 42)
-
-        mytraj.f_add_derived_parameter('trajectory.saaaa',33)
-
-        mytraj.f_add_derived_parameter('trajectory.intraj.dpar1',33)
-
-        mytraj.f_add_derived_parameter('run_00000008.inrun.dpar2',33)
-        mytraj.f_add_derived_parameter('run_00000001.inrun.dpar3',35)
-
-
-        mytraj.f_add_result('trajectory.intraj.res1',33)
-
-        mytraj.f_add_result('run_00000008.inrun.res1',33)
-
-        mytraj.f_store()
-
-        mytraj.f_migrate(new_name=mytraj.v_name + 'PETER', in_store=True)
-
-        mytraj.f_store()
-
-        fu=FileUpdater(filename=filename, backup=True)
-
-        fu.update_file()
-
-        mytraj = Trajectory(name=mytraj.v_name, add_time=False, filename=filename)
-        mytraj.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
-
-        for node in mytraj.f_iter_nodes():
-            self.assertTrue(node.v_name != 'trajectory')
-
-            if 'run_' in node.v_full_name:
-                self.assertTrue('.runs.' in node.v_full_name)
-
-        remove_data()
-
-
 class MyDummy(object):
     pass
 
@@ -461,16 +409,12 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertTrue(nested_equal(a, b))
         self.assertTrue(nested_equal(b, a))
-        if compat.python_major == 2:
-            self.assertTrue(a == b)
 
         b = MyDummyCMP(1)
 
         self.assertFalse(nested_equal(a, b))
 
         self.assertFalse(nested_equal(b, a))
-        if compat.python_major == 2:
-            self.assertTrue(not (a == b))
 
         self.assertFalse(nested_equal(a, 22))
         self.assertFalse(nested_equal(22, a))
@@ -486,7 +430,7 @@ class TestIteratorChain(unittest.TestCase):
     tags = 'unittest', 'utils', 'iterators'
 
     def test_next(self):
-        l1 = (x for x in compat.xrange(3))
+        l1 = (x for x in range(3))
         l2 = iter([3,4,5])
         l3 = iter([6])
         l4 = iter([7,8])
@@ -499,7 +443,7 @@ class TestIteratorChain(unittest.TestCase):
                 chain.add(l4)
 
     def test_iter(self):
-        l1 = (x for x in compat.xrange(3))
+        l1 = (x for x in range(3))
         l2 = iter([3,4,5])
         l3 = iter([6])
         l4 = iter([7,8])

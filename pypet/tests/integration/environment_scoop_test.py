@@ -10,8 +10,6 @@ try:
 except ImportError:
     scoop = None
 
-import pypet.compat as compat
-
 
 def identity(x):
     return x

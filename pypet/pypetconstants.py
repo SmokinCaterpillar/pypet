@@ -7,15 +7,14 @@ that are recognized by storage services to determine how to store and load data.
 
 __author__ = 'Robert Meyer'
 
-import pypet.compat as compat
 
+import sys
 
 ####################### VERSIONS_TO_STORE ####################
 from pypet._version import __version__ as VERSION
 import tables
 tablesversion = tables.__version__
-import pypet.utils.ptcompat as ptcompat
-hdf5version = ptcompat.hdf5_version
+hdf5version = tables.hdf5_version
 import pandas
 pandasversion = pandas.__version__
 import numpy
@@ -53,7 +52,10 @@ try:
 except ImportError:
     gitversion = 'N/A'
 
-VERSIONS_TO_STORE = {'pypet': VERSION, 'python': compat.python_version_string,
+
+python_version_string = '.'.join([str(x) for x in sys.version_info[0:3]])
+
+VERSIONS_TO_STORE = {'pypet': VERSION, 'python': python_version_string,
                      'scipy': scipyversion, 'numpy': numpyversion, 'PyTables': tablesversion,
                      'pandas': pandasversion, 'Sumatra': sumatraversion,
                      'dill': dillversion, 'GitPython': gitversion,
@@ -67,7 +69,6 @@ PARAMETERTYPEDICT = {bool.__name__: bool,
                      complex.__name__: complex,
                      float.__name__: float,
                      int.__name__: int,
-                     compat.long_type.__name__: compat.long_type,
                      numpy.bool_.__name__: numpy.bool_,
                      numpy.complex128.__name__: numpy.complex128,
                      numpy.complex64.__name__: numpy.complex64,
@@ -82,8 +83,8 @@ PARAMETERTYPEDICT = {bool.__name__: bool,
                      numpy.uint32.__name__: numpy.uint32,
                      numpy.uint64.__name__: numpy.uint64,
                      numpy.uint8.__name__: numpy.uint8,
-                     compat.unicode_type.__name__: compat.unicode_type,
-                     compat.bytes_type.__name__: compat.bytes_type}
+                     str.__name__: str,
+                     bytes.__name__: bytes}
 """ A Mapping (dict) from the the string representation of a type and the type.
 
 These are the so far supported types of the storage service and the standard parameter!
@@ -121,8 +122,8 @@ PARAMETER_SUPPORTED_DATA = (numpy.int8,
                             numpy.complex,
                             numpy.complex_,
                             numpy.str_,
-                            compat.unicode_type,
-                            compat.bytes_type)
+                            str,
+                            bytes)
 """Set of supported scalar types by the storage service and the standard parameter"""
 
 

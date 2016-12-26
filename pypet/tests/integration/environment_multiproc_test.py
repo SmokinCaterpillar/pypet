@@ -11,7 +11,6 @@ from pypet.tests.integration.environment_test import EnvironmentTest, ResultSort
 from pypet.tests.testutils.ioutils import run_suite,make_temp_dir, make_trajectory_name, \
      parse_args, get_log_config, unittest, get_random_port_url
 from pypet.tests.testutils.data import create_param_dict, add_params
-import pypet.compat as compat
 import platform
 
 try:
@@ -325,7 +324,7 @@ class MultiprocFrozenPoolSortQueueTest(ResultSortTest):
 
         self.env.f_run(new_multiply)
         traj = self.traj
-        self.assertTrue(len(traj) == len(compat.listvalues(self.explore_dict)[0]))
+        self.assertTrue(len(traj) == len(list(self.explore_dict.values())[0]))
 
         self.traj.f_load_skeleton()
         self.traj.f_load_items(self.traj.f_to_dict().keys(), only_empties=True)

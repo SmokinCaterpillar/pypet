@@ -65,8 +65,6 @@ try:
 except ImportError:
     zmq = None
 
-import pypet.compat as compat
-import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
@@ -84,6 +82,7 @@ from pypet.utils.helpful_functions import is_debug, result_sort, format_time, po
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
+import pypet.pypetconstants as pypetconstants
 
 
 def _pool_single_run(kwargs):
@@ -1194,7 +1193,7 @@ class Environment(HasLogger):
         self._git_fail = git_fail
 
         # Check if a novel trajectory needs to be created.
-        if isinstance(trajectory, compat.base_type):
+        if isinstance(trajectory, str):
             # Create a new trajectory
             self._traj = Trajectory(trajectory,
                                     add_time=add_time,
@@ -1225,10 +1224,10 @@ class Environment(HasLogger):
 
         if not new_commit:
             # Otherwise we need to create a novel hexsha
-            self._hexsha = hashlib.sha1(compat.tobytes(self.trajectory.v_name +
+            self._hexsha = hashlib.sha1((self.trajectory.v_name +
                                                        str(self.trajectory.v_timestamp) +
                                                        str(self.timestamp) +
-                                                           VERSION)).hexdigest()
+                                                           VERSION).encode('utf-8')).hexdigest()
 
         # Create the name of the environment
         short_hexsha = self._hexsha[0:7]
@@ -1315,7 +1314,7 @@ class Environment(HasLogger):
         self._clean_up_runs = clean_up_runs
 
         if (wrap_mode == pypetconstants.WRAP_MODE_NETLOCK and
-                not isinstance(port, compat.base_type)):
+                not isinstance(port, str)):
                 url = port_to_tcp(port)
                 self._logger.info('Determined lock-server URL automatically, it is `%s`.' % url)
         else:
@@ -1865,7 +1864,7 @@ class Environment(HasLogger):
         reason += 'Trajectory %s%s -- Explored Parameters: %s' % \
                   (self._traj.v_name,
                    commentstr,
-                   str(compat.listkeys(self._traj._explored_parameters)))
+                   str(list(self._traj._explored_parameters.keys())))
 
         self._logger.info('Preparing sumatra record with reason: %s' % reason)
         self._sumatra_reason = reason
@@ -1874,7 +1873,7 @@ class Environment(HasLogger):
         if self._traj.f_contains('parameters', shortcuts=False):
             param_dict = self._traj.parameters.f_to_dict(fast_access=False)
 
-            for param_name in compat.listkeys(param_dict):
+            for param_name in list(param_dict.keys()):
                 param = param_dict[param_name]
                 if param.f_has_range():
                     param_dict[param_name] = param.f_get_range()
@@ -2144,7 +2143,7 @@ class Environment(HasLogger):
     def _make_index_iterator(self, start_run_idx):
         """Returns an iterator over the run indices that are not completed"""
         total_runs = len(self._traj)
-        for n in compat.xrange(start_run_idx, total_runs):
+        for n in range(start_run_idx, total_runs):
             self._current_idx = n + 1
             if self._stop_iteration:
                 self._logger.debug('I am stopping new run iterations now!')
@@ -2164,7 +2163,7 @@ class Environment(HasLogger):
             if self._map_arguments:
 
                 self._args = tuple(iter(arg) for arg in self._args)
-                for key in compat.listkeys(self._kwargs):
+                for key in list(self._kwargs.keys()):
                     self._kwargs[key] = iter(self._kwargs[key])
 
                 for idx in self._make_index_iterator(start_run_idx):
@@ -2280,7 +2279,7 @@ class Environment(HasLogger):
         n_processes = len(process_dict)
         total_utilization = psutil.virtual_memory().percent
         sum = 0.0
-        for proc in compat.itervalues(process_dict):
+        for proc in process_dict.values():
             try:
                 sum += psutil.Process(proc.pid).memory_percent()
             except (psutil.NoSuchProcess, ZeroDivisionError):
@@ -2730,7 +2729,7 @@ class Environment(HasLogger):
 
                 while len(process_dict) > 0 or keep_running:
                     # First check if some processes did finish their job
-                    for pid in compat.listkeys(process_dict):
+                    for pid in list(process_dict.keys()):
                         proc = process_dict[pid]
 
                         # Delete the terminated processes
@@ -3125,7 +3124,7 @@ class MultiprocContext(HasLogger):
 
     def _prepare_netlock(self):
         """ Replaces the trajectory's service with a LockWrapper """
-        if not isinstance(self._port, compat.base_type):
+        if not isinstance(self._port, str):
             url = port_to_tcp(self._port)
             self._logger.info('Determined Server URL: `%s`' % url)
         else:
@@ -3243,7 +3242,7 @@ class MultiprocContext(HasLogger):
         """
         self._logger.info('Starting Network Queue!')
 
-        if not isinstance(self._port, compat.base_type):
+        if not isinstance(self._port, str):
             url = port_to_tcp(self._port)
             self._logger.info('Determined Server URL: `%s`' % url)
         else:

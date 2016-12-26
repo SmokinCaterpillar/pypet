@@ -13,7 +13,6 @@ import os
 from pypet.utils.helpful_functions import get_matching_kwargs
 from pypet.storageservice import HDF5StorageService
 from pypet.utils.dynamicimports import create_class
-import pypet.compat as compat
 
 
 def _create_storage(storage_service, trajectory=None, **kwargs):
@@ -55,7 +54,7 @@ def storage_factory(storage_service, trajectory=None, **kwargs):
         else:
             raise ValueError('Extension `%s` of filename `%s` not understood.' %
                              (ext, filename))
-    elif isinstance(storage_service, compat.base_type):
+    elif isinstance(storage_service, str):
         class_name = storage_service.split('.')[-1]
         storage_service = create_class(class_name, [storage_service, HDF5StorageService])
 

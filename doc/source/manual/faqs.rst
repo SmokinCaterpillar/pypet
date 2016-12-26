@@ -6,6 +6,16 @@ FAQs and Known Issues
 Tools and Extensions
 --------------------
 
+**Q:** Does *pypet* support Python 2.6 and 2.7?
+
+    **A:** Python 2.6 and 2.7 are no longer supported. Still if you
+    need *pypet* for these versions check out the legacy `0.3.0`_ package.
+    You can pip install it via ``pip install pypet==0.3.0``.
+
+
+.. _0.3.0: https://pypi.python.org/pypi/pypet/0.3.0
+
+
 **Q:** How can I open and inspect an HDF5 file created by *pypet*?
 
     **A:** For inspection I mostly use these two tools: HDFview_ and ViTables_.

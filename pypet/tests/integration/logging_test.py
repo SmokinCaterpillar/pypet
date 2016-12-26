@@ -5,10 +5,7 @@ import itertools as itools
 import os
 import platform
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator

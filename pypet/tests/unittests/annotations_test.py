@@ -8,17 +8,9 @@ import numpy as np
 from pypet.trajectory import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_dir, remove_data, run_suite, parse_args
 from pypet.utils import comparisons as comp
+import pickle
+import unittest
 
-
-try:
-    import cPickle as pickle # will fail under python 3
-except ImportError:
-    import pickle
-
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
 
 class AnnotationsTest(unittest.TestCase):
 

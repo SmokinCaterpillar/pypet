@@ -8,24 +8,13 @@ try:
 except NameError:
     FileNotFoundError = IOError
 
-try:
-    import ConfigParser as cp
-except ImportError:
-    import configparser as cp
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+
+import configparser as cp
+from io import StringIO
 import logging
 from logging.config import fileConfig
-try:
-    from logging.config import dictConfig
-except ImportError:
-    from logutils.dictconfig import dictConfig
-try:
-    from logging import NullHandler
-except ImportError:
-    from logutils import NullHandler
+from logging.config import dictConfig
+from logging import NullHandler
 import os
 import math
 import sys
@@ -36,7 +25,6 @@ import functools
 import socket
 
 import pypet.pypetconstants as pypetconstants
-import pypet.compat as compat
 from pypet.utils.helpful_functions import progressbar, racedirs
 from pypet.utils.decorators import retry
 from pypet.slots import HasSlots
@@ -134,7 +122,7 @@ def _change_logging_kwargs(kwargs):
     dictionary = copy.deepcopy(LOGGING_DICT)
     prefixes = ['']
     if not log_multiproc:
-        for key in compat.listkeys(dictionary):
+        for key in list(dictionary.keys()):
             if key.startswith('multiproc_'):
                 del dictionary[key]
     else:
@@ -302,7 +290,8 @@ class HasLogger(HasSlots):
         """
         state_dict = super(HasLogger, self).__getstate__()
         if '_logger' in state_dict:
-            # Pickling does not work with loggers objects, so we just keep the logger's name:
+            # Pickling does not work with loggers objects,
+            # so we just keep the logger's name:
             state_dict['_logger'] = self._logger.name
         return state_dict
 
@@ -314,7 +303,8 @@ class HasLogger(HasSlots):
         """
         super(HasLogger, self).__setstate__(statedict)
         if '_logger' in statedict:
-            # If we re-instantiate the component the logger attribute only contains a name,
+            # If we re-instantiate the component the
+            # logger attribute only contains a name,
             # so we also need to re-create the logger:
             self._set_logger(statedict['_logger'])
 
@@ -337,7 +327,8 @@ class LoggingManager(object):
     :param trajectory: Trajectory container of Mock
     :param log_config: Logging configuration
 
-        Can be a a full name of an `ini` file. An already instantiated config parser,
+        Can be a a full name of an `ini` file.
+        An already instantiated config parser,
         or a logging dictionary.
 
     :param log_stdout: If `stdout` should be logged.
@@ -373,7 +364,8 @@ class LoggingManager(object):
         self.run_name = trajectory.f_wildcard('$')
 
     def __getstate__(self):
-        """ConfigParsers are not guaranteed to be picklable so we need to remove these."""
+        """ConfigParsers are not guaranteed to
+        be picklable so we need to remove these."""
         state_dict = self.__dict__.copy()
         if isinstance(state_dict['log_config'], cp.RawConfigParser):
             # Config Parsers are not guaranteed to be picklable
@@ -403,7 +395,8 @@ class LoggingManager(object):
     def add_null_handler(self):
         """Adds a NullHandler to the root logger.
 
-        This is simply added to avoid warnings that no logger has been configured.
+        This is simply added to avoid warnings that no
+        logger has been configured.
 
         """
         root = logging.getLogger()
@@ -513,7 +506,7 @@ class LoggingManager(object):
                 self.report_progress = (5, 'pypet', logging.INFO)
             elif isinstance(self.report_progress, (int, float)):
                 self.report_progress = (self.report_progress, 'pypet', logging.INFO)
-            elif isinstance(self.report_progress, compat.base_type):
+            elif isinstance(self.report_progress, str):
                 self.report_progress = (5, self.report_progress, logging.INFO)
             elif len(self.report_progress) == 2:
                 self.report_progress = (self.report_progress[0], self.report_progress[1],
@@ -525,7 +518,7 @@ class LoggingManager(object):
                 init_path = os.path.join(pypet_path, 'logging')
                 self.log_config = os.path.join(init_path, 'default.ini')
 
-            if isinstance(self.log_config, compat.base_type):
+            if isinstance(self.log_config, str):
                 if not os.path.isfile(self.log_config):
                     raise ValueError('Could not find the logger init file '
                                      '`%s`.' % self.log_config)
@@ -549,7 +542,7 @@ class LoggingManager(object):
         if self.log_stdout:
             if self.log_stdout is True:
                 self.log_stdout = ('STDOUT', logging.INFO)
-            if isinstance(self.log_stdout, compat.base_type):
+            if isinstance(self.log_stdout, str):
                 self.log_stdout = (self.log_stdout, logging.INFO)
             if isinstance(self.log_stdout, int):
                 self.log_stdout = ('STDOUT', self.log_stdout)

@@ -10,7 +10,6 @@ import shutil
 
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
-import pypet.compat as compat
 from pypet.environment import Environment
 from pypet import pypetconstants
 from pypet.parameter import Parameter
@@ -88,7 +87,7 @@ class ContinueTest(TrajectoryComparator):
 
     # def _remove_nresults_from_traj(self, nresults):
     #
-    #     hdf5_file = tables.openFile(self.filenames[0], mode='a')
+    #     hdf5_file = tables.open_file(self.filenames[0], mode='a')
     #     runtable = hdf5_file.getNode('/'+self.trajs[0].v_name +'/overview/runs')
     #
     #     for row in runtable.iterrows(0, nresults, 1):

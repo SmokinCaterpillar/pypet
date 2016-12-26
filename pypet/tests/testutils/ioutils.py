@@ -4,14 +4,8 @@ import logging
 import os
 import random
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
-try:
-    import ConfigParser as cp
-except ImportError:
-    import configparser as cp
+import unittest
+import configparser as cp
 import shutil
 import getopt
 import tempfile
@@ -22,15 +16,11 @@ except ImportError:
     zmq = None
 
 import pypet.pypetconstants as pypetconstants
-import pypet.compat as compat
 from pypet import HasLogger
 from pypet.pypetlogging import LoggingManager, rename_log_file
 from pypet.utils.decorators import copydoc
 from pypet.utils.helpful_functions import port_to_tcp
 
-#import pypet.utils.ptcompat as ptcompat
-#hdf5version = ptcompat.hdf5_version
-#print('HDF5 Version: %s' % str(hdf5version))
 
 testParams=dict(
     tempdir = 'tmp_pypet_tests',
@@ -262,7 +252,7 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
 
     @staticmethod
     def _input2set(element):
-        if isinstance(element, compat.base_type):
+        if isinstance(element, str):
             return set([element])
         elif element is None:
             return set()

@@ -4,10 +4,7 @@ import getopt
 import sys
 import os
 import sys
-if (sys.version_info < (2, 7, 0)):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 from pypet.tests.testutils.ioutils import discover_tests, TEST_IMPORT_ERROR
 
