@@ -704,7 +704,7 @@ class EnvironmentTest(TrajectoryComparator):
         hdf5file = pt.open_file(self.filename)
         traj_group = hdf5file.get_node(where='/', name= self.traj.v_name)
 
-        for node in traj_group._f_walkGroups():
+        for node in traj_group._f_walk_groups():
             if 'SRVC_LEAF' in node._v_attrs:
                 self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
                                     'There is no comment in node %s!' % node._v_name)
@@ -735,7 +735,7 @@ class EnvironmentTest(TrajectoryComparator):
             traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
-            for node in traj_group._f_walkGroups():
+            for node in traj_group._f_walk_groups():
                 if ('/derived_parameters/' in node._v_pathname or
                     '/results/' in node._v_pathname):
                     if 'SRVC_LEAF' in node._v_attrs:
@@ -766,7 +766,7 @@ class EnvironmentTest(TrajectoryComparator):
             traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
-            for node in traj_group._f_walkGroups():
+            for node in traj_group._f_walk_groups():
                 if ('/derived_parameters/' in node._v_pathname or
                     '/results/' in node._v_pathname):
                     if 'SRVC_LEAF' in node._v_attrs:
