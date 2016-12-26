@@ -20,14 +20,6 @@ from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
 
----------
-IMPORTANT
----------
-
-This is the last version of pypet to support **Python 2**. All coming releases
-will only run under **Python 3**!
-
-
 ------------
 Requirements
 ------------
@@ -66,6 +58,15 @@ To utilize the continuing of crashed trajectories you need
 Automatic Sumatra records are supported for
 
 * Sumatra >= 0.7.1
+
+
+----------
+Python 2.7
+----------
+
+This release no longer supports Python 2.7.
+If you are still using Python 2.7, you need to
+use the pypet legacy version 0.3.0 (https://pypi.python.org/pypi/pypet/0.3.0).
 
 
 ========================
@@ -176,7 +177,7 @@ Main Features
 
     * pandas DataFrames (http://pandas.pydata.org/)
 
-    * BRIAN (1 and 2) quantities and monitors (http://briansimulator.org/)
+    * BRIAN2 quantities and monitors (http://briansimulator.org/)
 
 * Easily **extendable** to other data formats!
 

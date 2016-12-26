@@ -11,12 +11,6 @@ import platform
 import subprocess
 
 try:
-    import brian
-except ImportError:
-    print('No BRIAN module found, will skip the example')
-    brian = None
-
-try:
     import brian2
 except ImportError:
     print('No BRIAN module found, will skip the example')
@@ -27,9 +21,7 @@ print('*** Running under %s ***' % str(system))
 
 to_skip = set()
 to_skip.add('21')
-if brian is None:
-    to_skip.add('07')
-    to_skip.add('11')
+
 if brian2 is None:
     to_skip.add('23')
     to_skip.add('24')
