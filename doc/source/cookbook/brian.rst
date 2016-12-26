@@ -12,15 +12,15 @@ pypet and BRIAN2
 -----------------
 
 
-BRIAN_ as it comes is nice for small scripts and quick simulations, but it can
+BRIAN2_ as it comes is nice for small scripts and quick simulations, but it can
 be really hard to manage and maintain large scale projects based on
 very complicated networks with many parts and components.
 So I wrote a *pypet* extension that allows easier handling of more sophisticated
-BRIAN_ networks.
+BRIAN2_ networks.
 
 All of this can be found in ``pypet.brian2`` sub-package.
 The package contains a ``parameter.py`` file that includes specialized containers
-for BRIAN_ data, like the :class:`~pypet.brian2.parameter.Brian2Parameter`,
+for BRIAN2_ data, like the :class:`~pypet.brian2.parameter.Brian2Parameter`,
 the :class:`~pypet.brian2.parameter.Brian2Result` (both for BRIAN Quantities), and
 the :class:`~pypet.brian2.parameter.Brian2MonitorResult` (extracts data from any kind of
 BRIAN Monitor_).
@@ -60,7 +60,7 @@ An instance of the latter is usually only created once and takes care about the 
 of a network simulation.
 
 All these three types of components are managed by the
-:class:`~pypet.brian2.network.NetworkManager` that also creates `BRIAN networks`_ and
+:class:`~pypet.brian2.network.NetworkManager` that also creates `BRIAN2 networks`_ and
 passes these to the runner.
 Conceptually this is depicted in figure below.
 
@@ -259,12 +259,12 @@ Every component can implement these 5 methods:
         :func:`~pypet.brian2.network.NetworkComponent.build`
 
         Both are very similar and should trigger the construction of objects
-        relevant to BRIAN_ like NeuronGroups_ or Connections_.
+        relevant to BRIAN2_ like NeuronGroups_ or Synapses_.
         However, they differ in when they are executed.
         The former is initiated either by you directly (aka ``my_manger.pre_build(traj)``), or
         by a *pre run* (``my_manager.pre_run_network(traj)``).
         The latter is called during your single runs for parameter exploration,
-        before the `BRIAN network`_ is simulated by your runner.
+        before the `BRIAN2 network`_ is simulated by your runner.
 
         The two methods provide the following arguments:
 
@@ -328,7 +328,7 @@ Every component can implement these 5 methods:
         :func:`~pypet.brian2.network.NetworkComponent.pre_build` or
         :func:`~pypet.brian2.network.NetworkComponent.build`.
         You can now add your monitor to the ``network`` via its ``add`` functionality, see
-        the the `BRIAN network`_ class.
+        the the `BRIAN2 network`_ class.
 
         The :func:`~pypet.brian2.network.NetworkComponent.add_to_network` relies on
         the following arguments

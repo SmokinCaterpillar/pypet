@@ -40,7 +40,10 @@ IMPORTANT
 ---------
 
 This version **no** longer supports **Python 2**. If you are stil using
-**Python 2** please download ``pypet 0.3.0``.
+**Python 2** please download `pypet 0.3.0`_.
+
+.. _`pypet 0.3.0`: https://pypi.python.org/pypi/pypet/0.3.0
+
 
 -------------
 Documentation

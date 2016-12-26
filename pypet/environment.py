@@ -65,7 +65,6 @@ try:
 except ImportError:
     zmq = None
 
-import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import LoggingManager, HasLogger, simple_logging_config
 from pypet.trajectory import Trajectory
 from pypet.storageservice import HDF5StorageService, LazyStorageService
@@ -83,6 +82,7 @@ from pypet.utils.helpful_functions import is_debug, result_sort, format_time, po
 from pypet.utils.storagefactory import storage_factory
 from pypet.utils.configparsing import parse_config
 from pypet.parameter import Parameter
+import pypet.pypetconstants as pypetconstants
 
 
 def _pool_single_run(kwargs):

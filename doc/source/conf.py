@@ -287,7 +287,7 @@ class Mock(object):
             return '/dev/null'
         elif name == '__version__':
             # To mock the call to pt.__version__ in pypet.utils.ptcompat
-            return '2'
+            return '3'
         elif name[0] == name[0].upper():
             mockType = type(name, (), {})
             mockType.__module__ = __name__

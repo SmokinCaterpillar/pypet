@@ -604,7 +604,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
         hdf5file = pt.open_file(self.filename)
-        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        overview_group = hdf5file.get_node(where='/'+ self.traj.v_name, name='overview')
         should = ['derived_parameters_overview', 'results_overview']
         for name in should:
             self.assertTrue(name in overview_group, '%s not in overviews but it should!' % name)
@@ -631,7 +631,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
         hdf5file = pt.open_file(self.filename)
-        overview_group = hdf5file.getNode(where='/'+ self.traj.v_name, name='overview')
+        overview_group = hdf5file.get_node(where='/'+ self.traj.v_name, name='overview')
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
             name = name.split('.')[-1] # Get only the name of the table, no the full name
@@ -702,7 +702,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.make_run()
 
         hdf5file = pt.open_file(self.filename)
-        traj_group = hdf5file.getNode(where='/', name= self.traj.v_name)
+        traj_group = hdf5file.get_node(where='/', name= self.traj.v_name)
 
         for node in traj_group._f_walkGroups():
             if 'SRVC_LEAF' in node._v_attrs:
@@ -732,7 +732,7 @@ class EnvironmentTest(TrajectoryComparator):
         ncomments = {}
 
         try:
-            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
+            traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
             for node in traj_group._f_walkGroups():
@@ -763,7 +763,7 @@ class EnvironmentTest(TrajectoryComparator):
         ncomments = {}
 
         try:
-            traj_group = hdf5file.getNode(where='/',name= self.traj.v_name)
+            traj_group = hdf5file.get_node(where='/',name= self.traj.v_name)
 
 
             for node in traj_group._f_walkGroups():

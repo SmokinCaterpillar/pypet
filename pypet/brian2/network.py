@@ -1,4 +1,4 @@
-"""Module for easy compartmental implementation of a `BRIAN2 network`_.
+"""Module for easy compartmental implementation of a BRIAN2 network.
 
 Build parts of a network via subclassing :class:`~pypet.brian2.network.NetworkComponent` and
 :class:`~pypet.brian2.network.NetworkAnalyser` for recording and statistical analysis.
@@ -20,8 +20,6 @@ Pass the :func:`~pypet.brian2.network.run_network` function together with a
 parameter exploration. Be aware that in case of a *pre-built* network,
 successful parameter exploration
 requires parallel processing (see :class:`~pypet.brian2.network.NetworkManager`).
-
-.._`BRIAN2 network`: https://brian2.readthedocs.org/
 
 """
 
