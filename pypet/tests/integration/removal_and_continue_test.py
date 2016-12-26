@@ -1,10 +1,13 @@
 __author__ = 'Robert Meyer'
 
 import os
-
+import unittest
 import numpy as np
 import tables
-import dill
+try:
+    import dill
+except ImportError:
+    dill = None
 import logging
 import shutil
 
@@ -36,6 +39,7 @@ class Multiply(object):
         return z
 
 
+@unittest.skipIf(dill is None, 'Only makes sense if dill is installed')
 class ContinueTest(TrajectoryComparator):
 
     tags = 'integration', 'hdf5', 'environment', 'continue', 'dill'
@@ -330,6 +334,7 @@ class ContinueTest(TrajectoryComparator):
         self.compare_trajectories(self.trajs[0],self.trajs[1])
 
 
+@unittest.skipIf(dill is None, 'Only makes sense if dill is installed')
 class ContinueMPTest(ContinueTest):
 
     # def test_removal(self):
@@ -484,6 +489,7 @@ class ContinueMPTest(ContinueTest):
             self.assertTrue( z in results, '%s not in %s' % (z, results))
 
 
+@unittest.skipIf(dill is None, 'Only makes sense if dill is installed')
 class ContinueMPPoolTest(ContinueMPTest):
 
     tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'pool', 'dill'

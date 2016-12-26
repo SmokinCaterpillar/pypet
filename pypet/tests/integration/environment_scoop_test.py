@@ -16,7 +16,7 @@ def identity(x):
 
 
 def check_mock():
-    if scoop.IS_RUNNING:
+    if scoop is not None and scoop.IS_RUNNING:
         print('SCOOP mode functional!')
         mock = False
     else:
@@ -84,17 +84,12 @@ class SharedMock(object):
 #     scoop.futures = ScoopFuturesWrapper()
 
 import pypet.environment
+import importlib
 
 if check_mock():
     shared_mock = SharedMock()
     shared_mock.mock()
-    # Reload to replace futures
-    try:
-        reload(pypet.environment)
-    except NameError:
-        # Python 3
-        import importlib
-        importlib.reload(pypet.environment)
+    importlib.reload(pypet.environment)
 
 from pypet.tests.integration.environment_test import EnvironmentTest, ResultSortTest
 from pypet.tests.integration.environment_multiproc_test import check_nice
