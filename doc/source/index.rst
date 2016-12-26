@@ -35,6 +35,13 @@ Latest version:
 .. _HDF5: http://www.hdfgroup.org/HDF5/
 
 
+---------
+IMPORTANT
+---------
+
+This is the last version of pypet to support **Python 2**. All coming releases
+will only run under **Python 3**!
+
 -------------
 Documentation
 -------------
