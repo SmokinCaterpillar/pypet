@@ -66,7 +66,7 @@ def prepend_mpl_import(filename):
 def execute_example(filename):
     """Executes a file as script.
 
-    Firs prepends matplotlib import
+    First prepends matplotlib import
 
     """
     #filename = os.path.join(os.getcwd(), filename)
@@ -126,20 +126,6 @@ def main():
         execute_example('analysis.py')
         print("Running pipeline")
         execute_example('pipeline.py')
-        os.chdir('..')
-
-    ex11 = 'example_11_large_scale_brian_simulation'
-    if skip(ex11):
-        print("------- Skipping %s -------" % ex11)
-    else:
-        print("########## Running %s ###########" % ex11)
-
-        os.chdir(ex11)
-        sys.path.append(os.getcwd())
-        print("Running script")
-        execute_example('runscript.py')
-        print("Running analysis")
-        execute_example('plotff.py')
         os.chdir('..')
 
     ex24 = 'example_24_large_scale_brian2_simulation'
