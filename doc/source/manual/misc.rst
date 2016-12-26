@@ -8,18 +8,43 @@ Citation Policy
 
 If you use *pypet* in your research,
 it would be very kind of you to cite this in your amazing work.
-A research article about *pypet* is currently in preparation which will be the basis
-for citations in the future.
-In the meantime you can cite the software as given below. For *bibtex* you can use:
+A research article about *pypet* is available at `frontiers`_, the
+corresponding bibtex entry is:
 
 ::
 
-    @misc{rmeyer2016,
-        author = {Robert Meyer and Klaus Obermayer},
-        year = {2016},
-        title = {pypet: {T}he {P}ython {P}arameter {E}xploration {T}oolkit},
-        note = {\url{http://pypet.readthedocs.org/}},
-        institution = {Technische Universität Berlin, Neural Information Processing Group}
+    @article{Meyer2016,
+        author={Meyer, Robert and Obermayer, Klaus},
+        title={pypet: A Python Toolkit for Data Management of Parameter Explorations},
+        journal={Frontiers in Neuroinformatics},
+        volume={10},
+        pages={38},
+        year={2016},
+        url={http://journal.frontiersin.org/article/10.3389/fninf.2016.00038},
+        doi={10.3389/fninf.2016.00038},
+        issn={1662-5196},
+        abstract={pypet (Python parameter exploration toolkit) is a new
+                  multi-platform Python toolkit for managing numerical simulations.
+                  Sampling the space of model parameters is a key aspect of
+                  simulations and numerical experiments. pypet is designed to
+                  allow easy and arbitrary sampling of trajectories through a
+                  parameter space beyond simple grid searches.
+                  pypet collects and stores both simulation parameters and results
+                  in a single HDF5 file.
+                  This collective storage allows fast and convenient loading of
+                  data for further analyses. pypet provides various additional
+                  features such as multiprocessing and parallelization of
+                  simulations, dynamic loading of data, integration of git
+                  version control, and supervision of experiments via the
+                  electronic lab notebook Sumatra. pypet supports a rich set of
+                  data formats, including native Python types, Numpy and Scipy
+                  data, Pandas DataFrames, and BRIAN(2) quantities.
+                  Besides these formats, users can easily extend the toolkit
+                  to allow customized data types. pypet is a flexible tool
+                  suited for both short Python scripts and large scale projects.
+                  pypet's various features, especially the tight link between
+                  parameters and results, promote reproducible research in
+                  computational neuroscience and simulation-based disciplines.}
     }
 
 
@@ -28,6 +53,8 @@ Otherwise you can cite it as:
 *   Robert Meyer and Klaus Obermayer. *pypet*: The Python Parameter
     Exploration Toolkit, 2016. http://pypet.readthedocs.org/.
 
+
+.. _`frontiers`: http://journal.frontiersin.org/article/10.3389/fninf.2016.00038/full
 
 --------------------------------
 Brain Days and EuroPython Poster
