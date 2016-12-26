@@ -20,6 +20,14 @@ from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
 
+---------
+IMPORTANT
+---------
+
+This is the last version of pypet to support **Python 2**. All coming releases
+will only run under **Python 3**!
+
+
 ------------
 Requirements
 ------------
