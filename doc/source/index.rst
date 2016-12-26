@@ -39,8 +39,8 @@ Latest version:
 IMPORTANT
 ---------
 
-This is the last version of pypet to support **Python 2**. All coming releases
-will only run under **Python 3**!
+This version **no** longer supports **Python 2**. If you are stil using
+**Python 2** please download `pypet 0.3.0`.
 
 -------------
 Documentation

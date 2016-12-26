@@ -10,6 +10,8 @@ Tools and Extensions
 
     **A:** Python 2.6 and 2.7 are no longer supported. Still if you
     need *pypet* for these versions check out the legacy `0.3.0`_ package.
+    You can pip install it via ``pip install pypet==0.3.0``.
+
 
 .. _0.3.0: https://pypi.python.org/pypi/pypet/0.3.0
 
