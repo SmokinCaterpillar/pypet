@@ -1809,7 +1809,14 @@ class NaturalNamingInterface(HasLogger):
             result_dict[new_key] = new_val
 
         if nested:
-           result_dict = nest_dictionary(result_dict, '.')
+            if node.v_is_root:
+                nest_dict = result_dict
+            else:
+                # remove the name of the current node
+                # such that the nested dictionary starts with the children
+                strip = len(node.v_full_name) + 1
+                nest_dict = {key[strip:]: val for key, val in result_dict.items()}
+            result_dict = nest_dictionary(nest_dict, '.')
 
         return result_dict
 

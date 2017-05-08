@@ -1224,6 +1224,38 @@ class TrajectoryTest(unittest.TestCase):
         self.assertTrue(nested_equal(result, lookout),
                         '{} != {}'.format(result, lookout))
 
+    def test_to_nested_dict_intermediate_node(self):
+        traj = Trajectory()
+        traj.f_add_parameter('my.param', 42)
+        traj.f_add_parameter('my.fff', 44)
+        traj.f_add_result('runs.$.myresult',55)
+
+        lookout = {
+                'runs':{
+                    'run_ALL':{
+                        'myresult': 55
+                    }
+                }
+            }
+        result = traj.res.f_to_dict(nested=True, fast_access=True)
+        self.assertTrue(nested_equal(result, lookout),
+                        '{} != {}'.format(result, lookout))
+
+    def test_to_nested_dict_intermediate_node2(self):
+        traj = Trajectory()
+        traj.f_add_parameter('my.param', 42)
+        traj.f_add_parameter('my.fff', 44)
+        traj.f_add_result('runs.$.myresult',55)
+
+        lookout = {
+                    'run_ALL':{
+                        'myresult': 55
+                    }
+            }
+        result = traj.res.runs.f_to_dict(nested=True, fast_access=True)
+        self.assertTrue(nested_equal(result, lookout),
+                        '{} != {}'.format(result, lookout))
+
     def test_iter_leaves(self):
 
         count = 0
