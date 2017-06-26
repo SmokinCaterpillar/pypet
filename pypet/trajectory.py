@@ -884,6 +884,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                     value = None
                     already_found = False
                     for run_parent_group in self._run_parent_groups.values():
+                        if run_name not in run_parent_group._children:
+                            continue
 
                         try:
                             value = run_parent_group.f_get(run_name + '.' + name,

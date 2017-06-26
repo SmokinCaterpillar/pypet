@@ -1,3 +1,10 @@
+pypet 0.4.1
+
+*   BUG FIX: Fixed slow `f_get_from_all_runs` with run groups
+
+*   More intuitive behaviro for `f_to_dict` to only start at initiating group node.
+
+
 pypet 0.4.0
 
 *   BUG FIX: Correct progressbar printing in Python3 using reprint

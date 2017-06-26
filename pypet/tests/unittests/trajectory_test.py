@@ -676,6 +676,60 @@ class TrajectoryTest(unittest.TestCase):
 
             depth_dict[node.v_depth].remove(node)
 
+    def test_find_in_all_runs_with_groups(self):
+
+        self.traj.f_add_result('results.runs.run_set_00001.run_00000000.sub.resulttest', 42)
+        self.traj.f_add_result('results.runs.run_set_00001.run_00000001.sub.resulttest', 43)
+        self.traj.f_add_result('results.runs.run_set_00003.run_00000002.sub.resulttest', 44)
+
+        self.traj.f_add_result('results.runs.run_set_00004.run_00000002.sub.resulttest2', 42)
+        self.traj.f_add_result('results.runs.run_00000003.sub.resulttest2', 43)
+
+
+
+        self.traj.f_add_derived_parameter('derived_parameters.runs.run_00000002.testing', 44)
+
+        res_dict = self.traj.f_get_from_runs('kkkkkkdjfoiuref')
+
+        self.assertTrue(len(res_dict)==0)
+
+        res_dict = self.traj.f_get_from_runs('resulttest', fast_access=True)
+
+        self.assertTrue(len(res_dict)==3)
+        self.assertTrue(res_dict['run_00000001']==43)
+        self.assertTrue('run_00000003' not in res_dict)
+
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(1 not in res_dict)
+
+        res_dict = self.traj.f_get_from_runs(name='testing', where='derived_parameters')
+
+        self.assertTrue(len(res_dict)==1)
+
+        self.traj.f_add_result('results.runs.run_ALL.sub.resulttest2', 44)
+
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', use_indices=True)
+
+        self.assertTrue(len(res_dict)==4)
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(res_dict[1] is self.traj.f_get('run_ALL.resulttest2'))
+        self.assertTrue(res_dict[0] is self.traj.f_get('run_ALL.resulttest2'))
+        self.assertTrue(1 in res_dict)
+
+
+        res_dict = self.traj.f_get_from_runs(name='sub.resulttest2', include_default_run=False,
+                                             use_indices=True)
+
+        self.assertTrue(len(res_dict)==2)
+        self.assertTrue(res_dict[3] is self.traj.f_get('run_00000003.resulttest2'))
+        self.assertTrue(1 not in res_dict)
+
+        res_dict =  self.traj.f_get_from_runs('test')
+        self.assertTrue(len(res_dict) == 0)
+
     def test_find_in_all_runs(self):
 
 
