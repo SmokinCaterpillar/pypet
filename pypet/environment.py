@@ -2643,15 +2643,8 @@ class Environment(HasLogger):
                 if self._freeze_input:
                     self._logger.info('Freezing SCOOP input')
 
-                    if hasattr(_frozen_scoop_single_run, 'kwargs'):
-                        self._logger.warning('You already did run an experiment with '
-                                             'SCOOP and a frozen input. Frozen input '
-                                             'is realized as a shared constant, so'
-                                             'over time your memory might get bloated. '
-                                             'If you experience trouble, '
-                                             'restart your python interpreter and '
-                                             'SCOOP.')
-                    _frozen_scoop_single_run.kwargs = {}
+                    if not hasattr(_frozen_scoop_single_run, 'kwargs'):
+                        _frozen_scoop_single_run.kwargs = {}
 
                     scoop_full_copy = self._traj.v_full_copy
                     self._traj.v_full_copy = True
