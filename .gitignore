@@ -49,3 +49,6 @@ LOG
 hdf5
 HDF5
 tmp
+
+# profiling
+.profile*
