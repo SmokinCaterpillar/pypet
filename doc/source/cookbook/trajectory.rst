@@ -1166,7 +1166,7 @@ code snippet will iterate over all four runs and print the result of each run:
         x=traj.x
         y=traj.y
         z=traj.z
-        print '%s: x=%f, y=%f, z=%f' % (run_name,x,y,z)
+        print('%s: x=%f, y=%f, z=%f' % (run_name,x,y,z))
 
     # Don't forget to reset your trajectory to the default settings, to release its belief to
     # be the last run:
@@ -1220,7 +1220,7 @@ in your lambda function.
 
 Now if we print the indexes found by the lambda filter, we get:
 
-    >>> print [idx for idx in idx_iterator]
+    >>> print([idx for idx in idx_iterator])
     [1, 5, 8, 9, 10, 11]
 
 To see this in action check out :ref:`example-08`.
@@ -1244,7 +1244,7 @@ beyond simple comments:
 
     >>> ncars_obj = traj.f_get('ncars')
     >>> ncars_obj.v_annotations.my_special_annotation = ['peter','paul','mary']
-    >>> print ncars_obj.v_annotations.my_special_annotation
+    >>> print(ncars_obj.v_annotations.my_special_annotation)
     ['peter','paul','mary']
 
 So here you added a list of strings as an annotation called `my_special_annotation`.

@@ -102,7 +102,7 @@ def get_batch():
     for o, a in optlist:
         if o == '--batch':
             batch = int(a)
-            print 'Found batch %d' % batch
+            print('Found batch %d' % batch)
 
     return batch
 

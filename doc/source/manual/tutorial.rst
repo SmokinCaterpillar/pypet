@@ -501,7 +501,7 @@ So here is our top-level simulation or run function:
         spiketimes = []  # List to collect all times of action potentials
 
         # Do the Euler integration:
-        print 'Starting Euler Integration'
+        print('Starting Euler Integration')
         for step in range(1, steps):
             if V_array[step-1] >= 1:
                 # The membrane potential crossed the threshold and we mark this as
@@ -517,7 +517,7 @@ So here is our top-level simulation or run function:
                 dV = -1/tau_V * V_array[step-1] + I
                 V_array[step] = V_array[step-1] + dV*dt
 
-        print 'Finished Euler Integration'
+        print('Finished Euler Integration')
 
         # Add the voltage trace and spike times
         traj.f_add_result('neuron.$', V=V_array, nspikes=len(spiketimes),
@@ -580,7 +580,7 @@ This is just the core of our neuron simulation:
 .. code-block:: python
 
     # Do the Euler integration:
-    print 'Starting Euler Integration'
+    print('Starting Euler Integration')
     for step in range(1, steps):
         if V_array[step-1] >= 1:
             # The membrane potential crossed the threshold and we mark this as
@@ -596,7 +596,7 @@ This is just the core of our neuron simulation:
             dV = -1/tau_V * V_array[step-1] + I
             V_array[step] = V_array[step-1] + dV*dt
 
-    print 'Finished Euler Integration'
+    print('Finished Euler Integration')
 
 
 This is simply the python description of the following set of equations:
