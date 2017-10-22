@@ -9,6 +9,18 @@ if [[ $TEST_SUITE == ON ]]
         python -m scoop -n 3 ../../pypet/tests/all_tests.py
     fi
 
+if [[ $TEST_SUITE == MULTIPROC ]]
+    then
+        echo "Running test suite (with SCOOP)"
+        python -m scoop -n 3 ../../pypet/tests/all_multi_core_tests.py
+    fi
+
+if [[ $TEST_SUITE == SINGLECORE ]]
+    then
+        echo "Running test suite (with SCOOP)"
+        python -m scoop -n 3 ../../pypet/tests/all_single_core_tests.py
+    fi
+
 if [[ $GIT_TEST == ON ]]
     then
 

@@ -16,7 +16,7 @@ __author__ = ['Henri Bunting', 'Robert Meyer']
 import ast
 
 import brian2.numpy_ as np
-from brian2.units.fundamentalunits import Quantity, get_unit_fast, have_same_dimensions
+from brian2.units.fundamentalunits import Quantity, get_dimensions
 from brian2.monitors import SpikeMonitor, StateMonitor, PopulationRateMonitor
 import brian2.units.allunits as allunits
 
@@ -27,6 +27,11 @@ from pypet.parameter import Parameter, Result, ObjectTable
 ALLUNITS = {}
 for name in allunits.__all__:
     ALLUNITS[name] =  getattr(allunits, name)
+
+
+def get_unit_fast(x):
+    """ Return a `Quantity` with value 1 and the same dimensions. """
+    return Quantity.with_dimensions(1, get_dimensions(x))
 
 
 def unit_from_expression(expr):

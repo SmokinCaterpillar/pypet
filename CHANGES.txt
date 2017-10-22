@@ -4,6 +4,8 @@ pypet 0.4.1
 
 *   More intuitive behaviro for `f_to_dict` to only start at initiating group node.
 
+*   BUG FIX: brian 2 removed get unit fast, this has been replaced with a pypet implementation
+
 
 pypet 0.4.0
 
