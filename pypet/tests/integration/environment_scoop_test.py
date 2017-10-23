@@ -24,12 +24,16 @@ def check_mock():
     return mock
 
 
+class Dummy(object): pass
+
+
 class SharedMock(object):
     def __init__(self):
         self.constants = {}
         self.signal = True
 
     def mock(self):
+        scoop = Dummy()
         scoop.IS_ORIGIN = True
         scoop.worker = 'itsmemario'
         scoop.shared = self
