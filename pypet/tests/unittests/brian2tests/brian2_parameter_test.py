@@ -10,7 +10,7 @@ import unittest
 try:
     import brian2
     from brian2.units.stdunits import mV, mA, kHz, ms
-    from pypet.brian2.parameter import Brian2Parameter, Brian2Result
+    from pypet.brian2.parameter import Brian2Parameter, Brian2Result, get_unit_fast
 except ImportError:
     brian2 = None
 
@@ -207,6 +207,15 @@ class Brian2ResultTest(ResultTest):
 
         super(Brian2ResultTest, self).setUp()
 
+
+@unittest.skipIf(brian2 is None, 'Can only be run with brian2!')
+class Brian2GetUnitFastTest(unittest.TestCase):
+
+    tags = 'unittest', 'brian2'
+
+    def test_get_unit_fast(self):
+        unit = get_unit_fast(42 * mV)
+        self.assertEquals(unit, 1000 * mV)
 
 
 if __name__ == '__main__':
