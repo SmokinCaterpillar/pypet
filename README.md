@@ -24,7 +24,7 @@ analyses becomes a piece of cake!
 Requirements
 ------------
 
-Python 3.4, or 3.5, and
+Python 3.4, 3.5, or 3.6 and
 
 * tables >=  3.1.1
 
@@ -388,7 +388,7 @@ If the folder cannot be created, the program defaults to `tempfile.gettempdir()`
 Running all tests can take up to 20 minutes. The test suite encompasses more than **1000** tests
 and has a code coverage of about **90%**!
 
-Moreover, *pypet* is constantly tested with Python 2.6, 2.7, 3.3, 3.4 and 3.5 for **Linux** using
+Moreover, *pypet* is constantly tested with Python 3.4, 3.5, and 3.6 for **Linux** using
 Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
 The source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
