@@ -168,6 +168,41 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
             val = self.data[key]
             self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
 
+    def test_expanding(self):
+        for key, vallist in self.explore_dict.items():
+            param = self.param[key]
+
+            copy_list = vallist.copy()
+            old_len = len(vallist)
+
+            param.f_unlock()
+            param._expand(copy_list)
+
+            new_len = len(param.f_get_range())
+
+            self.assertEqual(new_len, 2 * old_len)
+
+    def test_loading_and_expanding(self):
+        # Regression test for issue #50
+        # https://github.com/SmokinCaterpillar/pypet/issues/50
+        for key, vallist in self.explore_dict.items():
+            param = self.param[key]
+
+            copy_list = vallist.copy()
+            old_len = len(vallist)
+
+
+            store_dict = param._store()
+            param.f_unlock()
+            param._load(store_dict)
+
+            param.f_unlock()
+            param._expand(copy_list)
+
+            new_len = len(param.f_get_range())
+
+            self.assertEqual(new_len, 2 * old_len)
+
     def test_meta_settings(self):
         for key, param in self.param.items():
             self.assertEqual(param.v_full_name, self.location+'.'+key)

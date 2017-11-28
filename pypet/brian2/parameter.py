@@ -161,7 +161,7 @@ class Brian2Parameter(Parameter):
                 value_col = explore_table['value']
                 explore_list = [value * unit for value in value_col]
 
-                self._explored_range = tuple(explore_list)
+                self._explored_range = explore_list
                 self._explored = True
 
         except KeyError:

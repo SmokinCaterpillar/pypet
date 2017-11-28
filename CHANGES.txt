@@ -1,3 +1,7 @@
+pypet 0.4.2
+
+*   BUG FIX: Brian2Parameters can now be merged [Issue #50]
+
 pypet 0.4.1
 
 *   BUG FIX: Fixed slow `f_get_from_all_runs` with run groups
