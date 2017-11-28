@@ -1734,11 +1734,13 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if 'derived_parameters' in self:
             my_traj_dpars = self._derived_parameters
             if self._stored:
-                self.f_load_items(my_traj_dpars.keys(), only_empties=True)
+                with self._nn_interface._disable_logging:
+                    self.f_load_items(my_traj_dpars.keys(), only_empties=True)
             allmyparams.update(my_traj_dpars)
             other_traj_dpars = other_trajectory._derived_parameters
             if other_trajectory._stored:
-                other_trajectory.f_load_items(other_traj_dpars.keys(), only_empties=True)
+                with self._nn_interface._disable_logging:
+                    other_trajectory.f_load_items(other_traj_dpars.keys(), only_empties=True)
             allotherparams.update(other_traj_dpars)
 
         # Check if the trajectories have the same parameters:
