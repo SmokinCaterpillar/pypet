@@ -1,6 +1,4 @@
-=====
-pypet
-=====
+# pypet
 
 [![Travis Build Status](https://travis-ci.org/SmokinCaterpillar/pypet.svg?branch=master)](https://travis-ci.org/SmokinCaterpillar/pypet)
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true)](https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master)
@@ -19,9 +17,7 @@ from a single source. Data I/O of your simulations and
 analyses becomes a piece of cake!
 
 
-------------
-Requirements
-------------
+## Requirements
 
 Python 3.4, 3.5, or 3.6 and
 
@@ -59,18 +55,14 @@ Automatic Sumatra records are supported for
 * Sumatra >= 0.7.1
 
 
-----------
-Python 2.7
-----------
+## Python 2.7
 
 This release no longer supports Python 2.7.
 If you are still using Python 2.7, you need to
 use the pypet legacy version 0.3.0 (https://pypi.python.org/pypi/pypet/0.3.0).
 
 
-========================
-What is pypet all about?
-========================
+# What is pypet all about?
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
@@ -98,9 +90,7 @@ The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTable
 (http://www.pytables.org/).
 
 
---------------------
-Package Organization
---------------------
+## Package Organization
 
 This project encompasses these core modules:
 
@@ -116,9 +106,7 @@ This project encompasses these core modules:
 *  The `pypet.storageservice` for saving your data to disk
 
 
--------
-Install
--------
+## Install
 
 If you don't have all prerequisites (*numpy*, *scipy*, *tables*, *pandas*) install them first.
 These are standard python packages, so chances are high that they are already installed.
@@ -140,9 +128,7 @@ and navigate to your unpacked *pypet* files to the folder containing the `setup.
 As above run from the terminal ``python setup.py install``.
 
 
--------------------------
-Documentation and Support
--------------------------
+## Documentation and Support
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
@@ -151,9 +137,7 @@ There is a Google Groups mailing list for support: https://groups.google.com/for
 If you have any further questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
 
 
--------------
-Main Features
--------------
+## Main Features
 
 * **Novel tree container** `Trajectory`, for handling and managing of
   parameters and results of numerical simulations
@@ -206,9 +190,7 @@ Main Features
   SCOOP (http://scoop.readthedocs.org/)
 
 
-=====================
-Quick Working Example
-=====================
+# Quick Working Example
 
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
@@ -220,57 +202,56 @@ b) we want to explore the parameter space and try different values of `x` and `y
 
 Let's take a look at the snippet at once:
 
-::
+```python
+from pypet import Environment, cartesian_product
 
-    from pypet import Environment, cartesian_product
+def multiply(traj):
+    """Example of a sophisticated simulation that involves multiplying two values.
 
-    def multiply(traj):
-        """Example of a sophisticated simulation that involves multiplying two values.
+    :param traj:
 
-        :param traj:
+        Trajectory containing the parameters in a particular combination,
+        it also serves as a container for results.
 
-            Trajectory containing the parameters in a particular combination,
-            it also serves as a container for results.
+    """
+    z=traj.x * traj.y
+    traj.f_add_result('z',z, comment='I am the product of two values!')
 
-        """
-        z=traj.x * traj.y
-        traj.f_add_result('z',z, comment='I am the product of two values!')
+# Create an environment that handles running our simulation
+env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
+                    file_title='Example_01',
+                    comment = 'I am the first example!')
 
-    # Create an environment that handles running our simulation
-    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01',
-                      comment = 'I am the first example!')
+# Get the trajectory from the environment
+traj = env.trajectory
 
-    # Get the trajectory from the environment
-    traj = env.trajectory
+# Add both parameters
+traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
+traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
 
-    # Add both parameters
-    traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-    traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+# Explore the parameters with a cartesian product
+traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
 
-    # Explore the parameters with a cartesian product
-    traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
-
-    # Run the simulation with all parameter combinations
-    env.run(multiply)
+# Run the simulation with all parameter combinations
+env.run(multiply)
+```
 
 And now let's go through it one by one. At first we have a job to do, that is multiplying two
 values:
 
-::
+```python
+def multiply(traj):
+    """Example of a sophisticated simulation that involves multiplying two values.
 
-    def multiply(traj):
-        """Example of a sophisticated simulation that involves multiplying two values.
+    :param traj:
 
-        :param traj:
+        Trajectory containing the parameters in a particular combination,
+        it also serves as a container for results.
 
-            Trajectory containing the parameters in a particular combination,
-            it also serves as a container for results.
-
-        """
-        z=traj.x * traj.y
-        traj.f_add_result('z',z, comment='I am the product of two values!')
-
+    """
+    z=traj.x * traj.y
+    traj.f_add_result('z',z, comment='I am the product of two values!')
+```
 
 This is our simulation function `multiply`. The function uses a so called *trajectory*
 container which manages our parameters. We can access the parameters simply by natural naming,
@@ -280,13 +261,12 @@ to the `traj` object.
 After the definition of the job that we want to simulate, we create an environment which
 will run the simulation.
 
-::
-
-    # Create an environment that handles running our simulation
-    env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
-                      file_title='Example_01',
-                      comment = 'I am the first example!')
-
+```python
+# Create an environment that handles running our simulation
+env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
+                    file_title='Example_01',
+                    comment = 'I am the first example!')
+```
 
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
 store the trajectory into, the title of the file, and a comment that is added to the trajectory. 
@@ -295,37 +275,37 @@ how verbose the final HDF5 file is supposed to be.
 Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
-::
-
-    # Get the trajectory from the environment
-    traj = env.trajectory
+```python
+# Get the trajectory from the environment
+traj = env.trajectory
+```
 
 Now we need to populate our trajectory with our parameters. They are added with the default values
 of `x=y=1.0`.
 
-::
-
-    # Add both parameters
-    traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
-    traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+```python
+# Add both parameters
+traj.f_add_parameter('x', 1.0, comment='Im the first dimension!')
+traj.f_add_parameter('y', 1.0, comment='Im the second dimension!')
+```
 
 Well, calculating `1.0 * 1.0` is quite boring, we want to figure out more products, that is
 the results of the cartesian product set `{1.0,2.0,3.0,4.0} x {6.0,7.0,8.0}`.
 Therefore, we use `f_explore` in combination with the builder function
 `cartesian_product`.
 
-::
-
-    # Explore the parameters with a cartesian product
-    traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
+```python
+# Explore the parameters with a cartesian product
+traj.f_explore(cartesian_product({'x':[1.0,2.0,3.0,4.0], 'y':[6.0,7.0,8.0]}))
+```
 
 Finally, we need to tell the environment to run our job `multiply` with all parameter
 combinations.
 
-::
-
-    # Run the simulation with all parameter combinations
-    env.run(multiply)
+```python
+# Run the simulation with all parameter combinations
+env.run(multiply)
+```
 
 And that's it. The environment will evoke the function `multiply` now 12 times with
 all parameter combinations. Every time it will pass a `traj` container with another one of these
@@ -339,13 +319,9 @@ Cheers,
     Robert
 
 
-=============
-Miscellaneous
-=============
+# Miscellaneous
 
-----------------
-Acknowledgements
-----------------
+## Acknowledgements
 
 *   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
@@ -364,9 +340,7 @@ Acknowledgements
     Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
 
 
------
-Tests
------
+## Tests
 
 Tests can be found in `pypet/tests`.
 Note that they involve heavy file I/O and you need privileges
@@ -392,24 +366,18 @@ Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
 The source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
 
--------
-License
--------
+## License
 
 BSD, please read LICENSE file.
 
 
-------------
-Legal Notice
-------------
+## Legal Notice
 
 *pypet* was created by Robert Meyer at the Neural Information Processing Group (TU Berlin),
 supported by the Research Training Group GRK 1589/1.
 
 
--------
-Contact
--------
+## Contact
 
 **robert.meyer (at) ni.tu-berlin.de**
 
