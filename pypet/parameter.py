@@ -1954,7 +1954,7 @@ class Result(BaseResult):
     __slots__ = ('_data_',)
 
     SUPPORTED_DATA = set((np.ndarray, ObjectTable,
-                       DataFrame, Series
+                       DataFrame, Series,
                        dict, tuple, list, np.matrix) +
                        pypetconstants.PARAMETER_SUPPORTED_DATA)
 
