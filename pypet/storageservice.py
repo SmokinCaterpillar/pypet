@@ -19,7 +19,7 @@ if tables_version < 3:
 import tables.parameters as ptpa
 
 import numpy as np
-from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
+from pandas import DataFrame, Series, HDFStore
 
 import pypet.pypetconstants as pypetconstants
 import pypet.pypetexceptions as pex
@@ -422,9 +422,6 @@ class HDF5StorageService(StorageService, HasLogger):
     SERIES = pypetconstants.SERIES
     ''' Store data as pandas Series '''
 
-    PANEL = pypetconstants.PANEL
-    ''' Store data as pandas Panel(4D) '''
-
     SPLIT_TABLE = pypetconstants.SPLIT_TABLE
     ''' If a table was split due to too many columns'''
 
@@ -446,8 +443,6 @@ class HDF5StorageService(StorageService, HasLogger):
         np.matrix: CARRAY,
         DataFrame: FRAME,
         Series: SERIES,
-        Panel: PANEL,
-        Panel4D: PANEL,
         shared.SharedTable: SHARED_DATA,
         shared.SharedArray: SHARED_DATA,
         shared.SharedPandasFrame: SHARED_DATA,
@@ -3836,7 +3831,8 @@ class HDF5StorageService(StorageService, HasLogger):
                                                  flag=flag, **kwargs)
             elif flag in (HDF5StorageService.SERIES,
                           HDF5StorageService.FRAME,
-                          HDF5StorageService.PANEL):
+                          #  HDF5StorageService.PANEL
+                          ):
                 # self._logger.log(1, 'SUB-Storing %s PANDAS', key)
                 self._prm_write_pandas_data(key, data_to_store, hdf5_group, fullname,
                                             flag, **kwargs)
@@ -4018,7 +4014,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
             elif flag in (HDF5StorageService.FRAME,
                           HDF5StorageService.SERIES,
-                          HDF5StorageService.PANEL) :
+                          #  HDF5StorageService.PANEL
+                          ) :
 
                 self._prm_write_pandas_data(key, data,
                                             hdf5_group,
@@ -4676,7 +4673,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 to_load = self._prm_read_array(node, full_name)
             elif load_type in (HDF5StorageService.FRAME,
                                HDF5StorageService.SERIES,
-                               HDF5StorageService.PANEL):
+                               #  HDF5StorageService.PANEL
+                               ):
                 to_load = self._prm_read_pandas(node, full_name)
             elif load_type.startswith(HDF5StorageService.SHARED_DATA):
                 to_load = self._prm_read_shared_data(node, instance)

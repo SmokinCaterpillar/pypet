@@ -818,17 +818,7 @@ class ResultTest(TrajectoryComparator):
 
         myseries = myframe['TC1']
 
-        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),
-                            'Item2' : pd.DataFrame(np.random.randn(4, 2))})
-
         self.data['series'] = myseries
-        self.data['panel'] = mypanel
-
-        # self.data['p4d'] = pd.Panel4D(np.random.randn(2, 2, 5, 4),
-        #     labels=['Label1','Label2'],
-        #    items=['Item1', 'Item2'],
-        #    major_axis=pd.date_range('1/1/2000', periods=5),
-        #   minor_axis=['A', 'B', 'C', 'D'])
 
         self.make_constructor()
         self.make_results()

@@ -155,13 +155,6 @@ def nested_equal(a, b):
         else:
             return not np.any((a != b).data)
 
-    a_panel = isinstance(a, (pd.Panel, pd.Panel4D))
-    b_panel = isinstance(b, (pd.Panel, pd.Panel4D))
-    if a_panel != b_panel:
-        return False
-    if a_panel:
-        return nested_equal(a.to_frame(), b.to_frame())
-
     a_series = isinstance(a, pd.Series)
     b_series = isinstance(b, pd.Series)
     if a_series != b_series:
