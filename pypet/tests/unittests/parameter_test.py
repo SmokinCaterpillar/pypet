@@ -818,11 +818,7 @@ class ResultTest(TrajectoryComparator):
 
         myseries = myframe['TC1']
 
-        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.random.randn(4, 3)),
-                            'Item2' : pd.DataFrame(np.random.randn(4, 2))})
-
         self.data['series'] = myseries
-        self.data['panel'] = mypanel
 
         self.make_constructor()
         self.make_results()

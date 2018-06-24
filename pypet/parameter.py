@@ -67,7 +67,8 @@ import pickletools
 
 import numpy as np
 import scipy.sparse as spsp
-from pandas import DataFrame, Series, Panel
+from pandas import DataFrame, Series
+
 
 import pypet.pypetconstants as pypetconstants
 from pypet.naturalnaming import NNLeafNode
@@ -1954,7 +1955,7 @@ class Result(BaseResult):
     __slots__ = ('_data_',)
 
     SUPPORTED_DATA = set((np.ndarray, ObjectTable,
-                       DataFrame, Series, Panel,
+                       DataFrame, Series,
                        dict, tuple, list, np.matrix) +
                        pypetconstants.PARAMETER_SUPPORTED_DATA)
 

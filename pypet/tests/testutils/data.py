@@ -264,12 +264,8 @@ def simple_calculations(traj, arg1, simple_kwarg):
 
         myseries = myframe['TC1']
 
-        mypanel = pd.Panel({'Item1' : pd.DataFrame(np.ones((4, 3))),'Item2' : pd.DataFrame(np.ones((4, 2)))})
-
         traj.f_add_result('myseries', myseries, comment='dd')
         traj.f_store_item('myseries')
-        traj.f_add_result('mypanel', mypanel, comment='dd')
-        #traj.f_add_result('mypanel4d', p4d, comment='dd')
 
         traj.f_get('DictsNFrame').f_set(myframe)
 
