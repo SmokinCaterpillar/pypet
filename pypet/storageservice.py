@@ -19,7 +19,7 @@ if tables_version < 3:
 import tables.parameters as ptpa
 
 import numpy as np
-from pandas import DataFrame, Series, Panel, Panel4D, HDFStore
+from pandas import DataFrame, Series, Panel, HDFStore
 
 import pypet.pypetconstants as pypetconstants
 import pypet.pypetexceptions as pex
@@ -447,7 +447,6 @@ class HDF5StorageService(StorageService, HasLogger):
         DataFrame: FRAME,
         Series: SERIES,
         Panel: PANEL,
-        Panel4D: PANEL,
         shared.SharedTable: SHARED_DATA,
         shared.SharedArray: SHARED_DATA,
         shared.SharedPandasFrame: SHARED_DATA,

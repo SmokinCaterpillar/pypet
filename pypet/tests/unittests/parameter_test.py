@@ -824,16 +824,8 @@ class ResultTest(TrajectoryComparator):
         self.data['series'] = myseries
         self.data['panel'] = mypanel
 
-        # self.data['p4d'] = pd.Panel4D(np.random.randn(2, 2, 5, 4),
-        #     labels=['Label1','Label2'],
-        #    items=['Item1', 'Item2'],
-        #    major_axis=pd.date_range('1/1/2000', periods=5),
-        #   minor_axis=['A', 'B', 'C', 'D'])
-
         self.make_constructor()
         self.make_results()
-
-
 
     def test_store_load_with_hdf5(self):
         traj_name = 'test_%s' % self.__class__.__name__
@@ -851,7 +843,6 @@ class ResultTest(TrajectoryComparator):
 
         new_traj.f_load(load_data=2)
         self.compare_trajectories(traj, new_traj)
-
 
     def test_rename(self):
         for name,res in self.results.items():

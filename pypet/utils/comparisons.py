@@ -155,8 +155,8 @@ def nested_equal(a, b):
         else:
             return not np.any((a != b).data)
 
-    a_panel = isinstance(a, (pd.Panel, pd.Panel4D))
-    b_panel = isinstance(b, (pd.Panel, pd.Panel4D))
+    a_panel = isinstance(a, pd.Panel)
+    b_panel = isinstance(b, pd.Panel)
     if a_panel != b_panel:
         return False
     if a_panel:
