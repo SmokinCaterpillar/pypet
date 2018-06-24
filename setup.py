@@ -9,10 +9,10 @@ except ImportError:
     from distutils.core import setup
 
 install_requires=[
-        'tables >= 3.1.1',
-        'pandas >= 0.20.0',
-        'numpy >= 1.13.1',
-        'scipy >= 0.17.0']
+        'tables',
+        'pandas',
+        'numpy',
+        'scipy']
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()
