@@ -69,6 +69,7 @@ import numpy as np
 import scipy.sparse as spsp
 from pandas import DataFrame, Series
 
+
 import pypet.pypetconstants as pypetconstants
 from pypet.naturalnaming import NNLeafNode
 import pypet.utils.comparisons as comparisons

@@ -90,15 +90,15 @@ Getting Started
 Requirements
 ------------
 
-3.3, 3.4, or 3.5 [#pythonversion]_, and
+3.4, 3.5, or 3.6 [#pythonversion]_, and
 
-* numpy_ >= 1.6.1
+* numpy_ >= 1.13.0
 
-* scipy_ >= 0.9.0
+* scipy_ >= 1.0.0
 
 * tables_ >= 3.1.1
 
-* pandas_ >= 0.15.0
+* pandas_ >= 0.23.0
 
 * HDF5_ >= 1.8.9
 

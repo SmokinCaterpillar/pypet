@@ -1,3 +1,9 @@
+pypet 0.4.3
+
+*   DEPR: Removed pandas Panel4D (see also https://github.com/pandas-dev/pandas/pull/13776)
+
+*   Removed support for Python 3.3
+
 pypet 0.4.2
 
 *   BUG FIX: Brian2Parameters can now be merged [Issue #50]
