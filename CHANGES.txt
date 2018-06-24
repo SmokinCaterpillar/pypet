@@ -1,6 +1,6 @@
 pypet 0.4.3
 
-*   DEPR: Removed pandas Panel4D (see also https://github.com/pandas-dev/pandas/pull/13776)
+*   DEPR: Removed pandas Panel and Panel4D (see also https://github.com/pandas-dev/pandas/pull/13776)
 
 *   Removed support for Python 3.3
 
