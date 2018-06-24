@@ -16,13 +16,13 @@ addons:
 matrix:
   include:
     - python: 3.5
-      env: NEWEST=FALSE PANDAS_VERSION=0.20 TABLES_VERSION=3.1 COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=SINGLECORE SCOOP=OFF
+      env: COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=SINGLECORE SCOOP=OFF
     - python: 3.6
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=MULTIPROC SCOOP=OFF
+      env: COVERAGE=OFF GIT_TEST=OFF EXAMPLES=OFF TEST_SUITE=MULTIPROC SCOOP=OFF
     - python: 3.5
-      env: NEWEST=TRUE COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
+      env: COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
     - python: 3.6
-      env: NEWEST=TRUE COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
+      env: COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
 
 
 
@@ -39,7 +39,7 @@ before_install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy numexpr cython
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy numexpr cython pandas
   - source activate test-environment
   - pip freeze
 
@@ -49,11 +49,9 @@ install:
   - echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
   - if [[ $COVERAGE == ON ]]; then travis_retry pip install coveralls; fi
   - echo "+++++++++++ Installing PyTables $TABLES_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry conda install pytables=$TABLES_VERSION; fi
-  - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry conda install pandas=$PANDAS_VERSION; fi
-  - echo "+++++++++++ Installing Brian2 if newest  +++++++++++"
-  - if [[ $NEWEST == TRUE ]]; then travis_retry pip install brian2; fi
+  - travis_retry conda install pytables
+  - echo "+++++++++++ Installing Brian2 +++++++++++"
+  - travis_retry pip install brian2
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
