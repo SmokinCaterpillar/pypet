@@ -63,7 +63,7 @@ install:
   - echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
   - if [[ $EXAMPLES == ON ]]; then travis_retry conda install matplotlib; travis_retry pip install deap; fi
   - echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
-  - travis_retry pip install https://pypi.python.org/packages/source/s/scoop/scoop-0.7.1.release.tar.gz
+  - travis_retry pip install scoop
   - echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
   - if [[ $COVERAGE == OFF ]]; then travis_retry python setup.py install; fi
   - echo "+++++++++++ FINISHED INSTALL +++++++++++"
