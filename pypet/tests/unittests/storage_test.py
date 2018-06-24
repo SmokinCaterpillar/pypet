@@ -147,7 +147,6 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_result(SparseResult, 'empty.all', dict={}, list=[],
                           series = pd.Series(),
                           frame = pd.DataFrame(),
-                          panel = pd.Panel(),
                           **traj.par.f_to_dict(short_names=True, fast_access=True))
 
         traj.f_store()
