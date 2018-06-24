@@ -301,9 +301,6 @@ FRAME = 'FRAME'
 SERIES = 'SERIES'
 """ Store data as pandas Series """
 
-PANEL = 'PANEL'
-""" Store data as pandas Panel(4D) """
-
 SPLIT_TABLE = 'SPLIT_TABLE'
 """ If a table was split due to too many columns"""
 
