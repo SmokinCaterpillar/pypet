@@ -10,9 +10,9 @@ except ImportError:
 
 install_requires=[
         'tables >= 3.1.1',
-        'pandas >= 0.15.0',
-        'numpy >= 1.6.1',
-        'scipy >= 0.9.0']
+        'pandas >= 0.20.0',
+        'numpy >= 1.13.1',
+        'scipy >= 1.0.0']
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()
