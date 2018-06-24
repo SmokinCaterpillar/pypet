@@ -52,8 +52,8 @@ install:
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pytables; else travis_retry conda install pytables=$TABLES_VERSION; fi
   - echo "+++++++++++ Installing pandas $PANDAS_VERSION +++++++++++++"
   - if [[ $NEWEST == TRUE ]]; then travis_retry conda install pandas; else travis_retry conda install pandas=$PANDAS_VERSION; fi
-  - echo "+++++++++++ Installing Brian2  +++++++++++"
-  - travis_retry pip install brian2
+  - echo "+++++++++++ Installing Brian2 if newest  +++++++++++"
+  - if [[ $NEWEST == TRUE ]]; then travis_retry pip install brian2; fi
   - echo "+++++++++++ Installing psutil +++++++++++"
   - travis_retry pip install psutil
   - echo "+++++++++++ Installing dill ++++++++++++"
