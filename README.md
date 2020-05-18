@@ -379,10 +379,10 @@ supported by the Research Training Group GRK 1589/1.
 
 ## Contact
 
-**robert.meyer (at) ni.tu-berlin.de**
+**robert.meyer (at) alcemy.tech**
 
-Marchstr. 23
+alcemy GmbH
 
-MAR 5.046
+Choriner Str. 83
 
-D-10587 Berlin
+10119 Berlin, Germany
