@@ -44,7 +44,7 @@ def unit_from_expression(expr):
         return unit_from_expression(expr)
     elif expr.__class__ is ast.Name:
         return ALLUNITS[expr.id]
-    elif expr.__class__ is ast.Num:
+    elif expr.__class__ is ast.Num or expr.__class__ is ast.Constant:
         return expr.n
     elif expr.__class__ is ast.UnaryOp:
         op = expr.op.__class__.__name__

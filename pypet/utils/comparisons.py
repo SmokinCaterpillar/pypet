@@ -184,7 +184,7 @@ def nested_equal(a, b):
             new_frame = a == b
             new_frame = new_frame | (pd.isnull(a) & pd.isnull(b))
             if isinstance(new_frame, pd.DataFrame):
-                return np.all(new_frame.as_matrix())
+                return np.all(new_frame.values)
         except (ValueError, TypeError):
             # The Value Error can happen if the data frame is of dtype=object and contains
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
