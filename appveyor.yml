@@ -69,6 +69,8 @@ install:
     - pip install dill
     # Install scoop with explicetly due to pypi problems
     - pip install https://pypi.python.org/packages/source/s/scoop/scoop-0.7.1.release.tar.gz
+    # Install MKL for openMP
+    - pip install mkl-service
     # Finally install pypet
     - pip freeze # check installed packages
     - python setup.py install
