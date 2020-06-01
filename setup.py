@@ -41,7 +41,7 @@ setup(
     package_data={'pypet.tests': ['testdata/*.hdf5'], 'pypet': ['logging/*.ini']},
     license='BSD',
     author='Robert Meyer',
-    author_email='robert.meyer@ni.tu-berlin.de',
+    author_email='robert.meyer@alcemy.tech',
     description='A toolkit for numerical simulations to allow easy parameter exploration and storage of results.',
     long_description=open('README.md').read(),
     url='https://github.com/SmokinCaterpillar/pypet',
@@ -49,11 +49,13 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
         'License :: OSI Approved :: BSD License',
-        'Topic :: Utilities']
+        'Topic :: Utilities'],
+    python_requires='>=3.6',
 )

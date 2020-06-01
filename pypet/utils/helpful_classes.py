@@ -62,7 +62,12 @@ class IteratorChain(object):
 
     def __iter__(self):
         while True:
-            yield self.next()
+            try:
+                yield self.next()
+            except StopIteration:
+                # new behavior since PEP479
+                # one should return to stop iteration
+                return
 
 
 class ChainMap(object):
