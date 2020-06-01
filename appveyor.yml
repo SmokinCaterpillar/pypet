@@ -10,49 +10,49 @@ environment:
 
     matrix:
         - PYTHON: "C:\\Python35_64"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "64"
           MULTIPROC: "OFF"
           SINGLECORE: "1"
           EXAMPLES: "ON"
 
         - PYTHON: "C:\\Python35_32"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "32"
           MULTIPROC: "1"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
         - PYTHON: "C:\\Python35_64"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "64"
           MULTIPROC: "3"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
         - PYTHON: "C:\\Python35_32"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "32"
           MULTIPROC: "2"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
         - PYTHON: "C:\\Python35_64"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "64"
           MULTIPROC: "4"
           SINGLECORE: "OFF"
           EXAMPLES: "OFF"
 
         - PYTHON: "C:\\Python35_64"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "64"
           MULTIPROC: "OFF"
           SINGLECORE: "2"
           EXAMPLES: "ON"
 
         - PYTHON: "C:\\Python35_32"
-          PYTHON_VERSION: "3.5"
+          PYTHON_VERSION: "3.8"
           PYTHON_ARCH: "32"
           MULTIPROC: "OFF"
           SINGLECORE: "3"
@@ -83,6 +83,7 @@ branches:
     - develop
     - brian2
     - py3only
+    - python38
 
 
 test_script:

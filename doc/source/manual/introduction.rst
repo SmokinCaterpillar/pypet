@@ -90,17 +90,17 @@ Getting Started
 Requirements
 ------------
 
-3.4, 3.5, or 3.6 [#pythonversion]_, and
+3.6, 3.7, or 3.8 [#pythonversion]_, and
 
-* numpy_ >= 1.13.0
+* numpy_ >= 1.16.0
 
 * scipy_ >= 1.0.0
 
-* tables_ >= 3.1.1
+* tables_ >= 3.5.0
 
-* pandas_ >= 0.23.0
+* pandas_ >= 1.0.0
 
-* HDF5_ >= 1.8.9
+* HDF5_ >= 1.10.0
 
 Python 2.6 and 2.7 are no longer supported. Still if you
 need *pypet* for these versions check out the legacy `0.3.0`_ package.
@@ -115,15 +115,15 @@ If you want to combine *pypet* with the `SCOOP framework`_ you need
 
 For git integration you additionally need
 
-* GitPython_ >= 0.3.1
+* GitPython_ >= 3.1.3
 
 To utilize the cap feature for :ref:`more-on-multiprocessing` you need
 
-* psutil_ >= 2.0.0
+* psutil_ >= 5.7.0
 
 To utilize the continuing of crashed trajectories you need
 
-* dill_ >= 0.2.1
+* dill_ >= 0.3.1
 
 Automatic sumatra records are supported for
 
@@ -133,7 +133,7 @@ Automatic sumatra records are supported for
 
 .. [#pythonversion]
 
-    *pypet* might also work under Python 3.0-3.2 but has not been tested.
+    *pypet* might also work under Python 3.0-3.5 but has not been tested.
 
 
 -------

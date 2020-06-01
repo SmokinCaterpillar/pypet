@@ -1,3 +1,10 @@
+pypet 0.5.0
+
+* Fix to work with pandas 1.0
+* Fix to work with brian2 2.3
+* Fix to work with Python 3.7 and 3.8
+* Removal `expectedrows` and `filters` option for HDF5Storage.put as this is no longer supported by pandas
+
 pypet 0.4.3
 
 *   DEPR: Removed pandas Panel and Panel4D (see also https://github.com/pandas-dev/pandas/pull/13776)
