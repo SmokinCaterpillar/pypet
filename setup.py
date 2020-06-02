@@ -1,21 +1,22 @@
 __author__ = 'Robert Meyer'
 
 import re
-import sys
-try:
-    import m2r
-except ImportError:
-    m2r = None
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+try:
+    # Used to convert md to rst for pypi, otherwise not needed
+    import m2r
+except ImportError:
+    m2r = None
 
 install_requires=[
-        'tables',
-        'pandas',
-        'numpy',
-        'scipy']
+    'tables',
+    'pandas',
+    'numpy',
+    'scipy'
+]
 
 # For versioning, Version found in pypet._version.py
 verstrline = open('pypet/_version.py', "rt").read()
