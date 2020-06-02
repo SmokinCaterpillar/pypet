@@ -1,3 +1,7 @@
+pypet 0.5.1
+
+* Updated package description to automatically convert md to rst for pypi
+
 pypet 0.5.0
 
 * Fix to work with pandas 1.0

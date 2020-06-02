@@ -2,7 +2,10 @@ __author__ = 'Robert Meyer'
 
 import re
 import sys
-
+try:
+    import m2r
+except ImportError:
+    m2r = None
 try:
     from setuptools import setup
 except ImportError:
@@ -24,6 +27,14 @@ if mo:
 else:
     raise RuntimeError('Unable to find version in pypet/_version.py')
 
+description = ('A toolkit for numerical simulations to allow '
+               'easy parameter exploration and storage of results.')
+if m2r is None:
+    long_description = description
+else:
+    # convert markdown to rst
+    long_description = m2r.convert(open('README.md').read())
+
 setup(
     name='pypet',
     version=verstr,
@@ -42,8 +53,8 @@ setup(
     license='BSD',
     author='Robert Meyer',
     author_email='robert.meyer@alcemy.tech',
-    description='A toolkit for numerical simulations to allow easy parameter exploration and storage of results.',
-    long_description=open('README.md').read(),
+    description=description,
+    long_description=long_description,
     url='https://github.com/SmokinCaterpillar/pypet',
     install_requires=install_requires,
     classifiers=[
