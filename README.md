@@ -132,9 +132,7 @@ As above run from the terminal ``python setup.py install``.
 
 Documentation can be found on http://pypet.readthedocs.org/.
 
-There is a Google Groups mailing list for support: https://groups.google.com/forum/?hl=de#!forum/pypet
-
-If you have any further questions feel free to contact me at **robert.meyer (at) ni.tu-berlin.de**.
+If you have any further questions feel free to contact me at **robert.meyer (at) alcemy.tech**.
 
 
 ## Main Features
