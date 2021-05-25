@@ -3,7 +3,10 @@ __author__ = 'Robert Meyer'
 import time
 import sys
 import pickle
-from collections import Set, Sequence, Mapping
+try:
+    from collections import Set, Sequence, Mapping
+except ImportError:
+    from collections.abc import Set, Sequence, Mapping
 
 import pandas as pd
 import numpy as np
