@@ -46,7 +46,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pypet'
-copyright = u'2020, Robert Meyer'
+copyright = u'2021, Robert Meyer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
