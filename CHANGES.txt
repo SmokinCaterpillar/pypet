@@ -1,3 +1,7 @@
+pypet 0.5.2
+
+* Fixed import from collections.abc for Python 3.10
+
 pypet 0.5.1
 
 * Updated package description to automatically convert md to rst for pypi

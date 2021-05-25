@@ -90,7 +90,7 @@ Getting Started
 Requirements
 ------------
 
-3.6, 3.7, or 3.8 [#pythonversion]_, and
+3.7 or higher [#pythonversion]_ and
 
 * numpy_ >= 1.16.0
 
@@ -133,7 +133,7 @@ Automatic sumatra records are supported for
 
 .. [#pythonversion]
 
-    *pypet* might also work under Python 3.0-3.5 but has not been tested.
+    *pypet* might also work under Python 3.0-3.6 but has not been tested.
 
 
 -------

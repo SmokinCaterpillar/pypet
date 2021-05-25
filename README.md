@@ -19,7 +19,7 @@ analyses becomes a piece of cake!
 
 ## Requirements
 
-Python 3.6, 3.7 or 3.8 and
+Python 3.7 or higher and
 
 * tables >=  3.5.0
 
