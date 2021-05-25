@@ -2,7 +2,10 @@
 
 __author__ = 'Robert Meyer'
 
-from collections import Sequence, Mapping
+try:
+    from collections import Sequence, Mapping
+except ImportError:
+    from collections.abc import Sequence, Mapping
 
 import numpy as np
 import pandas as pd
