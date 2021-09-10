@@ -333,8 +333,6 @@ class ParameterTest(TrajectoryComparator):
                 if isinstance(param, SparseParameter):
                     self.assertTrue(len(store_dict)<23)
 
-
-
             constructor = param.__class__
 
             param.f_unlock()
