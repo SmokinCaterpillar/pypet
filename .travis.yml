@@ -73,7 +73,4 @@ branches:
   only:
     - develop
     - master
-    - brian2
-    - py3only
-    - python38
 
