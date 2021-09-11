@@ -1,3 +1,9 @@
+pypet 0.6.0
+
+* Fixed broken support for scipy sparse matrices
+* Sparse matrices are now serialized using scipy save_npz function and hex conversion
+* BACKWARDS INCOMPATIBLE CHANGE: Can no longer load sparse matrices stored with older versions!
+
 pypet 0.5.2
 
 * Fixed import from collections.abc for Python 3.10

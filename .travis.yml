@@ -76,4 +76,5 @@ branches:
     - brian2
     - py3only
     - python38
+    - fixspsm
 
