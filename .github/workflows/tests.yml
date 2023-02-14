@@ -11,10 +11,11 @@ jobs:
   # command to install dependencies
   before_install:
     runs-on: ubuntu-latest
-    uses: conda-incubator/setup-miniconda@v2
     steps:
+      - uses: conda-incubator/setup-miniconda@v2
+      - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
+      - run: conda info -a
       # Replace dep1 dep2 ... with your dependencies
-      - run: conda info
       - run: conda create -q -n test-environment python=3.10 pip numpy scipy numexpr cython pandas pytables
       - run: conda activate test-environment
       - run: pip freeze
