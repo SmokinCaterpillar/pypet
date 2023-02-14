@@ -22,6 +22,6 @@ jobs:
 #          - env: PYTHON_VERSION="3.9" COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
 #          - env: PYTHON_VERSION="3.10" COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
     steps:
-      - run: echo $MY_VAR $MY_VAR2
+      - run: echo "$MY_VAR $MY_VAR2"
 
 
