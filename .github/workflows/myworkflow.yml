@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  MY_VAR: "2"
+  MY_VAR2: One
+
 jobs:
   test:
     runs-on: ubuntu-latest
