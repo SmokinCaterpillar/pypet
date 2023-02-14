@@ -6,26 +6,26 @@ set -u # Treat references to unset variables as an error
 if [[ $TEST_SUITE == ON ]]
     then
         echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ../../pypet/tests/all_tests.py
+        python -m scoop -n 3 ./pypet/tests/all_tests.py
     fi
 
 if [[ $TEST_SUITE == MULTIPROC ]]
     then
         echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ../../pypet/tests/all_multi_core_tests.py
+        python -m scoop -n 3 ./pypet/tests/all_multi_core_tests.py
     fi
 
 if [[ $TEST_SUITE == SINGLECORE ]]
     then
         echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ../../pypet/tests/all_single_core_tests.py
+        python -m scoop -n 3 ./pypet/tests/all_single_core_tests.py
     fi
 
 if [[ $GIT_TEST == ON ]]
     then
 
         mkdir git_sumatra_test
-        cp ../../pypet/tests/integration/git_check.py git_sumatra_test
+        cp ./pypet/tests/integration/git_check.py git_sumatra_test
         cd git_sumatra_test
         echo "Initialise git repo"
         git init
@@ -42,7 +42,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
+                coverage run --parallel-mode --source=./pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
             else
                 python git_check.py -f # Also test failing of git
             fi
@@ -51,7 +51,7 @@ if [[ $GIT_TEST == ON ]]
         if [[ $COVERAGE == ON ]]
             then
                 echo "Running git coverage"
-                coverage run --parallel-mode --source=../../../pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
+                coverage run --parallel-mode --source=./pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py git_check.py
                 mv -v .coverage* ../../../
             else
                 python git_check.py -n # Test that git is not failing
@@ -64,24 +64,22 @@ if [[ $GIT_TEST == ON ]]
 
 if [[ $COVERAGE == ON ]]
     then
-        cd ../../
         coverage run --parallel-mode --source=pypet --omit=*/compat.py,*/ptcompat.py,*/pypet/tests/*,*/shareddata.py ./pypet/tests/coverage_run.py
         coverage combine
         coveralls --verbose
-        cd ciscripts/travis
     fi
 
 if [[ $EXAMPLES == ON ]]
     then
-        cd ../../pypet/tests
+        cd pypet/tests
         python all_examples.py
-        cd ../../ciscripts/travis
+        cd ../../
         if [[ $SCOOP == ON ]]
             then
-                cd ../../examples
+                cd examples
                 echo "Running SCOOP example"
                 python -m scoop -n 3 example_21_scoop_multiprocessing.py
                 echo "SCOOP example succesfull"
-                cd ../ciscripts/travis
+                cd ..
             fi
     fi
