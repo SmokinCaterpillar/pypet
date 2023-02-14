@@ -894,8 +894,8 @@ class Parameter(BaseParameter):
             # Numpy has many string types that depend on the length of the string,
             # We allow all of them
             dtype = data.dtype
-            if np.issubdtype(dtype, np.str):
-                dtype = np.str
+            if np.issubdtype(dtype, str):
+                dtype = str
 
         return dtype in pypetconstants.PARAMETER_SUPPORTED_DATA
 

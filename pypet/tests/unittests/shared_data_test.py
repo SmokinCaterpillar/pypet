@@ -267,7 +267,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj = Trajectory(name=make_trajectory_name(self), filename=filename)
         trajname = traj.v_name
 
-        npearray = np.ones((2, 10, 3), dtype=np.float)
+        npearray = np.ones((2, 10, 3), dtype=float)
         thevlarray = np.array(['j'.encode('utf-8'), 22.2, 'gutter'.encode('utf-8')])
         traj.f_store(only_init=True)
         res = traj.f_add_result(SharedResult, 'arrays')
@@ -345,7 +345,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         filename = make_temp_dir('hdf5errors.hdf5')
         traj = Trajectory(name=make_trajectory_name(self), filename=filename)
 
-        npearray = np.ones((2, 10, 3), dtype=np.float)
+        npearray = np.ones((2, 10, 3), dtype=float)
         thevlarray = np.array(['j'.encode('utf-8'), 22.2, 'gutter'.encode('utf-8')])
 
         with self.assertRaises(TypeError):

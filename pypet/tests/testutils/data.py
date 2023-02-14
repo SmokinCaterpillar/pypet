@@ -118,7 +118,7 @@ def add_params(traj,param_dict):
     traj.f_add_derived_parameter('Another.crun.String2', 'Really, again?', comment='test4')
 
 
-    traj.f_add_result('Peter_Jackson',np.str(['is','full','of','suboptimal ideas']),
+    traj.f_add_result('Peter_Jackson', 'is full of suboptimal ideas',
                       comment='Only my opinion bro!',)
 
     traj.results.f_add_leaf('Test', 42, comment='NC')

@@ -1,7 +1,6 @@
 # pypet
 
-[![Travis Build Status](https://travis-ci.com/SmokinCaterpillar/pypet.svg?branch=master)](https://travis-ci.com/SmokinCaterpillar/pypet)
-[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true)](https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master)
+[![pypet-test-suite](https://github.com/SmokinCaterpillar/pypet/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/SmokinCaterpillar/pypet/actions/workflows/tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master)](https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bdc483ee47304b97a334bb2922d83e8f)](https://www.codacy.com/gh/SmokinCaterpillar/pypet/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SmokinCaterpillar/pypet&amp;utm_campaign=Badge_Grade)
 [![PyPI version](https://badge.fury.io/py/pypet.svg)](https://badge.fury.io/py/pypet)

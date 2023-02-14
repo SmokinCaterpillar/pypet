@@ -1,0 +1,39 @@
+name: pypet-test-suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Install dependencies for PyTables
+  # command to install dependencies
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        env:
+          - {PYTHON_VERSION: "3.10", COVERAGE: OFF, GIT_TEST: OFF, EXAMPLES: OFF, TEST_SUITE: SINGLECORE, SCOOP: OFF}
+          - {PYTHON_VERSION: "3.8", COVERAGE: OFF, GIT_TEST: OFF, EXAMPLES: OFF, TEST_SUITE: MULTIPROC, SCOOP: OFF }
+          # TODO figure out how to run the rest here eventually
+#          - {PYTHON_VERSION: "3.9", COVERAGE: ON, GIT_TEST: ON,  EXAMPLES: OFF, TEST_SUITE: OFF, SCOOP: OFF}
+#          - {PYTHON_VERSION: "3.9", COVERAGE: OFF, GIT_TEST: ON, EXAMPLES: ON, TEST_SUITE: OFF,  SCOOP: ON}
+    env: ${{ matrix.env }}
+    steps:
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.env.PYTHON_VERSION }}
+          auto-activate-base: true
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - run: chmod +x ./.github/scripts/install.sh; ./.github/scripts/install.sh
+      - run: chmod +x ./.github/scripts/runtests.sh; ./.github/scripts/runtests.sh
+
+
