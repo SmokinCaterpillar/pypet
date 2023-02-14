@@ -43,7 +43,7 @@ install:
     - python setup.py install
 
 
-build: false
+build: off
 
 
 branches:
