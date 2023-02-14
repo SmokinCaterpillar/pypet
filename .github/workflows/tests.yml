@@ -18,8 +18,6 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
       - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
       - run: conda info -a
-      - run: echo "$PWD"
-      - run: ls -a
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -39,7 +37,9 @@ jobs:
           fetch-depth: 1
       - run: echo "$PWD"
       - run: ls -a
-      - run: cd .github/scripts
+      - run: cd .github
+      - run: echo "$PWD"
+      - run: cd scripts
       - run: echo "$PWD"
       - run: chmod +x ./install.sh; ./install.sh
       - run: chmod +x ./runtests.sh; ./runtests.sh
