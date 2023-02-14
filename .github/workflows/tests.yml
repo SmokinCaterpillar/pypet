@@ -24,7 +24,7 @@ jobs:
       - run: conda info -a
       # Replace dep1 dep2 ... with your dependencies
       - run: conda create -q -n test-environment python=3.10 pip numpy scipy numexpr cython pandas pytables
-      - run: source activate test-environment
+      - run: conda activate test-environment
       - run: pip freeze
   install:
     needs: before_install
