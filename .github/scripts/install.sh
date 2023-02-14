@@ -19,6 +19,6 @@ if [[ $EXAMPLES == ON ]]; then conda install matplotlib; pip install deap; fi
 echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
 pip install scoop
 echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
-if [[ $COVERAGE == OFF ]]; then python setup.py install; fi
+python setup.py install -e
 echo "+++++++++++ FINISHED INSTALL +++++++++++"
 pip freeze
