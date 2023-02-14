@@ -1,3 +1,7 @@
+echo "+++++++++++ Installing libraries +++++++++++++"
+sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
+echo "+++++++ Conda Info ++++++"
+echo conda info -a
 echo "+++++++++++ Installing Stuff for Python $PYTHON_VERSION +++++++++++"
 conda create -q -n test-environment python=$PYTHON_VERSION pip numpy scipy numexpr cython pandas pytables
 conda activate test-environment

@@ -9,21 +9,8 @@ on:
 jobs:
   # Install dependencies for PyTables
   # command to install dependencies
-  build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: conda-incubator/setup-miniconda@v2
-      - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
-      - run: conda info -a
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    needs: build
     defaults:
       run:
         shell: bash -l {0}
@@ -36,6 +23,7 @@ jobs:
           - {PYTHON_VERSION: "3.10", COVERAGE: OFF, GIT_TEST: ON, EXAMPLES: ON, TEST_SUITE: OFF,  SCOOP: ON}
     env: ${{ matrix.env }}
     steps:
+      - uses: conda-incubator/setup-miniconda@v2
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
