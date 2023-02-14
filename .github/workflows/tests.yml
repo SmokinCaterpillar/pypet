@@ -16,6 +16,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/checkout@v3
       - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
       - run: conda info -a
       - run: echo "$PWD"
