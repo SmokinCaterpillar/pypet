@@ -27,6 +27,7 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.env.PYTHON_VERSION }}
+          auto-activate-base: true
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
