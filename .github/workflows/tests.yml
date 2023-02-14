@@ -30,7 +30,7 @@ jobs:
           - env: PYTHON_VERSION="3.9" COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
           - env: PYTHON_VERSION="3.10" COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
     steps:
-      - run: chmod +x ciscripts/install.sh; ciscripts/install.sh
+      - run: chmod +x ./ciscripts/install.sh; ./ciscripts/install.sh
       - run: cd ciscripts/; chmod +x runtests.sh; ./runtests.sh
 
 
