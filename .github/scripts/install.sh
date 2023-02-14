@@ -1,12 +1,9 @@
 echo "+++++++++++ Installing libraries +++++++++++++"
 sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
 echo "+++++++++++ Installing Stuff for Python $PYTHON_VERSION +++++++++++"
-conda create -q -n test-environment python=$PYTHON_VERSION pip numpy scipy numexpr cython pandas pytables
+conda install pip numpy scipy numexpr cython pandas pytables
 echo "+++++++ Conda Info and activate ++++++"
 conda info -a
-CONDA_BASE=$(conda info --base)
-source $CONDA_PREFIX/etc/profile.d/conda.sh
-conda activate test-environment
 echo "+++++++++++ Installing Coveralls if coverage +++++++++++"
 if [[ $COVERAGE == ON ]]; then pip install coveralls; fi
 echo "+++++++++++ Installing Brian2 +++++++++++"
