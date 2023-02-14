@@ -16,10 +16,10 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: conda-incubator/setup-miniconda@v2
-      - uses: actions/checkout@v3
       - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
       - run: conda info -a
       - run: echo "$PWD"
+      - run: ls -a
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -31,6 +31,7 @@ jobs:
           - env: PYTHON_VERSION="3.9" COVERAGE=ON GIT_TEST=ON EXAMPLES=OFF TEST_SUITE=OFF SCOOP=OFF
           - env: PYTHON_VERSION="3.10" COVERAGE=OFF GIT_TEST=ON EXAMPLES=ON TEST_SUITE=OFF SCOOP=ON
     steps:
+      - uses: actions/checkout@v3
       - run: echo "$PWD"
       - run: ls -a
       - run: cd .github/scripts
