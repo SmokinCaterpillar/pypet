@@ -38,6 +38,7 @@ jobs:
       - run: echo "$PWD"
       - run: ls -a
       - run: cd .github
+      - run: ls -a
       - run: echo "$PWD"
       - run: cd scripts
       - run: echo "$PWD"
