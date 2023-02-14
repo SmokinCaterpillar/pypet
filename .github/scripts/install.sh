@@ -18,7 +18,7 @@ echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
 if [[ $EXAMPLES == ON ]]; then conda install matplotlib; pip install deap; fi
 echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
 pip install scoop
-echo "+++++++++++ Installing PYPET unless coverage +++++++++++"
-if [[ $COVERAGE == OFF ]]; then python setup.py install; fi
+echo "+++++++++++ Installing PYPET unless coverage or append pwd to path +++++++++++"
+if [[ $COVERAGE == OFF ]]; then python setup.py install; else export PATH="./:$PATH"; fi
 echo "+++++++++++ FINISHED INSTALL +++++++++++"
 pip freeze
