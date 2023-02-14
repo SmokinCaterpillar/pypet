@@ -13,7 +13,7 @@ pip install psutil
 echo "+++++++++++ Installing dill ++++++++++++"
 pip install dill
 echo "+++++++++++ Installing GitPython and Sumatra if needed ++++++++++++"
-if [[ $GIT_TEST == ON ]]; then chmod +x ./install_gitpython.sh; ./install_gitpython.sh; fi
+if [[ $GIT_TEST == ON ]]; then chmod +x ./.github/scripts/install_gitpython.sh; ./.github/scripts/install_gitpython.sh; fi
 echo "+++++++++++ Installing matplotlib and deap if needed ++++++++++++"
 if [[ $EXAMPLES == ON ]]; then conda install matplotlib; pip install deap; fi
 echo "++++++++++++ Installing SCOOP  +++++++++++++++++++++++++"
