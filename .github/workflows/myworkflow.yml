@@ -17,6 +17,7 @@ jobs:
         env:
           - MY_VAR: Two
           - MY_VAR: Three
+    env: ${{ matrix.env }}
     steps:
       - run: echo "$MY_VAR2"
 
