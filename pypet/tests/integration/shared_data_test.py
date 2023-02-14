@@ -172,7 +172,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
 
     def add_array_params(self, traj):
         length = len(traj)
-        da_data = np.zeros(length, dtype=np.int)
+        da_data = np.zeros(length, dtype=int)
         traj.f_store(only_init=True)
         traj.f_add_result(SharedResult, 'daarrays.a', SharedArray()).create_shared_data(obj=da_data)
         traj.f_add_result(SharedResult, 'daarrays.ca', SharedCArray()).create_shared_data( obj=da_data)
