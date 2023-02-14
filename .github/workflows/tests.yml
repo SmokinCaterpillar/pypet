@@ -11,20 +11,12 @@ jobs:
   # command to install dependencies
   before_install:
     runs-on: ubuntu-latest
+    uses: conda-incubator/setup-miniconda@v2
     steps:
-      - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
-      - run: echo "++++++++++++ Install conda with numpy and scipy ++++++++++++++++++"
-      - run: wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      - run: bash miniconda.sh -b -p $HOME/miniconda
-      - run: export PATH="$HOME/miniconda/bin:$PATH"
-      - run: hash -r
-      - run: conda config --set always_yes yes --set changeps1 no
-      - run: conda update -q conda
-      # Useful for debugging any issues with conda
-      - run: conda info -a
       # Replace dep1 dep2 ... with your dependencies
+      - run: conda info
       - run: conda create -q -n test-environment python=3.10 pip numpy scipy numexpr cython pandas pytables
-      - run: conda init bash; conda activate test-environment
+      - run: conda activate test-environment
       - run: pip freeze
   install:
     needs: before_install
