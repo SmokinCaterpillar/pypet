@@ -11,6 +11,9 @@ jobs:
   # command to install dependencies
   before_install:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: conda-incubator/setup-miniconda@v2
       - run: sudo apt-get install gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
