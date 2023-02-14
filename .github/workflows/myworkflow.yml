@@ -17,8 +17,8 @@ jobs:
         include:
           - env:
               MY_VAR: Two
-          - env:
-              MY_VAR: Three
+#          - env:
+#              MY_VAR: Three
     steps:
       - run: echo "$MY_VAR2"
 
