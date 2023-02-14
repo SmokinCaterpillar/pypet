@@ -1,5 +1,4 @@
 echo "+++++++++++ Installing Stuff for Python $PYTHON_VERSION +++++++++++"
-echo "$PWD"
 conda create -q -n test-environment python=$PYTHON_VERSION pip numpy scipy numexpr cython pandas pytables
 conda activate test-environment
 pip freeze
