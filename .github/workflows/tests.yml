@@ -20,6 +20,9 @@ jobs:
       - run: conda info -a
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     needs: build
     defaults:
       run:
