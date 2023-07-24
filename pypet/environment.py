@@ -56,6 +56,12 @@ except ImportError:
     scoop = None
 
 try:
+    import dask
+    from dask.distributed import Client
+except ImportError:
+    dask = None
+
+try:
     import git
 except ImportError:
     git = None
@@ -206,6 +212,13 @@ def _scoop_single_run(kwargs):
         scoop.logger.exception('ERROR occurred during a single run!')
         raise
 
+def _dask_single_run(kwargs):
+    """Wrapper function for dask, that does not configure logging"""
+    try:
+        return _single_run(kwargs)
+    except Exception:
+        dask.logger.exception('ERROR occurred during a single run!')
+        raise
 
 def _configure_logging(kwargs, extract=True):
     """Requests the logging manager to configure logging.
@@ -1025,6 +1038,8 @@ class Environment(HasLogger):
                  ncores=1,
                  use_scoop=False,
                  use_pool=False,
+                 use_dask=False,
+                 dask_client=None,
                  freeze_input=False,
                  timeout=None,
                  cpu_cap=100.0,
@@ -1305,6 +1320,8 @@ class Environment(HasLogger):
         # Whether to use a pool of processes
         self._use_pool = use_pool
         self._use_scoop = use_scoop
+        self._use_dask = use_dask
+        self._dask_client = dask_client
         self._freeze_input = freeze_input
         self._gc_interval = gc_interval
         self._multiproc_wrapper = None # The wrapper Service
@@ -2680,6 +2697,26 @@ class Environment(HasLogger):
                 finally:
                     if self._freeze_input:
                         self._traj.v_full_copy = scoop_full_copy
+            elif self._use_dask:
+                self._logger.info('Starting Dask jobs')
+
+                if self._freeze_input:
+                    raise RuntimeError('Freezing input is not supported for Dask')
+                else:
+                    iterator = self._make_iterator(start_run_idx,
+                                                   copy_data=True)
+                    target = _dask_single_run
+                
+                try:
+                    dask_futures = self._dask_client.map(target, list(iterator))
+                    dask_results = [future.result() for future in dask_futures]
+                    self._show_progress(n - 1, total_runs)
+                    for result in dask_results:
+                        n = self._check_result_and_store_references(result, results,
+                                                                    n, total_runs)
+                except Exception as exc:
+                    self._logger.error('Dask failed with the following error: %s' % exc)
+                    raise exc
             else:
                 # If we spawn a single process for each run, we need an additional queue
                 # for the results of `runfunc`
