@@ -481,7 +481,7 @@ class StorageTest(TrajectoryComparator):
 
         store = pt.open_file(filename, mode='r+')
         table = store.root._f_get_child(traj.v_name).overview.parameters_overview
-        self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
+        self.assertEqual(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
 
         for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH,
@@ -492,7 +492,7 @@ class StorageTest(TrajectoryComparator):
 
         store = pt.open_file(filename, mode='r+')
         table = store.root._f_get_child(traj.v_name).overview.parameters_overview
-        self.assertEquals(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
+        self.assertEqual(table.nrows, pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH)
         store.close()
 
         env.f_disable_logging()
