@@ -556,7 +556,7 @@ class LoggingManager(object):
 
         """
         parser = NoInterpolationParser()
-        parser.readfp(log_config)
+        parser.read_file(log_config)
 
         rename_func = lambda string: rename_log_file(string,
                                                      env_name=self.env_name,
