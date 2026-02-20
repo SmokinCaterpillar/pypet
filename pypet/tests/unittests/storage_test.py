@@ -100,14 +100,14 @@ class StorageTest(TrajectoryComparator):
         npars = 700
         traj.f_store()
         for irun in range(npars):
-            par = traj.f_add_parameter('test.test%d' % irun, 42+irun, comment='duh!')
+            par = traj.f_add_parameter(f'test.test{irun}', 42+irun, comment='duh!')
             traj.f_store_item(par)
 
 
         size =  os.path.getsize(filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 10.0, f'Size is {size_in_mb}MB > 10MB')
 
     def test_loading_explored_parameters(self):
 
@@ -444,7 +444,7 @@ class StorageTest(TrajectoryComparator):
             traj.f_store()
 
         with pt.open_file(file, mode='r') as fh:
-            jj = fh.get_node(where='/%s/results/j/j' % traj.v_name)
+            jj = fh.get_node(where=f'/{traj.v_name}/results/j/j')
             self.assertTrue('josie' not in jj)
 
         traj.j.j.f_remove_child('josie')
@@ -455,7 +455,7 @@ class StorageTest(TrajectoryComparator):
             traj.f_store_child('results', recursive=True)
 
         with pt.open_file(file, mode='r') as fh:
-            jj = fh.get_node(where='/%s/results/j/j' % traj.v_name)
+            jj = fh.get_node(where=f'/{traj.v_name}/results/j/j')
             self.assertTrue('josie2' in jj)
             josie2 =jj._f_get_child('josie2')
             self.assertTrue('hey' in josie2)
@@ -472,7 +472,7 @@ class StorageTest(TrajectoryComparator):
 
         traj = env.v_trajectory
         for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
-            traj.f_add_parameter('f%d.x' % irun, 5)
+            traj.f_add_parameter(f'f{irun}.x', 5)
 
         traj.f_store()
 
@@ -484,7 +484,7 @@ class StorageTest(TrajectoryComparator):
 
         for irun in range(pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH,
                   2*pypetconstants.HDF5_MAX_OVERVIEW_TABLE_LENGTH):
-            traj.f_add_parameter('f%d.x' % irun, 5)
+            traj.f_add_parameter(f'f{irun}.x', 5)
 
         traj.f_store()
 
@@ -572,7 +572,7 @@ class StorageTest(TrajectoryComparator):
         traj.f_add_result('wc2test.$.hhh', 333)
         traj.f_add_leaf('results.wctest.run_00000000.jjj', 42)
         traj.f_add_result('results.wctest.run_00000001.jjj', 43)
-        traj.f_add_result('results.wctest.%s.jjj' % traj.f_wildcard('$', -1), 43)
+        traj.f_add_result(f'results.wctest.{traj.f_wildcard("$", -1)}.jjj', 43)
 
         traj.v_crun = 1
 
@@ -619,12 +619,12 @@ class StorageTest(TrajectoryComparator):
         large_dict = {}
 
         for irun in range(1025):
-            large_dict['item_%d' % irun] = irun
+            large_dict[f'item_{irun}'] = irun
 
         large_dict2 = {}
 
         for irun in range(33):
-            large_dict2['item_%d' % irun] = irun
+            large_dict2[f'item_{irun}'] = irun
 
         traj.f_add_result('large_dict', large_dict, comment='Huge_dict!')
         traj.f_add_result('large_dict2', large_dict2, comment='Not so large dict!')

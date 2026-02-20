@@ -64,20 +64,20 @@ def write_into_shared_storage(traj):
     for irun in the_range:
         x, y = a[irun], irun
         if x != y and x != 0:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+            raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
         x, y = ca[irun], irun
         if x != y and x != 0:
-            raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+            raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
         try:
             x, y = ea[irun, 9], ea[irun, 8]
             if x != y and x != 0:
-                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
         except IndexError:
             pass  # Array is not at this size yet
         try:
             x, y = vla[irun][0], vla[irun][1]
             if x != y and x != 0:
-                raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
         except IndexError:
             pass  # Array is not at this size yet
     root.info('6. !!!!!!!!!')
@@ -95,8 +95,7 @@ def write_into_shared_storage(traj):
     t2 = tabs.t2
     row = t2[idx]
     if row['run_name'] != traj.v_crun.encode('utf-8'):
-        raise RuntimeError('Names in run table do not match, Run: %s != %s' % (row['run_name'],
-                                                                                   traj.v_crun) )
+        raise RuntimeError(f'Names in run table do not match, Run: {row["run_name"]} != {traj.v_crun}')
 
     df = traj.df
     df.append(pd.DataFrame({'idx':[traj.v_idx], 'run_name':traj.v_crun}))
@@ -139,7 +138,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, f'Size is {size_in_mb}MB > 2MB')
 
         newtraj = self.load_trajectory(trajectory_name=self.traj.v_name, as_new=False)
         self.compare_trajectories(self.traj, newtraj)
@@ -210,7 +209,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    'test%s.hdf5' % self.trajname))
+                                                    f'test{self.trajname}.hdf5'))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
@@ -261,16 +260,16 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
                 vla = daarrays.vla
                 x, y = a[idx], idx
                 if x != y:
-                    raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                    raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
                 x, y = ca[idx], idx
                 if x != y:
-                    raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                    raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
                 x, y = ea[idx, 9], ea[idx, 8]
                 if x != y:
-                    raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                    raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
                 x, y = vla[idx][0], vla[idx][1]
                 if x != y:
-                    raise RuntimeError('ERROR in write_into_shared_storage %s != %s' % (str(x), str(y)))
+                    raise RuntimeError(f'ERROR in write_into_shared_storage {x} != {y}')
 
         tabs = traj.tabs
 
@@ -309,7 +308,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 2MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, f'Size is {size_in_mb}MB > 2MB')
 
         for res in self.traj.results.f_iter_leaves():
             if isinstance(res, SharedResult):
@@ -342,7 +341,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 10.0, 'Size is %sMB > 10MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 10.0, f'Size is {size_in_mb}MB > 10MB')
 
         for res in self.traj.results.f_iter_leaves():
             if isinstance(res, SharedResult):
@@ -396,7 +395,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 400.0, 'Size is %sMB > 400MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 400.0, f'Size is {size_in_mb}MB > 400MB')
 
         # for res in self.traj.results.f_iter_leaves():
         #     if isinstance(res, SharedResult):

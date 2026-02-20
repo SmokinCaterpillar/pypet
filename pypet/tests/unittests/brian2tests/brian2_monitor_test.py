@@ -97,7 +97,7 @@ class Brian2MonitorTest(ResultTest):
                 self.check_population_rate_monitor(res, monitor)
 
             else:
-                raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
+                raise ValueError(f'Monitor Type {type(monitor)} is not supported (yet)')
 
     def test_dir(self):
         res = self.results['SpikeMonitor']

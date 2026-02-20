@@ -23,7 +23,7 @@ class Brian2hdf5Test(TrajectoryComparator):
 
     def test_hdf5_store_load_parameter(self):
         traj_name = make_trajectory_name(self)
-        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
+        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', f'test_{traj_name}.hdf5'))
         env = Environment(trajectory=traj_name, filename=file_name, log_config=get_log_config(),
                             dynamic_imports=[Brian2Parameter], add_time=False, storage_service=HDF5StorageService)
         traj = env.v_trajectory
@@ -54,7 +54,7 @@ class Brian2hdf5Test(TrajectoryComparator):
 
     def test_hdf5_store_load_result(self):
         traj_name = make_trajectory_name(self)
-        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
+        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', f'test_{traj_name}.hdf5'))
         env = Environment(trajectory=traj_name, filename=file_name, log_config=get_log_config(),
                             dynamic_imports=[Brian2Result], add_time=False, storage_service=HDF5StorageService)
         traj = env.v_trajectory
@@ -83,7 +83,7 @@ class Brian2hdf5Test(TrajectoryComparator):
 
     def test_hdf5_store_load_monitorresult(self):
         traj_name = make_trajectory_name(self)
-        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', 'test_%s.hdf5' % traj_name))
+        file_name = make_temp_dir(os.path.join('brian2', 'tests', 'hdf5', f'test_{traj_name}.hdf5'))
         env = Environment(trajectory=traj_name, filename=file_name, log_config=get_log_config(),
                             dynamic_imports=[Brian2MonitorResult], add_time=False, storage_service=HDF5StorageService)
         traj = env.v_trajectory

@@ -416,7 +416,7 @@ class CapTest(EnvironmentTest):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    '%s.hdf5' % self.trajname))
+                                                    f'{self.trajname}.hdf5'))
         self.logfolder = make_temp_dir(os.path.join('experiments', 'tests', 'Log'))
 
         random.seed()

@@ -724,9 +724,9 @@ class ResultTest(TrajectoryComparator):
             if len(res._data)==1:
                 val1=res.data
                 val2=res.f_get()
-                self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+                self.assertTrue(comp.nested_equal(val1,val2), f'{val1} != {val2}')
                 val3=res['data']
-                self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+                self.assertTrue(comp.nested_equal(val3,val2), f'{val3} != {val2}')
             else:
                 with self.assertRaises(AttributeError):
                     res.data
@@ -784,7 +784,7 @@ class ResultTest(TrajectoryComparator):
         dirlist = dir(res)
 
         self.assertTrue(res.v_name in dirlist)
-        self.assertTrue('%s_1' % res.v_name in dirlist)
+        self.assertTrue(f'{res.v_name}_1' in dirlist)
 
     def setUp(self):
 
@@ -819,7 +819,7 @@ class ResultTest(TrajectoryComparator):
         self.make_results()
 
     def test_store_load_with_hdf5(self):
-        traj_name = 'test_%s' % self.__class__.__name__
+        traj_name = f'test_{self.__class__.__name__}'
         filename = make_temp_dir(traj_name + '.hdf5')
         traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
                           filename = filename, overwrite_file=True)
@@ -859,7 +859,7 @@ class ResultTest(TrajectoryComparator):
             strlen = 0
             for key in res._data:
                 val = res._data[key]
-                resstr = '%s=%s, ' % (key, repr(val))
+                resstr = f'{key}={val!r}, '
                 resstrlist.append(resstr)
 
                 strlen += len(resstr)
@@ -923,9 +923,9 @@ class ResultTest(TrajectoryComparator):
                     innerval1 = val1[innerkey]
                     innerval2 = val2[innerkey]
                     self.assertEqual(repr(innerval1), repr(innerval2),
-                                     '%s != %s' % (str(val1),str(val2)))
+                                     f'{val1} != {val2}')
             else:
-                self.assertEqual(repr(val1),repr(val2), '%s != %s' % (str(val1),str(val2)))
+                self.assertEqual(repr(val1),repr(val2), f'{val1} != {val2}')
 
 
     def test_pickling(self):

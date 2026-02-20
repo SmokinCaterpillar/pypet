@@ -216,7 +216,7 @@ class Brian2Result(Result):
                 # Accordingly, an ObjectTable might not be the best choice after all for a result
                 if isinstance(val, np.ndarray) and len(val.shape) == 0:
                     # Convert 0-dimensional arrays to regular numpy floats
-                    value = np.float(value)
+                    value = float(value)
                 store_dict[key + Brian2Result.IDENTIFIER + 'value'] = value
                 store_dict[key + Brian2Result.IDENTIFIER + 'unit'] = repr(unit)
 

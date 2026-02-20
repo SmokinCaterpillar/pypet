@@ -75,7 +75,7 @@ class LinkEnvironmentTest(TrajectoryComparator):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    'test%s.hdf5' % self.trajname))
+                                                    f'test{self.trajname}.hdf5'))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
@@ -146,7 +146,7 @@ class LinkMergeTest(TrajectoryComparator):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    'test%s.hdf5' % self.trajname1))
+                                                    f'test{self.trajname1}.hdf5'))
 
         self.env1 = Environment(trajectory=self.trajname1, filename=self.filename,
                           file_title=self.trajname1,
@@ -199,8 +199,8 @@ class LinkMergeTest(TrajectoryComparator):
         self.assertTrue(len(self.traj1) > old_length)
 
         for irun in range(len(self.traj1.f_get_run_names())):
-            self.assertTrue(self.traj1.res['r_%d' % irun] == self.traj1.paramB)
-            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
+            self.assertTrue(self.traj1.res[f'r_{irun}'] == self.traj1.paramB)
+            self.assertTrue(self.traj1.res.runs[f'r_{irun}'].paraBL == self.traj1.paramB)
 
         if disable_logging:
             self.env1.f_disable_logging()
@@ -216,7 +216,7 @@ class LinkMergeTest(TrajectoryComparator):
         self.bfilename = make_temp_dir(os.path.join('experiments',
                                                      'tests',
                                                      'HDF5',
-                                                     'backup_test%s.hdf5' % self.trajname1))
+                                                     f'backup_test{self.trajname1}.hdf5'))
 
         self.traj1.f_load(load_data=2)
 
@@ -237,21 +237,21 @@ class LinkMergeTest(TrajectoryComparator):
             idx = self.traj1.v_idx
             param = self.traj1['test.crun.gg']
             if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
-                self.assertTrue(param == 42, '%s != 42' % str(param))
+                self.assertTrue(param == 42, f'{param} != 42')
             else:
-                self.assertTrue(param == 44, '%s != 44' % str(param))
+                self.assertTrue(param == 44, f'{param} != 44')
 
             param = self.traj1['test.hh.crun']
             if idx < prev_old_length or old_length <= idx < prev_old_length + old_length:
-                self.assertTrue(param == 111, '%s != 111' % str(param))
+                self.assertTrue(param == 111, f'{param} != 111')
             else:
-                self.assertTrue(param == 53, '%s != 53' % str(param))
+                self.assertTrue(param == 53, f'{param} != 53')
 
         self.assertTrue(len(self.traj1)>old_length)
 
         for irun in range(len(self.traj1.f_get_run_names())):
-            self.assertTrue(self.traj1.res.runs['r_%d' % irun].paraBL == self.traj1.paramB)
-            self.assertTrue(self.traj1.res['r_%d' % irun] == self.traj1.paramB)
+            self.assertTrue(self.traj1.res.runs[f'r_{irun}'].paraBL == self.traj1.paramB)
+            self.assertTrue(self.traj1.res[f'r_{irun}'] == self.traj1.paramB)
 
         self.env1.f_disable_logging()
         self.env2.f_disable_logging()

@@ -181,7 +181,7 @@ class LoggingTest(TrajectoryComparator):
                 self.assertEqual(store_count, len(traj))
             elif 'LOG' in file:
                 if self.mode.multiproc and self.mode.use_pool:
-                    self.assertGreaterEqual(count, 0, '%d < 1 for file %s' % (count, file))
+                    self.assertGreaterEqual(count, 0, f'{count} < 1 for file {file}')
                 else:
                     self.assertEqual(count, 1)
                     if self.mode.wrap_mode == 'QUEUE':
@@ -189,8 +189,8 @@ class LoggingTest(TrajectoryComparator):
                     else:
                         self.assertEqual(store_count, 1)
             else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
+                self.assertTrue(False, f'There`s a file in the log folder that does not '
+                                       f'belong there: {file}')
         self.assertEqual(total_store_count, len(traj))
         self.assertEqual(total_error_count, 0)
         self.assertEqual(total_info_count, len(traj))
@@ -324,8 +324,8 @@ class LoggingTest(TrajectoryComparator):
                     else:
                         self.assertEqual(store_count, 1)
             else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
+                self.assertTrue(False, f'There`s a file in the log folder that does not '
+                                       f'belong there: {file}')
         self.assertEqual(total_store_count, 2*len(traj))
         self.assertEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, len(traj))
@@ -444,8 +444,8 @@ class LoggingTest(TrajectoryComparator):
                     else:
                         self.assertGreaterEqual(store_count, 1)
             else:
-                self.assertTrue(False, 'There`s a file in the log folder that does not '
-                                       'belong there: %s' % str(file))
+                self.assertTrue(False, f'There`s a file in the log folder that does not '
+                                       f'belong there: {file}')
         self.assertGreaterEqual(total_store_count, 2*len(traj))
         self.assertGreaterEqual(total_error_count, 2*len(traj))
         self.assertEqual(total_info_count, 0)

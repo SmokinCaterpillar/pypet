@@ -84,8 +84,8 @@ def with_niceness(traj):
                 import scoop
                 if (not scoop.IS_RUNNING or scoop.IS_ORIGIN):
                     return
-            raise RuntimeError('traj niceness != os niceness; '
-                               '%s != %s' % (str(trajnice), str(osnice)))
+            raise RuntimeError(f'traj niceness != os niceness; '
+                               f'{trajnice} != {osnice}')
 
 
 def add_large_data(traj):
@@ -241,7 +241,7 @@ class EnvironmentTest(TrajectoryComparator):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    'test%s.hdf5' % self.trajname))
+                                                    f'test{self.trajname}.hdf5'))
 
         env = Environment(trajectory=self.trajname, filename=self.filename,
                           file_title=self.trajname,
@@ -382,7 +382,7 @@ class EnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 30.0, 'Size is %sMB > 30MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 30.0, f'Size is {size_in_mb}MB > 30MB')
 
     def test_two_runs(self):
         self.traj.f_add_parameter('TEST', 'test_run')
@@ -401,7 +401,7 @@ class EnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 6.0, f'Size is {size_in_mb}MB > 6MB')
 
         mp_traj = self.traj
 
@@ -427,7 +427,7 @@ class EnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 6.0, f'Size is {size_in_mb}MB > 6MB')
 
         self.compare_trajectories(mp_traj, self.traj)
         self.multiproc = old_multiproc
@@ -477,7 +477,7 @@ class EnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 6.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 6.0, f'Size is {size_in_mb}MB > 6MB')
 
     def test_just_one_run(self):
         self.make_run()
@@ -494,7 +494,7 @@ class EnvironmentTest(TrajectoryComparator):
         size=os.path.getsize(self.filename)
         size_in_mb = size/1000000.
         get_root_logger().info('Size is %sMB' % str(size_in_mb))
-        self.assertTrue(size_in_mb < 2.0, 'Size is %sMB > 6MB' % str(size_in_mb))
+        self.assertTrue(size_in_mb < 2.0, f'Size is {size_in_mb}MB > 6MB')
 
         with self.assertRaises(TypeError):
             self.explore(self.traj)
@@ -605,7 +605,7 @@ class EnvironmentTest(TrajectoryComparator):
         overview_group = hdf5file.get_node(where='/'+ self.traj.v_name, name='overview')
         should = ['derived_parameters_overview', 'results_overview']
         for name in should:
-            self.assertTrue(name in overview_group, '%s not in overviews but it should!' % name)
+            self.assertTrue(name in overview_group, f'{name} not in overviews but it should!')
         hdf5file.close()
 
         self.traj.f_load(load_parameters=2, load_derived_parameters=2, load_results=2)
@@ -633,7 +633,7 @@ class EnvironmentTest(TrajectoryComparator):
         should_not = HDF5StorageService.NAME_TABLE_MAPPING.keys()
         for name in should_not:
             name = name.split('.')[-1] # Get only the name of the table, no the full name
-            self.assertTrue(not name in overview_group, '%s in overviews but should not!' % name)
+            self.assertTrue(not name in overview_group, f'{name} in overviews but should not!')
 
         hdf5file.close()
 
@@ -705,7 +705,7 @@ class EnvironmentTest(TrajectoryComparator):
         for node in traj_group._f_walk_groups():
             if 'SRVC_LEAF' in node._v_attrs:
                 self.assertTrue('SRVC_INIT_COMMENT' in node._v_attrs,
-                                    'There is no comment in node %s!' % node._v_name)
+                                    f'There is no comment in node {node._v_name}!')
 
         hdf5file.close()
 
@@ -781,10 +781,10 @@ class EnvironmentTest(TrajectoryComparator):
 
 
 def my_run_func(idx):
-    return 'hello_%d' % idx
+    return f'hello_{idx}'
 
 def my_set_func(idx):
-    return 'huhu_%d' % idx
+    return f'huhu_{idx}'
 
 class TestOtherHDF5Settings(EnvironmentTest):
 
@@ -1022,11 +1022,10 @@ class ResultSortTest(TrajectoryComparator):
             self.traj.v_idx = idx
             newtraj.v_idx = idx
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
-            self.assertTrue('run_%08d' % (idx+1) not in nameset)
-            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(f'run_{idx+1:08d}' not in nameset)
+            self.assertTrue(f'run_{idx:08d}' in nameset)
             self.assertTrue(traj.v_crun == run_name)
-            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,f' z != x*y: {newtraj.crun.z} != {traj.x} * {traj.y}')
 
         for idx, traj in enumerate(self.traj.f_iter_runs(yields='self')):
             run_name = traj.f_idx_to_run(idx)
@@ -1035,11 +1034,10 @@ class ResultSortTest(TrajectoryComparator):
             self.traj.v_idx = idx
             newtraj.v_idx = idx
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
-            self.assertTrue('run_%08d' % (idx+1) not in nameset)
-            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(f'run_{idx+1:08d}' not in nameset)
+            self.assertTrue(f'run_{idx:08d}' in nameset)
             self.assertTrue(traj.v_crun == run_name)
-            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,f' z != x*y: {newtraj.crun.z} != {traj.x} * {traj.y}')
 
         for idx, traj in enumerate(self.traj.f_iter_runs(yields='copy')):
             run_name = traj.f_idx_to_run(idx)
@@ -1048,11 +1046,10 @@ class ResultSortTest(TrajectoryComparator):
             self.traj.v_idx = idx
             newtraj.v_idx = idx
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
-            self.assertTrue('run_%08d' % (idx+1) not in nameset)
-            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(f'run_{idx+1:08d}' not in nameset)
+            self.assertTrue(f'run_{idx:08d}' in nameset)
             self.assertTrue(traj.v_crun == run_name)
-            self.assertTrue(newtraj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(newtraj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(newtraj.crun.z==traj.x*traj.y,f' z != x*y: {newtraj.crun.z} != {traj.x} * {traj.y}')
 
         traj = self.traj
         self.assertTrue(traj.v_idx == -1)
@@ -1087,11 +1084,10 @@ class ResultSortTest(TrajectoryComparator):
             self.traj.v_idx = idx
             newtraj.v_idx = idx
             nameset = set((x.v_name for x in traj.f_iter_nodes(predicate=(idx,))))
-            self.assertTrue('run_%08d' % (idx+1) not in nameset)
-            self.assertTrue('run_%08d' % idx in nameset)
+            self.assertTrue(f'run_{idx+1:08d}' not in nameset)
+            self.assertTrue(f'run_{idx:08d}' in nameset)
             self.assertTrue(traj.v_crun == run_name)
-            self.assertTrue(newtraj.res.runs.crun.z==newtraj.par.x*newtraj.par.y,' z != x*y: %s != %s * %s' %
-                                                  (str(newtraj.crun.z),str(newtraj.x),str(newtraj.y)))
+            self.assertTrue(newtraj.res.runs.crun.z==newtraj.par.x*newtraj.par.y,f' z != x*y: {newtraj.crun.z} != {newtraj.x} * {newtraj.y}')
 
 
         traj = self.traj
@@ -1181,8 +1177,7 @@ class ResultSortTest(TrajectoryComparator):
     def check_if_z_is_correct_map(self,traj, args1, args2, args3):
         for x, arg1, arg2, arg3 in zip(range(len(traj)), args1, args2, args3):
             traj.v_idx=x
-            self.assertTrue(traj.crun.z==traj.x*traj.y+arg1+arg2+arg3,' z != x*y: %s != %s * %s' %
-                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(traj.crun.z==traj.x*traj.y+arg1+arg2+arg3,f' z != x*y: {traj.crun.z} != {traj.x} * {traj.y}')
         traj.v_idx=-1
 
     def check_if_z_is_correct(self,traj):
@@ -1192,8 +1187,7 @@ class ResultSortTest(TrajectoryComparator):
             z = traj.res.runs.crun.z
             x = traj.par.x
             y = traj.par.y
-            self.assertTrue(z==x*y,' z != x*y: %s != %s * %s' %
-                                                  (str(z),str(x),str(y)))
+            self.assertTrue(z==x*y,f' z != x*y: {z} != {x} * {y}')
         traj.v_idx=-1
         traj.v_shortcuts=True
 

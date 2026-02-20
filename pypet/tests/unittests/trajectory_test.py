@@ -354,13 +354,13 @@ class TrajectoryTest(unittest.TestCase):
         self.traj.f_add_group('suiting_subgroups')
 
         for irun in range(5):
-            self.traj.suiting_subgroups.f_add_group('test%d' % irun)
+            self.traj.suiting_subgroups.f_add_group(f'test{irun}')
 
         self.assertFalse(str(self.traj.suiting_subgroups).endswith('...'))
 
         self.traj.f_add_group('non_suiting_subgroups')
         for irun in range(6):
-            self.traj.non_suiting_subgroups.f_add_group('test%d' % irun)
+            self.traj.non_suiting_subgroups.f_add_group(f'test{irun}')
 
         self.assertTrue(str(self.traj.non_suiting_subgroups).endswith('...'))
 
@@ -406,7 +406,7 @@ class TrajectoryTest(unittest.TestCase):
 
         all_nodes=self.traj.f_get_all('x.y')
 
-        self.assertTrue(len(all_nodes)==5, '%s != 5' % str(len(all_nodes)))
+        self.assertTrue(len(all_nodes)==5, f'{len(all_nodes)} != 5')
 
     # def test_backwards_search(self):
     #
@@ -430,12 +430,12 @@ class TrajectoryTest(unittest.TestCase):
         config_dict_directly = self.traj.f_get_config(copy=True)
 
         self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
-                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+                        f'{config_dict_directly}!={config_dict_directly}')
 
         config_dict_directly = self.traj.f_get_config(copy=False)
 
         self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
-                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+                        f'{config_dict_directly}!={config_dict_directly}')
 
 
         config_dict_from_subtree = self.traj.config.f_to_dict(fast_access=True)
@@ -446,7 +446,7 @@ class TrajectoryTest(unittest.TestCase):
         config_dict_directly = self.traj.f_get_config(copy=True, fast_access=True)
 
         self.assertTrue(comp.nested_equal(config_dict_directly,config_dict_from_subtree),
-                        '%s!=%s' % (str(config_dict_directly),str(config_dict_directly)))
+                        f'{config_dict_directly}!={config_dict_directly}')
 
         ############## Parameters #############################
         parameters_dict_from_subtree = self.traj.parameters.f_to_dict()
@@ -456,12 +456,12 @@ class TrajectoryTest(unittest.TestCase):
         parameters_dict_directly = self.traj.f_get_parameters(copy=True)
 
         self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
-                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+                        f'{parameters_dict_directly}!={parameters_dict_directly}')
 
         parameters_dict_directly = self.traj.f_get_parameters(copy=False)
 
         self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
-                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+                        f'{parameters_dict_directly}!={parameters_dict_directly}')
 
 
         ### Empty Parameters won't support fast access so we need to set
@@ -475,7 +475,7 @@ class TrajectoryTest(unittest.TestCase):
         parameters_dict_directly = self.traj.f_get_parameters(copy=True, fast_access=True)
 
         self.assertTrue(comp.nested_equal(parameters_dict_directly,parameters_dict_from_subtree),
-                        '%s!=%s' % (str(parameters_dict_directly),str(parameters_dict_directly)))
+                        f'{parameters_dict_directly}!={parameters_dict_directly}')
 
         ################# Derived Parameters ############################
         derived_parameters_dict_from_subtree = self.traj.derived_parameters.f_to_dict()
@@ -485,12 +485,12 @@ class TrajectoryTest(unittest.TestCase):
         derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=True)
 
         self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
-                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+                        f'{derived_parameters_dict_directly}!={derived_parameters_dict_directly}')
 
         derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=False)
 
         self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
-                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+                        f'{derived_parameters_dict_directly}!={derived_parameters_dict_directly}')
 
 
         derived_parameters_dict_from_subtree = self.traj.derived_parameters.f_to_dict(fast_access=True)
@@ -501,7 +501,7 @@ class TrajectoryTest(unittest.TestCase):
         derived_parameters_dict_directly = self.traj.f_get_derived_parameters(copy=True, fast_access=True)
 
         self.assertTrue(comp.nested_equal(derived_parameters_dict_directly,derived_parameters_dict_from_subtree),
-                        '%s!=%s' % (str(derived_parameters_dict_directly),str(derived_parameters_dict_directly)))
+                        f'{derived_parameters_dict_directly}!={derived_parameters_dict_directly}')
 
 
 
@@ -513,12 +513,12 @@ class TrajectoryTest(unittest.TestCase):
         results_dict_directly = self.traj.f_get_results(copy=True)
 
         self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
-                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+                        f'{results_dict_directly}!={results_dict_directly}')
 
         results_dict_directly = self.traj.f_get_results(copy=False)
 
         self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
-                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+                        f'{results_dict_directly}!={results_dict_directly}')
 
 
         results_dict_from_subtree = self.traj.results.f_to_dict(fast_access=True)
@@ -529,7 +529,7 @@ class TrajectoryTest(unittest.TestCase):
         results_dict_directly = self.traj.f_get_results(copy=True, fast_access=True)
 
         self.assertTrue(comp.nested_equal(results_dict_directly,results_dict_from_subtree),
-                        '%s!=%s' % (str(results_dict_directly),str(results_dict_directly)))
+                        f'{results_dict_directly}!={results_dict_directly}')
 
 
         ################### Explored Parameters #######################
@@ -578,7 +578,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.v_fast_access=False
 
-        self.assertTrue(self.traj.f_get('FloatParam').f_get() == 4.0 , '%d != 4.0' %self.traj.f_get('FloatParam').f_get())
+        self.assertTrue(self.traj.f_get('FloatParam').f_get() == 4.0 , f'{self.traj.f_get("FloatParam").f_get()} != 4.0')
 
         self.assertTrue(self.traj.FortyTwo.f_get() == 42)
 
@@ -1071,7 +1071,7 @@ class TrajectoryTest(unittest.TestCase):
                     self.assertTrue(str(nval.f_get(ikey))==str(val.f_get(ikey)))
             else:
 
-                self.assertTrue(str(val)==str(nval), '%s != %s' %(str(val),str(nval)))
+                self.assertTrue(str(val)==str(nval), f'{val} != {nval}')
 
     def test_dynamic_class_loading(self):
 
@@ -1084,7 +1084,7 @@ class TrajectoryTest(unittest.TestCase):
 
         self.traj.f_add_parameter('I.should_be_not.normal')
 
-        self.assertIsInstance(self.traj.f_get('normal'), ImAParameterInDisguise,'Param is %s insted of ParamInDisguise.' %str(type(self.traj.normal)))
+        self.assertIsInstance(self.traj.f_get('normal'), ImAParameterInDisguise,f'Param is {type(self.traj.normal)} insted of ParamInDisguise.')
 
         self.traj.v_standard_result=ImAResultInDisguise
 
@@ -1667,9 +1667,9 @@ class TrajectoryFindTest(unittest.TestCase):
         it = self.traj.f_find_idx('x',pred)
         it_list = [i for i in it]
 
-        self.assertEqual(len(it_list),1, 'Should find 1 item but found %d' % len(it_list) )
+        self.assertEqual(len(it_list),1, f'Should find 1 item but found {len(it_list)}' )
 
-        self.assertEqual(it_list[0],1, 'Found wrong index, should find 1 but found %s' % it_list[0])
+        self.assertEqual(it_list[0],1, f'Found wrong index, should find 1 but found {it_list[0]}')
 
     def test_complex_find_statement(self):
         pred = lambda x,ar,z,scalar: (scalar == 42 and
@@ -1680,10 +1680,10 @@ class TrajectoryFindTest(unittest.TestCase):
         it = self.traj.f_find_idx(('x', 'ar','z','scalar'),pred)
         it_list = [i for i in it]
 
-        self.assertEqual(len(it_list),2, 'Should find 2 items but found %d' % len(it_list) )
+        self.assertEqual(len(it_list),2, f'Should find 2 items but found {len(it_list)}' )
 
-        self.assertEqual(it_list[0],1, 'Found wrong index, should find 1 but found %s' % it_list[0])
-        self.assertEqual(it_list[1],3, 'Found wrong index, should find 1 but found %s' % it_list[1])
+        self.assertEqual(it_list[0],1, f'Found wrong index, should find 1 but found {it_list[0]}')
+        self.assertEqual(it_list[1],3, f'Found wrong index, should find 1 but found {it_list[1]}')
 
     def test_find_nothing(self):
         pred = lambda x: x==12
@@ -1691,7 +1691,7 @@ class TrajectoryFindTest(unittest.TestCase):
         it = self.traj.f_find_idx('x',pred)
         it_list = [i for i in it]
 
-        self.assertEqual(len(it_list),0, 'Should find 0 items but found %d' % len(it_list) )
+        self.assertEqual(len(it_list),0, f'Should find 0 items but found {len(it_list)}' )
 
 
     def explore(self,traj):
@@ -1763,7 +1763,7 @@ class SingleRunTest(unittest.TestCase):
 
         self.single_run.f_add_result('Puberty.Hacks', val=value)
         resval= self.single_run.res.crun.f_get('Hacks').f_get('val')
-        self.assertTrue(resval == value, '%s != %s' % ( str(resval),str(value)))
+        self.assertTrue(resval == value, f'{resval} != {value}')
 
         with self.assertRaises(ValueError):
             self.traj.f_add_result(comment='55')

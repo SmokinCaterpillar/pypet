@@ -63,7 +63,7 @@ class ContinueTest(TrajectoryComparator):
                                                      'tests',
                                                      'Log'))
         self.cnt_folder = make_temp_dir(os.path.join('experiments','tests','cnt'))
-        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
+        trajname = f'Test{idx}' + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
                           filename=filename,
@@ -132,7 +132,7 @@ class ContinueTest(TrajectoryComparator):
         timestamp_list = timestamp_list[-nresults:]
 
         for timestamp in timestamp_list:
-            filename = os.path.join(continue_folder, 'result_%s.rcnt' % repr(timestamp).replace('.','_'))
+            filename = os.path.join(continue_folder, f'result_{repr(timestamp).replace(".", "_")}.rcnt')
             os.remove(filename)
 
         result_tuple_list = []
@@ -354,7 +354,7 @@ class ContinueMPTest(ContinueTest):
         self.cnt_folder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
-        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
+        trajname = f'Test{idx}' + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname if trajectory is None else trajectory,
                           dynamically_imported_classes=[CustomParameter],
@@ -432,7 +432,7 @@ class ContinueMPTest(ContinueTest):
 
         for run_name in self.trajs[0].f_iter_runs():
             z = (self.trajs[0].v_idx, self.trajs[0].crun.z)
-            self.assertTrue(z in results, '%s not in %s' % (z, results))
+            self.assertTrue(z in results, f'{z} not in {results}')
 
         self.assertTrue(len(self.trajs[-1])== len(results))
         #os.removedirs(self.cnt_folder)
@@ -484,7 +484,7 @@ class ContinueMPTest(ContinueTest):
 
         for run_name in self.trajs[0].f_iter_runs():
             z = (self.trajs[0].v_idx, self.trajs[0].crun.z)
-            self.assertTrue( z in results, '%s not in %s' % (z, results))
+            self.assertTrue( z in results, f'{z} not in {results}')
 
 
 @unittest.skipIf(dill is None, 'Only makes sense if dill is installed')
@@ -500,7 +500,7 @@ class ContinueMPPoolTest(ContinueMPTest):
         self.cnt_folder = make_temp_dir(os.path.join('experiments',
                                                       'tests',
                                                       'cnt'))
-        trajname = 'Test%d' % idx + '_' + make_trajectory_name(self)
+        trajname = f'Test{idx}' + '_' + make_trajectory_name(self)
 
         env = Environment(trajectory=trajname,
                           dynamic_imports=[CustomParameter],

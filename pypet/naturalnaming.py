@@ -399,7 +399,7 @@ class NNLeafNode(NNTreeNode):
         * python lists and tuples
 
         * numpy natives arrays, and matrices of type
-          np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
+          np.int8-64, np.uint8-64, np.float32-64, np.complex128, np.str_
 
         * python dictionaries of the previous types (flat not nested!)
 

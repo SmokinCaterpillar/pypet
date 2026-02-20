@@ -404,10 +404,10 @@ class MergeTest(TrajectoryComparator):
 
         run_name = pypetconstants.FORMATTED_RUN_NAME % 1
         run_name2 = pypetconstants.FORMATTED_RUN_NAME % 5
-        self.trajs[1].f_add_result('%s.rrr' % run_name, 123)
-        self.trajs[1].f_store_item('%s.rrr' % run_name)
-        self.trajs[2].f_add_result('%s.rrr' % run_name2, 123)
-        self.trajs[2].f_store_item('%s.rrr' % run_name2)
+        self.trajs[1].f_add_result(f'{run_name}.rrr', 123)
+        self.trajs[1].f_store_item(f'{run_name}.rrr')
+        self.trajs[2].f_add_result(f'{run_name2}.rrr', 123)
+        self.trajs[2].f_store_item(f'{run_name2}.rrr')
 
         self.trajs[1].f_add_result('Ignore.Me', 42)
         self.trajs[1].f_apar('Ignore.Me', 42)
@@ -656,8 +656,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
         for x in range(len(traj)):
             traj.v_idx=x
 
-            self.assertTrue(traj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(traj.crun.z==traj.x*traj.y,f' z != x*y: {traj.crun.z} != {traj.x} * {traj.y}')
         traj.v_idx=-1
 
     def set_mode(self):
@@ -722,12 +721,12 @@ class TestConsecutiveMerges(TrajectoryComparator):
 
         # Test if there is no linear dependency for consecutive merges:
         if self.strictly_increasing(timings) and len(timings) > 1:
-            raise ValueError('Timings %s are strictly increasing' % str(timings))
+            raise ValueError(f'Timings {timings} are strictly increasing')
         r, alpha = pearsonr(range(len(timings)), timings)
         logging.error('R and Alpha of consecutive merge test %s' % str((r,alpha)))
         if alpha < 0.001 and r > 0:
-            raise ValueError( 'R and Alpha of consecutive merge test %s\n' % str((r,alpha)),
-                'Timings %s are lineary increasing' % str(timings))
+            raise ValueError( f'R and Alpha of consecutive merge test {(r,alpha)}\n',
+                f'Timings {timings} are lineary increasing')
 
         merge_traj.f_store()
         merge_traj.f_load(load_data=2)
@@ -743,7 +742,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
         ntrajs = 4
         total_len = 0
         for irun in range(ntrajs):
-            new_filename = os.path.join(path, 'test%d.hdf5' % irun)
+            new_filename = os.path.join(path, f'test{irun}.hdf5')
             self.envs.append(self._make_env(irun, filename=new_filename))
             self.trajs.append(self.envs[-1].v_traj)
             self.trajs[-1].f_add_parameter('x',0)

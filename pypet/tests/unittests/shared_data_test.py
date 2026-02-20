@@ -201,7 +201,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         traj.shared.t1.traj = traj
         traj.shared.array.traj = traj
 
-        self.assertTrue(traj.shared.t2.nrows == 11, '%s != 11' % str(traj.shared.t2.nrows))
+        self.assertTrue(traj.shared.t2.nrows == 11, f'{traj.shared.t2.nrows} != 11')
         self.assertTrue(traj.shared.t2[0]['ha'] == 'hu'.encode('utf-8'), traj.shared.t2[0]['ha'])
         self.assertTrue(traj.shared.t2[1]['ha'] == 'hu'.encode('utf-8'), traj.shared.t2[1]['ha'])
         self.assertTrue('huhu' in traj.shared.t1.colnames)
@@ -258,7 +258,7 @@ class StorageDataTrajectoryTests(TrajectoryComparator):
         self.assertTrue(backup_size == size)
         new_size = os.path.getsize(filename)
         get_root_logger().info('New filesize is %s' % str(new_size))
-        self.assertTrue(new_size < size, "%s > %s" % (str(new_size), str(size)))
+        self.assertTrue(new_size < size, f"{new_size} > {size}")
 
     def test_all_arrays(self):
         filename = make_temp_dir('hdf5arrays.hdf5')
@@ -401,7 +401,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_reading_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i * 1.5
                 row.append()
@@ -437,16 +437,16 @@ class SharedTableTest(TrajectoryComparator):
             row = the_append_table.row
             for i in range(15):
                 row['id'] = i * 2
-                row['name'] = 'name %d' % i
-                row['surname'] = '%d surname' % i
+                row['name'] = f'name {i}'
+                row['surname'] = f'{i} surname'
                 row['weight'] = (i*0.5 + 50.0)
                 row.append()
             the_append_table.flush()
 
             for idx, row in enumerate(the_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
-                self.assertEqual(row['name'], ('name %d' % idx).encode('utf-8'))
-                self.assertEqual(row['surname'], ('%d surname' % idx).encode('utf-8'))
+                self.assertEqual(row['name'], f'name {idx}'.encode('utf-8'))
+                self.assertEqual(row['surname'], f'{idx} surname'.encode('utf-8'))
                 self.assertEqual(row['weight'], idx*0.5+50.0)
 
         self.traj.f_store()
@@ -458,8 +458,8 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_append_table.iterrows()):
                 self.assertEqual(row['id'], idx * 2)
-                self.assertEqual(row['name'], ('name %d' % idx).encode('utf-8'))
-                self.assertEqual(row['surname'], ('%d surname' % idx).encode('utf-8'))
+                self.assertEqual(row['name'], f'name {idx}'.encode('utf-8'))
+                self.assertEqual(row['surname'], f'{idx} surname'.encode('utf-8'))
                 self.assertEqual(row['weight'], idx*0.5+50.0)
 
             second_append_table.append([(30, 'mehmet', 'timur', 65.5)])
@@ -496,7 +496,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_iterrows_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i * 1.5
                 row.append()
@@ -526,7 +526,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_col_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i * 1.5
                 row.append()
@@ -573,7 +573,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_getitem_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i * 1.5
                 row.append()
@@ -642,7 +642,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_setitem_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i * 1.5
                 row.append()
@@ -692,7 +692,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_where_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i
                 row.append()
@@ -764,7 +764,7 @@ class SharedTableTest(TrajectoryComparator):
             row = the_flush_table.row
             for i in range(10):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i
                 row.append()
@@ -772,7 +772,7 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(the_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['name'], f'mehmet {idx}'.encode('utf-8'))
                 self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
@@ -785,14 +785,14 @@ class SharedTableTest(TrajectoryComparator):
         with StorageContextManager(traj2):
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['name'], f'mehmet {idx}'.encode('utf-8'))
                 self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
             row = second_flush_table.row
             for i in range(10, 11):
                 row['id'] = i
-                row['name'] = 'mehmet %d' % i
+                row['name'] = f'mehmet {i}'
                 row['surname'] = 'Timur'
                 row['weight'] = 65.5 + i
                 row.append()
@@ -800,7 +800,7 @@ class SharedTableTest(TrajectoryComparator):
 
             for idx, row in enumerate(second_flush_table.iterrows()):
                 self.assertEqual(row['id'], idx)
-                self.assertEqual(row['name'], ('mehmet %d' % idx).encode('utf-8'))
+                self.assertEqual(row['name'], f'mehmet {idx}'.encode('utf-8'))
                 self.assertEqual(row['surname'], 'Timur'.encode('utf-8'))
                 self.assertEqual(row['weight'], 65.5+idx)
 
@@ -841,7 +841,7 @@ class SharedArrayTest(TrajectoryComparator):
         second_reading_array = traj2.shared_data.array.read()
 
         self.assertTrue(np.all(the_reading_array == second_reading_array),
-                        '%s != %s' % (str(the_reading_array), str(second_reading_array)))
+                        f'{the_reading_array} != {second_reading_array}')
 
     def test_array_getitem(self):
         the_getitem_array = np.array(range(100))

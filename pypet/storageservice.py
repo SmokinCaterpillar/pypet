@@ -1090,11 +1090,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     The function '_store' has to return a dictionary containing values only from
                     the following objects:
 
-                        * python natives (int, long, str, bool, float, complex),
+                        * python natives (int, str, bool, float, complex),
 
                         *
                             numpy natives, arrays and matrices of type np.int8-64, np.uint8-64,
-                            np.float32-64, np.complex, np.str
+                            np.float32-64, np.complex128, np.str_
 
                         *
 
@@ -3051,8 +3051,7 @@ class HDF5StorageService(StorageService, HasLogger):
             strtype = type(data).__name__
 
             if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
-                                (str(data), repr(type(data))))
+                raise TypeError(f'I do not know how to handle `{data}` its type is `{type(data)!r}`.')
 
             HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.SCALAR_TYPE, strtype)
 
@@ -3064,8 +3063,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 HDF5StorageService._all_set_attr(ptitem, prefix + HDF5StorageService.COLL_TYPE,
                                    HDF5StorageService.COLL_EMPTY_DICT)
         else:
-            raise TypeError('I do not know how to handle `%s` its type is `%s`.' %
-                            (str(data), repr(type(data))))
+            raise TypeError(f'I do not know how to handle `{data}` its type is `{type(data)!r}`.')
 
         if type(data) in (list, tuple):
             # If data is a list or tuple we need to remember the data type of the elements
@@ -3530,8 +3528,7 @@ class HDF5StorageService(StorageService, HasLogger):
         if store_data == pypetconstants.STORE_NOTHING:
             return
         elif store_data == pypetconstants.STORE_DATA_SKIPPING and traj_group._stored:
-            self._logger.debug('Already found `%s` on disk I will not store it!' %
-                                   traj_group.v_full_name)
+            self._logger.debug(f'Already found `{traj_group.v_full_name}` on disk I will not store it!')
         elif not recursive:
             if _hdf5_group is None:
                 _hdf5_group, _newly_created = self._all_create_or_get_groups(traj_group.v_full_name)
@@ -4043,8 +4040,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._prm_write_into_other_array(key, data, hdf5_group, full_name,
                                              flag=flag, **kwargs)
         else:
-            raise RuntimeError('Flag `%s` of hdf5 data `%s` of `%s` not understood' %
-                               (flag, key, full_name))
+            raise RuntimeError(f'Flag `{flag}` of hdf5 data `{key}` of `{full_name}` not understood')
 
         self._hdf5file.flush()
 
@@ -4105,10 +4101,10 @@ class HDF5StorageService(StorageService, HasLogger):
         """
         if key in group:
             raise ValueError(
-                'Dictionary `%s` already exists in `%s`. Appending is not supported (yet).')
+                f'Dictionary `{key}` already exists in `{fullname}`. Appending is not supported (yet).')
 
         if key in group:
-            raise ValueError('Dict `%s` already exists in `%s`. Appending is not supported (yet).')
+            raise ValueError(f'Dict `{key}` already exists in `{fullname}`. Appending is not supported (yet).')
 
         temp_dict = {}
         for innerkey in data_to_store:
@@ -4234,7 +4230,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if key in group:
                 raise ValueError(
-                    'CArray `%s` already exists in `%s`. Appending is not supported (yet).')
+                    f'CArray `{key}` already exists in `{fullname}`. Appending is not supported (yet).')
 
             if 'filters' in kwargs:
                 filters = kwargs.pop('filters')
@@ -4293,7 +4289,7 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             if key in group:
                 raise ValueError(
-                    'Array `%s` already exists in `%s`. Appending is not supported (yet).')
+                    f'Array `{key}` already exists in `{fullname}`. Appending is not supported (yet).')
 
             try:
 
@@ -4371,9 +4367,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if delete_only is None:
             if instance.v_is_group and not recursive and len(_hdf5_group._v_children) != 0:
-                    raise TypeError('You cannot remove the group `%s`, it has children, please '
-                                    'use `recursive=True` to enforce removal.' %
-                                    instance.v_full_name)
+                    raise TypeError(f'You cannot remove the group `{instance.v_full_name}`, it has children, please '
+                                    'use `recursive=True` to enforce removal.')
             _hdf5_group._f_remove(recursive=True)
         else:
             if not instance.v_is_leaf:
@@ -4393,8 +4388,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                         name=delete_item)
                     _hdf5_sub_group._f_remove(recursive=True)
                 except pt.NoSuchNodeError:
-                    self._logger.warning('Could not delete `%s` from `%s`. HDF5 node not found!' %
-                                         (delete_item, instance.v_full_name))
+                    self._logger.warning(f'Could not delete `{delete_item}` from `{instance.v_full_name}`. HDF5 node not found!')
 
     def _prm_write_into_pytable(self, tablename, data, hdf5_group, fullname, **kwargs):
         """Stores data as pytable.
@@ -4656,9 +4650,8 @@ class HDF5StorageService(StorageService, HasLogger):
             elif load_type.startswith(HDF5StorageService.SHARED_DATA):
                 to_load = self._prm_read_shared_data(node, instance)
             else:
-                raise pex.NoSuchServiceError('Cannot load %s, do not understand the hdf5 file '
-                                             'structure of %s [%s].' %
-                                             (full_name, str(node), str(load_type)))
+                raise pex.NoSuchServiceError(f'Cannot load {full_name}, do not understand the hdf5 file '
+                                             f'structure of {node} [{load_type}].')
 
             if to_load is None:
                 raise RuntimeError('You shall not pass!')
@@ -4721,8 +4714,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if load_data == pypetconstants.OVERWRITE_DATA:
             if instance.v_is_parameter and instance.v_locked:
-                self._logger.debug('Parameter `%s` is locked, I will skip loading.' %
-                                     instance.v_full_name)
+                self._logger.debug(f'Parameter `{instance.v_full_name}` is locked, I will skip loading.')
                 return
             instance.f_empty()
             instance.v_annotations.f_empty()
@@ -4747,19 +4739,15 @@ class HDF5StorageService(StorageService, HasLogger):
                 raise ValueError('Please use either `load_only` or `load_except` and not '
                              'both at the same time.')
             elif instance.v_is_parameter and instance.v_locked:
-                raise pex.ParameterLockedException('Parameter `%s` is locked, '
-                                                   'I will skip loading.' %
-                                                    instance.v_full_name)
-            self._logger.debug('I am in load only mode, I will only load %s.' %
-                               str(load_only))
+                raise pex.ParameterLockedException(f'Parameter `{instance.v_full_name}` is locked, '
+                                                   'I will skip loading.')
+            self._logger.debug(f'I am in load only mode, I will only load {load_only}.')
             load_only = set(load_only)
         elif load_except is not None:
             if instance.v_is_parameter and instance.v_locked:
-                raise pex.ParameterLockedException('Parameter `%s` is locked, '
-                                                   'I will skip loading.' %
-                                                    instance.v_full_name)
-            self._logger.debug('I am in load except mode, I will load everything except %s.' %
-                               str(load_except))
+                raise pex.ParameterLockedException(f'Parameter `{instance.v_full_name}` is locked, '
+                                                   'I will skip loading.')
+            self._logger.debug(f'I am in load except mode, I will load everything except {load_except}.')
             # We do not want to modify the original list
             load_except = set(load_except)
         elif not instance.f_is_empty():

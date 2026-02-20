@@ -146,7 +146,7 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
             if not key in self.explore_dict:
                 self.param[key]._restore_default()
                 param_val = self.param[key].f_get()
-                self.assertTrue(np.all(repr(val) == repr(param_val)),'%s != %s'  %(str(val),str(param_val)))
+                self.assertTrue(np.all(repr(val) == repr(param_val)),f'{val} != {param_val}')
 
     def test_exploration(self):
         for key, vallist in self.explore_dict.items():
@@ -156,15 +156,15 @@ class Brian2ParameterDuplicatesInStoreTest(unittest.TestCase):
                 assert isinstance(param, BaseParameter)
                 param._set_parameter_access(idx)
 
-                self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
+                self.assertTrue(np.all(repr(param.f_get())==repr(val))),f'{param.f_get()} != {val}'
 
                 param_val = self.param[key].f_get_range()[idx]
-                self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
+                self.assertTrue(np.all(str(val) == str(param_val)),f'{val} != {param_val}')
 
             param._restore_default()
-            self.assertTrue(param.v_explored and param.f_has_range(), 'Error for %s' % key)
+            self.assertTrue(param.v_explored and param.f_has_range(), f'Error for {key}')
             val = self.data[key]
-            self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
+            self.assertTrue(np.all(repr(param.f_get())==repr(val))),f'{param.f_get()} != {val}'
 
     def test_expanding(self):
         for key, vallist in self.explore_dict.items():
