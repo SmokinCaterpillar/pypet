@@ -3175,7 +3175,11 @@ class HDF5StorageService(StorageService, HasLogger):
                     # in the list or tuple
                     for idx, item in enumerate(data):
                         if typestr == str.__name__:
-                            data[idx] = data[idx].decode(self._encoding)
+                            try:
+                                data[idx] = data[idx].decode(self._encoding)
+                            except AttributeError:
+                                # Already decoded? Returns: object has no attribute 'decode'
+                                pass
                         else:
                             try:
                                 data[idx] = pypetconstants.PARAMETERTYPEDICT[typestr](item)
