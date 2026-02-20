@@ -250,7 +250,7 @@ class Brian2GetUnitFastTest(unittest.TestCase):
 
     def test_get_unit_fast(self):
         unit = get_unit_fast(42 * mV)
-        self.assertEquals(unit, 1000 * mV)
+        self.assertEqual(unit, 1000 * mV)
 
 
 if __name__ == '__main__':
