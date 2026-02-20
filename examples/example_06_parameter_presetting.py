@@ -146,7 +146,7 @@ def main():
 
         # Plot fancy 3d plot
         fig = plt.figure(idx)
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
         x = euler_data[:,0]
         y = euler_data[:,1]
         z = euler_data[:,2]
