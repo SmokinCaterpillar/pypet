@@ -14,8 +14,6 @@ the network may take a few seconds.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import random
 
 from deap import base

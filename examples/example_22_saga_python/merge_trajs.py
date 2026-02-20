@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 
 from pypet import merge_all_in_folder

@@ -8,8 +8,6 @@
 
 """
 
-__author__ = 'Robert Meyer'
-
 import time
 
 try:
@@ -26,7 +24,7 @@ def add_commit_variables(traj, commit):
     git_time_value = time.strftime('%Y_%m_%d_%Hh%Mm%Ss', time.localtime(commit.committed_date))
 
     git_short_name = str(commit.hexsha[0:7])
-    git_commit_name = 'commit_%s_' % git_short_name
+    git_commit_name = f'commit_{git_short_name}_'
     git_commit_name = 'git.' + git_commit_name + git_time_value
 
     if not traj.f_contains('config.'+git_commit_name, shortcuts=False):
@@ -77,15 +75,14 @@ def make_git_commit(environment, git_repository, user_message, git_fail):
 
     # Create the commit message and append the trajectory name and comment
     if traj.v_comment:
-        commentstr = ', Comment: `%s`' % traj.v_comment
+        commentstr = f', Comment: `{traj.v_comment}`'
     else:
         commentstr = ''
 
     if user_message:
         user_message += ' -- '
 
-    message = '%sTrajectory: `%s`, Time: `%s`, %s' % \
-              (user_message, traj.v_name, traj.v_time, commentstr)
+    message = f'{user_message}Trajectory: `{traj.v_name}`, Time: `{traj.v_time}`, {commentstr}'
 
     # Detect changes:
     diff = index.diff(None)

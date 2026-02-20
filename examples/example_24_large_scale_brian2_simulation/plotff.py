@@ -3,8 +3,6 @@ stored as a trajectory to an HDF5 file.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import os
 import matplotlib.pyplot as plt
 

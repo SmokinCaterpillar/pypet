@@ -2,8 +2,6 @@
 
 Suppresses all openings of plots
 """
-__author__ = 'Robert Meyer'
-
 import glob
 import os
 import sys
@@ -17,7 +15,7 @@ except ImportError:
     brian2 = None
 
 system = platform.system()
-print('*** Running under %s ***' % str(system))
+print(f'*** Running under {system} ***')
 
 to_skip = set()
 to_skip.add('21')
@@ -34,7 +32,7 @@ if system == 'Windows':
 if len(to_skip) == 0:
     print ('----- I will run all tests -----')
 else:
-    print('----- I will skip the following tests: `%s` ----' % to_skip)
+    print(f'----- I will skip the following tests: `{to_skip}` ----')
 
 
 def skip(name):
@@ -75,7 +73,7 @@ def execute_example(filename):
         new_filename = prepend_mpl_import(filename)
         retcode = subprocess.call(sys.executable + ' ' + new_filename, shell=True)
         if retcode != 0:
-            print('### ERROR: Example `%s` failed! ###' % filename)
+            print(f'### ERROR: Example `{filename}` failed! ###')
             sys.exit(retcode)
         else:
             print('#### Example successful ####')
@@ -96,14 +94,14 @@ def main():
             continue
 
         if skip(simple_example):
-            print("---------- Skipping %s ----------" % simple_example)
+            print(f"---------- Skipping {simple_example} ----------")
         else:
-            print("########## Running %s ###########" % simple_example)
+            print(f"########## Running {simple_example} ###########")
             execute_example(simple_example)
 
     ex17 = 'example_17_wrapping_an_existing_project'
     if skip(ex17):
-        print("------- Skipping %s -------" % ex17)
+        print(f"------- Skipping {ex17} -------")
     else:
         os.chdir(ex17)
         sys.path.append(os.getcwd())
@@ -115,9 +113,9 @@ def main():
 
     ex13 = 'example_13_post_processing'
     if skip(ex13):
-        print("------- Skipping %s -------" % ex13)
+        print(f"------- Skipping {ex13} -------")
     else:
-        print("########## Running %s ###########" % ex13)
+        print(f"########## Running {ex13} ###########")
         os.chdir(ex13)
         sys.path.append(os.getcwd())
         print("Running main")
@@ -130,9 +128,9 @@ def main():
 
     ex24 = 'example_24_large_scale_brian2_simulation'
     if skip(ex24):
-        print("------- Skipping %s -------" % ex24)
+        print(f"------- Skipping {ex24} -------")
     else:
-        print("########## Running %s ###########" % ex24)
+        print(f"########## Running {ex24} ###########")
 
         os.chdir(ex24)
         sys.path.append(os.getcwd())

@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 from pypet.tests.testutils.ioutils import make_temp_dir
 import tables as pt
 import tables.parameters
@@ -12,7 +10,7 @@ def create_children_dfs(hdf5_file, group_node, current_children):
     nchildren = current_children[0]
     child_count = 0
     for irun in range(nchildren):
-        name = 'child%d' % irun
+        name = f'child{irun}'
         hdf5_file.create_group(where=group_node, name=name)
         child = group_node._f_get_child(name)
         child_count += create_children_dfs(hdf5_file, child, current_children[1:])
@@ -32,7 +30,7 @@ def main():
     cc = create_children_dfs(myfile, myfile.root, children_structure)
     end = time.time()
     runtime = end-start
-    print('\nCreated %d children %s in %f seconds' % (cc, str(children_structure), runtime))
+    print(f'\nCreated {cc} children {children_structure} in {runtime:f} seconds')
 
 
 if __name__ == '__main__':

@@ -1,7 +1,5 @@
 """Helper module that allows parsing of `.ini` files"""
 
-__author__ = 'Robert Meyer'
-
 import functools
 import ast
 import os
@@ -23,7 +21,7 @@ def parse_config(init_func):
     return new_func
 
 
-class ConfigInterpreter(object):
+class ConfigInterpreter:
     """ Helper class that parses an `.ini` file and passes the data to an environment."""
     def __init__(self, kwargs):
         self.kwargs = kwargs
@@ -33,7 +31,7 @@ class ConfigInterpreter(object):
             if isinstance(self.config_file, str):
                 # Check if the config file exists
                 if not os.path.isfile(self.config_file):
-                    raise ValueError('`%s` does not exist.' % self.config_file)
+                    raise ValueError(f'`{self.config_file}` does not exist.')
                 # If yes parse it with a config parser
                 self.parser = cp.ConfigParser()
                 self.parser.read(self.config_file)
@@ -41,8 +39,8 @@ class ConfigInterpreter(object):
                 # Already instantiaded parsers are also accepted
                 self.parser = self.config_file
             else:
-                raise RuntimeError('Your config file/parser format `%s` '
-                                   'is not understood.' % str(self.config_file))
+                raise RuntimeError(f'Your config file/parser format `{self.config_file}` '
+                                   f'is not understood.')
 
     def _collect_section(self, section):
         """Collects all settings within a section"""

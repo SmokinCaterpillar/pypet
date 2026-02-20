@@ -1,7 +1,5 @@
 """Module containing all exceptions"""
 
-__author__ = 'Robert Meyer'
-
 
 class ParameterLockedException(TypeError):
     """Exception raised if someone tries to modify a locked Parameter."""

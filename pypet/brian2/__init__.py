@@ -1,5 +1,3 @@
-__author__ = ['Henri Bunting', 'Robert Meyer']
-
 
 from pypet.brian2.parameter import Brian2Parameter, Brian2Result, Brian2MonitorResult
 from pypet.brian2.network import NetworkManager, NetworkRunner, NetworkComponent, NetworkAnalyser

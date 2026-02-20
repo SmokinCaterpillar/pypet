@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import logging
 import os
 import random
@@ -243,7 +241,7 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
 
     """
     def __init__(self, predicate=None):
-        super(LambdaTestDiscoverer, self).__init__()
+        super().__init__()
         if predicate is not None:
             self.predicate=predicate
         else:
@@ -271,7 +269,7 @@ class LambdaTestDiscoverer(unittest.TestLoader, HasLogger):
 
     @copydoc(unittest.TestLoader.discover)
     def discover(self, start_dir, pattern='test*.py', top_level_dir=None):
-        tmp_suite = super(LambdaTestDiscoverer, self).discover(start_dir=start_dir, pattern=pattern,
+        tmp_suite = super().discover(start_dir=start_dir, pattern=pattern,
                                                         top_level_dir=top_level_dir)
 
         res_suite = unittest.TestSuite()

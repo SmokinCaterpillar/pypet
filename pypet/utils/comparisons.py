@@ -1,11 +1,6 @@
 """Module containing utility functions to compare parameters and results"""
 
-__author__ = 'Robert Meyer'
-
-try:
-    from collections import Sequence, Mapping
-except ImportError:
-    from collections.abc import Sequence, Mapping
+from collections.abc import Sequence, Mapping
 
 import numpy as np
 import pandas as pd
@@ -268,11 +263,10 @@ def nested_equal(a, b):
     if len(attributes_a) != len(attributes_b):
         return False
     if len(attributes_a) > 0:
-        keys_a = list(attributes_a.keys())
-        if set(keys_a) != set(attributes_b.keys()):
+        if attributes_a.keys() != attributes_b.keys():
             return False
 
-        return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
+        return all(nested_equal(attributes_a[k], attributes_b[k]) for k in attributes_a)
 
     # Ok they are really not equal
     return False

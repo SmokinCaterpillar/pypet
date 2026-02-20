@@ -14,8 +14,6 @@ from pypet.utils.helpful_functions import flatten_dictionary
 from pypet.utils.mpwrappers import LockWrapper
 from pypet.utils.siginthandling import sigint_handling
 
-__author__ = 'Robert Meyer'
-
 
 def create_param_dict(param_dict):
     '''Fills a dictionary with some parameters that can be put into a trajectory.
@@ -109,7 +107,7 @@ def add_params(traj,param_dict):
             # protocol read out to test all protocols
             traj.f_add_parameter(PickleParameter,key,val, comment='Im a comment!', protocol=val[-1])
         else:
-            raise RuntimeError('You shall not pass, %s is %s!' % (str(val),str(type(val))))
+            raise RuntimeError(f'You shall not pass, {val} is {type(val)}!')
 
 
     traj.f_add_derived_parameter('Another.String', 'Hi, how are you?', comment='test1')
@@ -129,7 +127,7 @@ def add_params(traj,param_dict):
     traj.par.f_add_leaf('er.Test3', 42, comment='sdfds')
 
     for irun in range(13):
-        traj.f_add_leaf('testleaf%d' % irun, 42, comment='f')
+        traj.f_add_leaf(f'testleaf{irun}', 42, comment='f')
 
     traj.par.f_add_group('Empty', comment='Notting!')
 
@@ -364,12 +362,12 @@ class TrajectoryComparator(unittest.TestCase):
             else:
                 rungroups = 1
 
-            self.assertEqual(trajlength, rungroups, 'len of traj1 is %d, rungroups %d' % (trajlength, rungroups))
+            self.assertEqual(trajlength, rungroups, f'len of traj1 is {trajlength}, rungroups {rungroups}')
 
         old_items = to_dict_wo_config(traj1)
         new_items = to_dict_wo_config(traj2)
 
-        self.assertEqual(len(traj1),len(traj2), 'Length unequal %d != %d.' % (len(traj1), len(traj2)))
+        self.assertEqual(len(traj1),len(traj2), f'Length unequal {len(traj1)} != {len(traj2)}.')
 
         self.assertEqual(len(old_items),len(new_items))
         for key,item in new_items.items():
@@ -377,16 +375,15 @@ class TrajectoryComparator(unittest.TestCase):
 
             if isinstance(item, BaseParameter):
                 self.assertTrue(parameters_equal(item,old_item),
-                                'For key %s: %s not equal to %s' % (key,str(old_item),str(item)))
+                                f'For key {key}: {old_item} not equal to {item}')
             elif isinstance(item,BaseResult):
                 self.assertTrue(results_equal(item, old_item),
-                                'For key %s: %s not equal to %s' % (key, str(old_item),str(item)))
+                                f'For key {key}: {old_item} not equal to {item}')
             else:
                 raise RuntimeError('You shall not pass')
 
 
-            self.assertTrue(str(item.v_annotations)==str(old_item.v_annotations),'%s != %s' %
-                        (item.v_annotations.f_ann_to_str(),old_item.v_annotations.f_ann_to_str()))
+            self.assertTrue(str(item.v_annotations)==str(old_item.v_annotations),f'{item.v_annotations.f_ann_to_str()} != {old_item.v_annotations.f_ann_to_str()}')
 
         # Check the annotations
         for node in traj1.f_iter_nodes(recursive=True):
@@ -394,8 +391,7 @@ class TrajectoryComparator(unittest.TestCase):
             if node.v_run_branch == traj1.f_wildcard('$', 0) or node.v_run_branch == 'trajectory':
                 if node.v_comment != '' and node.v_full_name in traj2:
                     second_comment = traj2.f_get(node.v_full_name).v_comment
-                    self.assertEqual(node.v_comment, second_comment, '%s != %s, for %s' %
-                                                (node.v_comment, second_comment, node.v_full_name))
+                    self.assertEqual(node.v_comment, second_comment, f'{node.v_comment} != {second_comment}, for {node.v_full_name}')
 
             if not node.v_annotations.f_is_empty():
                 second_anns = traj2.f_get(node.v_full_name).v_annotations

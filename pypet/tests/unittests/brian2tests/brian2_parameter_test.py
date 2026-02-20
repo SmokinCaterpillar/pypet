@@ -1,5 +1,3 @@
-__author__ = 'Henri Bunting'
-
 import sys
 
 import numpy as np
@@ -41,7 +39,7 @@ class Brian2ParameterTest(ParameterTest):
         self.data['b2a'] = np.array([1., 2.]) * mV
         self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**2.73
 
-        super(Brian2ParameterTest, self).setUp()
+        super().setUp()
         self.dynamic_imports = [Brian2Parameter]
 
     def make_params(self):
@@ -240,7 +238,7 @@ class Brian2ResultTest(ResultTest):
         self.data['integer'] = 444
         self.data['complex'] = np.array([1., 2.]) * mV*mV/mA**-2.7343
 
-        super(Brian2ResultTest, self).setUp()
+        super().setUp()
 
 
 @unittest.skipIf(brian2 is None, 'Can only be run with brian2!')

@@ -4,8 +4,6 @@ Start the script via ``python -m scoop example_21_scoop_multiprocessing.py``.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import os # For path names being viable under Windows and Linux
 
 from pypet import Environment, cartesian_product

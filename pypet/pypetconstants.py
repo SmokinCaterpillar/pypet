@@ -5,8 +5,6 @@ that are recognized by storage services to determine how to store and load data.
 
 """
 
-__author__ = 'Robert Meyer'
-
 
 import sys
 

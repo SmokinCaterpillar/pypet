@@ -1,12 +1,10 @@
 """Module that handles KeyboardInterrupt to exit gracefully"""
 
-__author__ = 'Robert Meyer'
-
 import signal
 import sys
 
 
-class _SigintHandler(object):
+class _SigintHandler:
 
     SIGINT = '__SIGINT__'
 

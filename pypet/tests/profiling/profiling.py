@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import logging
 import os
 
@@ -46,7 +44,7 @@ def test_run():
 
     np.random.seed()
     trajname = 'profiling'
-    filename = make_temp_dir(os.path.join('hdf5', 'test%s.hdf5' % trajname))
+    filename = make_temp_dir(os.path.join('hdf5', f'test{trajname}.hdf5'))
 
     env = Environment(trajectory=trajname, filename=filename,
                       file_title=trajname,
@@ -84,7 +82,7 @@ def test_run():
 
     size=os.path.getsize(filename)
     size_in_mb = size/1000000.
-    print('Size is %sMB' % str(size_in_mb))
+    print(f'Size is {size_in_mb}MB')
 
 
 def test_load():

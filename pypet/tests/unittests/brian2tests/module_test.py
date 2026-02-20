@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 
 import sys
 import unittest

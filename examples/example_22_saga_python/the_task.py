@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import inspect
 import getopt
@@ -50,7 +48,7 @@ class FunctionParameter(Parameter):
     def f_set(self, data):
         if callable(data):
             data = inspect.getsource(data)
-        return super(FunctionParameter, self).f_set(data)
+        return super().f_set(data)
 
 
 def add_parameters(traj):

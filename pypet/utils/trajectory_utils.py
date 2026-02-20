@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 from pypet.trajectory import load_trajectory
 

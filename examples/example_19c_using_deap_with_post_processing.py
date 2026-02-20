@@ -8,8 +8,6 @@ and using the post processing functionality.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import random
 
 from deap import base
@@ -24,7 +22,7 @@ def eval_one_max(traj):
     return (fitness,)  # DEAP wants a tuple here!
 
 
-class Postprocessing(object):
+class Postprocessing:
     """Callable that implements postprocessing.
 
     It is realised as an object to be able to keep track of current generation

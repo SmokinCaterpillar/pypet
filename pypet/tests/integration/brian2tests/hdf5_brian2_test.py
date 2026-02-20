@@ -1,5 +1,3 @@
-__author__ = 'Henri Bunting'
-
 import numpy as np
 import os
 

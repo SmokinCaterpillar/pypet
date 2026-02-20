@@ -5,8 +5,6 @@ But to be extended in the future.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import inspect
 import os
 
@@ -52,8 +50,7 @@ def storage_factory(storage_service, trajectory=None, **kwargs):
         if ext in ('.hdf', '.h4', '.hdf4', '.he2', '.h5', '.hdf5', '.he5'):
             storage_service = HDF5StorageService
         else:
-            raise ValueError('Extension `%s` of filename `%s` not understood.' %
-                             (ext, filename))
+            raise ValueError(f'Extension `{ext}` of filename `{filename}` not understood.')
     elif isinstance(storage_service, str):
         class_name = storage_service.split('.')[-1]
         storage_service = create_class(class_name, [storage_service, HDF5StorageService])

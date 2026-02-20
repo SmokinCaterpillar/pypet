@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 import platform
 import logging
@@ -48,7 +46,7 @@ def add_one_particular_item(traj, store_full):
 class SlowResult(Result):
     def _load(self, load_dict):
         time.sleep(3)
-        super(SlowResult, self)._load(load_dict)
+        super()._load(load_dict)
 
 
 class FullStorageTest(TrajectoryComparator):
@@ -230,7 +228,7 @@ class EnvironmentTest(TrajectoryComparator):
     def tearDown(self):
         self.env.f_disable_logging()
 
-        super(EnvironmentTest, self).tearDown()
+        super().tearDown()
 
     def setUp(self):
         self.set_mode()
@@ -848,7 +846,7 @@ class ResultSortTest(TrajectoryComparator):
 
     def tearDown(self):
         self.env.f_disable_logging()
-        super(ResultSortTest, self).tearDown()
+        super().tearDown()
 
     def setUp(self):
         self.set_mode()

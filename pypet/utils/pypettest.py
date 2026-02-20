@@ -1,7 +1,5 @@
 """Short module to allow the running of tests via ``pypet.test()``"""
 
-__author__ = 'Robert Meyer'
-
 
 from pypet.tests.testutils.ioutils import TEST_IMPORT_ERROR, discover_tests, run_suite
 

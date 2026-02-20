@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master)](https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bdc483ee47304b97a334bb2922d83e8f)](https://www.codacy.com/gh/SmokinCaterpillar/pypet/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SmokinCaterpillar/pypet&amp;utm_campaign=Badge_Grade)
 [![PyPI version](https://badge.fury.io/py/pypet.svg)](https://badge.fury.io/py/pypet)
-[![Documentation Status](https://readthedocs.org/projects/pypet/badge/?version=latest)](http://pypet.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pypet/badge/?version=latest)](https://pypet.readthedocs.io/en/latest/?badge=latest)
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
@@ -18,7 +18,7 @@ analyses becomes a piece of cake!
 
 ## Requirements
 
-Python 3.7 or higher and
+Python 3.12 or higher and
 
 * tables >=  3.5.0
 
@@ -52,13 +52,6 @@ To utilize the continuing of crashed trajectories you need
 Automatic Sumatra records are supported for
 
 * Sumatra >= 0.7.1
-
-
-## Python 2.7
-
-This release no longer supports Python 2.7.
-If you are still using Python 2.7, you need to
-use the pypet legacy version 0.3.0 (https://pypi.python.org/pypi/pypet/0.3.0).
 
 
 # What is pypet all about?
@@ -112,24 +105,14 @@ These are standard python packages, so chances are high that they are already in
 By the way, in case you use the python package manager ``pip``
 you can list all installed packages with ``pip freeze``.
 
-Next, simply install *pypet* via ``pip install pypet``
+Simply install *pypet* via ``pip install pypet``
 
-**Or**
-
-The package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
-and ``python setup.py install`` it.
-
-**Or**
-
-In case you use **Windows**, you have to download the tar file from https://pypi.python.org/pypi/pypet 
-and unzip it. Next, open a windows terminal
-and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above run from the terminal ``python setup.py install``.
+The package release can also be found on https://pypi.org/project/pypet/.
 
 
 ## Documentation and Support
 
-Documentation can be found on http://pypet.readthedocs.org/.
+Documentation can be found on https://pypet.readthedocs.io/.
 
 If you have any further questions feel free to contact me at **robert.meyer (at) alcemy.tech**.
 
@@ -147,7 +130,7 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 
 * Support for many different **data formats**
 
-    * python native data types: bool, int, long, float, str, complex
+    * python native data types: bool, int, float, str, complex
 
     * list, tuple, dict
 
@@ -269,7 +252,7 @@ The environment uses some parameters here, that is the name of the new trajector
 store the trajectory into, the title of the file, and a comment that is added to the trajectory. 
 There are more options available like the number of processors for multiprocessing or 
 how verbose the final HDF5 file is supposed to be.
-Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
+Check out the documentation (https://pypet.readthedocs.io/) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
 ```python
@@ -358,9 +341,8 @@ If the folder cannot be created, the program defaults to `tempfile.gettempdir()`
 Running all tests can take up to 20 minutes. The test suite encompasses more than **1000** tests
 and has a code coverage of about **90%**!
 
-Moreover, *pypet* is constantly tested with Python 3.7 and 3.8 for **Linux** using
-Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
-The source code is available at https://github.com/SmokinCaterpillar/pypet/.
+Moreover, *pypet* is continuously tested with Python 3.12 and 3.13 for **Linux** using
+GitHub Actions. The source code is available at https://github.com/SmokinCaterpillar/pypet/.
 
 
 ## License

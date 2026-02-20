@@ -4,8 +4,6 @@ Contains the standard :class:`~pypet.storageservice.HDF5StorageSerivce`.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import os
 import warnings
 import time
@@ -32,7 +30,7 @@ import pypet.shareddata as shared
 from pypet.utils.helpful_functions import racedirs
 
 
-class StorageService(object):
+class StorageService:
     """Abstract base class defining the storage service interface."""
 
     @property
@@ -117,23 +115,22 @@ class NodeProcessingTimer(HasLogger):
             seconds = int(dfullt) % 60
             minutes = int(dfullt) / 60
             if minutes == 0:
-                formatted_time = '%ds' % seconds
+                formatted_time = f'{seconds}s'
             else:
-                formatted_time = '%dm%02ds' % (minutes, seconds)
+                formatted_time = f'{minutes}m{seconds:02d}s'
             nodespersecond = self._updates / dfullt
-            message = 'Processed %d nodes in %s (%.2f nodes/s).' % \
-                      (self._updates, formatted_time, nodespersecond)
+            message = f'Processed {self._updates} nodes in {formatted_time} ({nodespersecond:.2f} nodes/s).'
             self._logger.info(message)
             self._last_time = current_time
 
 
-class DictWrap(object):
+class DictWrap:
     """Wraps dictionary to allow get and setattr access"""
     def __init__(self, dictionary):
         self.__dict__ = dictionary
 
 
-class PTItemMock(object):
+class PTItemMock:
     """Class that mocks a PyTables item and wraps around a dictionary"""
     def __init__(self, dictionary):
         self._v_attrs = DictWrap(dictionary)
@@ -539,7 +536,7 @@ class HDF5StorageService(StorageService, HasLogger):
             filename = os.path.join(filename, 'Experiments.hdf5')
 
         # Print which file we use for storage
-        self._logger.info('I will use the hdf5 file `%s`.' % filename)
+        self._logger.info(f'I will use the hdf5 file `{filename}`.')
 
         self._filename = filename
         self._file_title = file_title
@@ -589,8 +586,8 @@ class HDF5StorageService(StorageService, HasLogger):
         if overwrite_file:
             try:
                 os.remove(filename)
-                self._logger.info('You specified ``overwrite_file=True``, so I deleted the '
-                                  'file `%s`.' % filename)
+                self._logger.info(f'You specified ``overwrite_file=True``, so I deleted the '
+                                  f'file `{filename}`.')
             except OSError:
                 # File not found, we're good
                 pass
@@ -600,7 +597,7 @@ class HDF5StorageService(StorageService, HasLogger):
         warnings.simplefilter('ignore', pt.NaturalNameWarning)
 
     def __repr__(self):
-        return '<%s (filename:`%s`)>' % (self.__class__.__name__, str(self._filename))
+        return f'<{self.__class__.__name__} (filename:`{self._filename}`)>'
 
     @property
     def is_open(self):
@@ -951,13 +948,13 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._srvc_load_several_items(stuff_to_load, *args, **kwargs)
 
             else:
-                raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
+                raise pex.NoSuchServiceError(f'I do not know how to handle `{msg}`')
 
         except pt.NoSuchNodeError as exc:
-            self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
+            self._logger.error(f'Failed loading  `{stuff_to_load}`')
             raise pex.DataNotInStorageError(repr(exc))
         except:
-            self._logger.error('Failed loading  `%s`' % str(stuff_to_load))
+            self._logger.error(f'Failed loading  `{stuff_to_load}`')
             raise
         finally:
             self._srvc_closing_routine(opened)
@@ -1328,10 +1325,10 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._hdf5file.flush()
 
             else:
-                raise pex.NoSuchServiceError('I do not know how to handle `%s`' % msg)
+                raise pex.NoSuchServiceError(f'I do not know how to handle `{msg}`')
 
         except:
-            self._logger.error('Failed storing `%s`' % str(stuff_to_store))
+            self._logger.error(f'Failed storing `{stuff_to_store}`')
             raise
         finally:
             self._srvc_closing_routine(opened)
@@ -1565,7 +1562,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 errmsg = ('Encountered OSError while flushing file.'
                                    'If you are using Windows, don`t worry! '
                                    'I will ignore the error and try to close the file. '
-                                   'Original error: %s' % repr(exc))
+                                   f'Original error: {exc!r}')
                 self._logger.debug(errmsg)
 
             self._hdf5store.close()
@@ -1615,19 +1612,19 @@ class HDF5StorageService(StorageService, HasLogger):
             defaults to `path_to_trajectory_hdf5_file/backup_trajectory_name.hdf`.
 
         """
-        self._logger.info('Storing backup of %s.' % traj.v_name)
+        self._logger.info(f'Storing backup of {traj.v_name}.')
 
         mypath, _ = os.path.split(self._filename)
 
         if backup_filename is None:
-            backup_filename = os.path.join('%s' % mypath, 'backup_%s.hdf5' % traj.v_name)
+            backup_filename = os.path.join(mypath, f'backup_{traj.v_name}.hdf5')
 
         backup_hdf5file = pt.open_file(filename=backup_filename,
                                              mode='a', title=backup_filename)
 
         if '/' + self._trajectory_name in backup_hdf5file:
-            raise ValueError('I cannot backup  `%s` into file `%s`, there is already a '
-                             'trajectory with that name.' % (traj.v_name, backup_filename))
+            raise ValueError(f'I cannot backup  `{traj.v_name}` into file `{backup_filename}`, there is already a '
+                             'trajectory with that name.')
 
         backup_root = backup_hdf5file.root
 
@@ -1636,7 +1633,7 @@ class HDF5StorageService(StorageService, HasLogger):
         backup_hdf5file.flush()
         backup_hdf5file.close()
 
-        self._logger.info('Finished backup of %s.' % traj.v_name)
+        self._logger.info(f'Finished backup of {traj.v_name}.')
 
     @staticmethod
     def _trj_read_out_row(colnames, row):
@@ -1674,10 +1671,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         try:
             if not '/' + other_trajectory_name in other_file:
-                raise ValueError('Cannot merge `%s` and `%s`, because the second trajectory cannot '
-                                 'be found in file: %s.' % (self._trajectory_name,
-                                                            other_trajectory_name,
-                                                            other_filename))
+                raise ValueError(f'Cannot merge `{self._trajectory_name}` and `{other_trajectory_name}`, because the second trajectory cannot '
+                                 f'be found in file: {other_filename}.')
             for old_name in rename_dict:
                 new_name = rename_dict[old_name]
 
@@ -1868,9 +1863,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 load_derived_parameters != pypetconstants.LOAD_NOTHING or
                 load_results != pypetconstants.LOAD_NOTHING or
                 load_other_data != pypetconstants.LOAD_NOTHING):
-            self._logger.info('Loading trajectory `%s`.' % traj.v_name)
+            self._logger.info(f'Loading trajectory `{traj.v_name}`.')
         else:
-            self._logger.info('Checked meta data of trajectory `%s`.' % traj.v_name)
+            self._logger.info(f'Checked meta data of trajectory `{traj.v_name}`.')
             return
 
         maximum_display_other = 10
@@ -1906,12 +1901,11 @@ class HDF5StorageService(StorageService, HasLogger):
 
                 if load_subbranch:
                     # Load the subbranches recursively
-                    self._logger.info('Loading branch `%s` in mode `%s`.' %
-                                          (child_name, str(loading)))
+                    self._logger.info(f'Loading branch `{child_name}` in mode `{loading}`.')
                 else:
                     if counter < maximum_display_other:
                         self._logger.info(
-                            'Loading branch/node `%s` in mode `%s`.' % (child_name, str(loading)))
+                            f'Loading branch/node `{child_name}` in mode `{loading}`.')
                     elif counter == maximum_display_other:
                         self._logger.info('To many branchs or nodes at root for display. '
                                           'I will not inform you about loading anymore. '
@@ -1941,13 +1935,13 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             version = metarow['version'].decode('utf-8')
         except (IndexError, ValueError) as ke:
-            self._logger.error('Could not check version due to: %s' % str(ke))
+            self._logger.error(f'Could not check version due to: {ke}')
             version = '`COULD NOT BE LOADED`'
 
         try:
             python = metarow['python'].decode('utf-8')
         except (IndexError, ValueError) as ke:
-            self._logger.error('Could not check version due to: %s' % str(ke))
+            self._logger.error(f'Could not check version due to: {ke}')
             python = '`COULD NOT BE LOADED`'
 
         self._trj_check_version(version, python, force)
@@ -2458,22 +2452,20 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if not only_init:
-            self._logger.info('Start storing Trajectory `%s`.' % self._trajectory_name)
+            self._logger.info(f'Start storing Trajectory `{self._trajectory_name}`.')
         else:
-            self._logger.info('Initialising storage or updating meta data of Trajectory `%s`.' %
-                              self._trajectory_name)
+            self._logger.info(f'Initialising storage or updating meta data of Trajectory `{self._trajectory_name}`.')
             store_data = pypetconstants.STORE_NOTHING
 
         # In case we accidentally chose a trajectory name that already exist
         # We do not want to mess up the stored trajectory but raise an Error
         if not traj._stored and self._trajectory_group is not None:
-            raise RuntimeError('You want to store a completely new trajectory with name'
-                               ' `%s` but this trajectory is already found in file `%s`.'
+            raise RuntimeError(f'You want to store a completely new trajectory with name'
+                               f' `{traj.v_name}` but this trajectory is already found in file `{self._filename}`.'
                                'Did you try to accidentally overwrite existing data? If '
                                'you DO want to override existing data, use `overwrite_file=True`.'
                                'Note that this deletes the whole HDF5 file not just the particular '
-                               'trajectroy therein! ' %
-                               (traj.v_name, self._filename))
+                               'trajectroy therein! ')
 
         # Extract HDF5 settings from the trajectory
         self._srvc_check_hdf_properties(traj)
@@ -2501,10 +2493,10 @@ class HDF5StorageService(StorageService, HasLogger):
             for child_name in traj._children:
 
                 if child_name in name_set:
-                    self._logger.info('Storing branch `%s`.' % child_name)
+                    self._logger.info(f'Storing branch `{child_name}`.')
                 else:
                     if counter < maximum_display_other:
-                        self._logger.info('Storing branch/node `%s`.' % child_name)
+                        self._logger.info(f'Storing branch/node `{child_name}`.')
                     elif counter == maximum_display_other:
                         self._logger.info('To many branches or nodes at root for display. '
                                           'I will not inform you about storing anymore. '
@@ -2518,10 +2510,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                             recursive=True, max_depth=max_depth,
                                             hdf5_group=self._trajectory_group)
 
-            self._logger.info('Finished storing Trajectory `%s`.' % self._trajectory_name)
+            self._logger.info(f'Finished storing Trajectory `{self._trajectory_name}`.')
         else:
-            self._logger.info('Finished init or meta data update for `%s`.' %
-                              self._trajectory_name)
+            self._logger.info(f'Finished init or meta data update for `{self._trajectory_name}`.')
         traj._stored = True
 
     def _tree_store_sub_branch(self, traj_node, branch_name,
@@ -2575,18 +2566,17 @@ class HDF5StorageService(StorageService, HasLogger):
                     hdf5_group = self._hdf5file.get_node( where=self._trajectory_group,
                                                          name=hdf5_location)
             except pt.NoSuchNodeError:
-                self._logger.debug('Cannot store `%s` the parental hdf5 node with path `%s` does '
-                                     'not exist on disk.' %
-                                     (traj_node.v_name, hdf5_location))
+                self._logger.debug(f'Cannot store `{traj_node.v_name}` the parental hdf5 node with path `{hdf5_location}` does '
+                                     'not exist on disk.')
 
                 if traj_node.v_is_leaf:
-                    self._logger.error('Cannot store `%s` the parental hdf5 '
-                                       'node with path `%s` does '
+                    self._logger.error(f'Cannot store `{traj_node.v_name}` the parental hdf5 '
+                                       f'node with path `{hdf5_location}` does '
                                        'not exist on disk! The child '
                                        'you want to store is a leaf node,'
                                        'that cannot be stored without '
                                        'the parental node existing on '
-                                       'disk.' % (traj_node.v_name, hdf5_location))
+                                       'disk.')
                     raise
                 else:
                     self._logger.debug('I will try to store the path from trajectory root to '
@@ -2847,11 +2837,9 @@ class HDF5StorageService(StorageService, HasLogger):
         try:
             to_link_hdf5_group = self._hdf5file.get_node(where=linking_name)
         except pt.NoSuchNodeError:
-            self._logger.debug('Could not store link `%s` under `%s` immediately, '
-                               'need to store `%s` first. '
-                               'Will store the link right after.' % (link,
-                                                                     node_in_traj.v_full_name,
-                                                                     linked_traj_node.v_full_name))
+            self._logger.debug(f'Could not store link `{link}` under `{node_in_traj.v_full_name}` immediately, '
+                               f'need to store `{linked_traj_node.v_full_name}` first. '
+                               'Will store the link right after.')
             root = node_in_traj._nn_interface._root_instance
             self._tree_store_sub_branch(root, linked_traj_node.v_full_name,
                                         store_data=pypetconstants.STORE_DATA_SKIPPING,
@@ -2871,7 +2859,7 @@ class HDF5StorageService(StorageService, HasLogger):
         """ Stores a single run instance to disk (only meta data)"""
 
         if store_data != pypetconstants.STORE_NOTHING:
-            self._logger.debug('Storing Data of single run `%s`.' % traj.v_crun)
+            self._logger.debug(f'Storing Data of single run `{traj.v_crun}`.')
             if max_depth is None:
                 max_depth = float('inf')
             for name_pair in traj._new_nodes:
@@ -3017,7 +3005,7 @@ class HDF5StorageService(StorageService, HasLogger):
     def _all_get_node_by_name(self, name):
         """Returns an HDF5 node by the path specified in `name`"""
         path_name = name.replace('.', '/')
-        where = '/%s/%s' % (self._trajectory_name, path_name)
+        where = f'/{self._trajectory_name}/{path_name}'
         return self._hdf5file.get_node(where=where)
 
     @staticmethod
@@ -3101,8 +3089,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 strtype = type(data[0]).__name__
 
                 if not strtype in pypetconstants.PARAMETERTYPEDICT:
-                    raise TypeError('I do not know how to handle `%s` its type is '
-                                    '`%s`.' % (str(data), strtype))
+                    raise TypeError(f'I do not know how to handle `{data}` its type is '
+                                    f'`{strtype}`.')
 
                 HDF5StorageService._all_set_attr(ptitem, prefix +
                                        HDF5StorageService.SCALAR_TYPE, strtype)
@@ -3316,8 +3304,8 @@ class HDF5StorageService(StorageService, HasLogger):
         table.flush()
 
         if HDF5StorageService.REMOVE_ROW not in flags and row is None:
-            raise RuntimeError('Could not add or modify entries of `%s` in '
-                               'table %s' % (item_name, table._v_name))
+            raise RuntimeError(f'Could not add or modify entries of `{item_name}` in '
+                               f'table {table._v_name}')
 
     def _all_insert_into_row(self, row, insert_dict):
         """Copies data from `insert_dict` into a pytables `row`."""
@@ -3325,7 +3313,7 @@ class HDF5StorageService(StorageService, HasLogger):
             try:
                 row[key] = val
             except KeyError as ke:
-                self._logger.warning('Could not write `%s` into a table, ' % key + repr(ke))
+                self._logger.warning(f'Could not write `{key}` into a table, {ke!r}')
 
     def _all_extract_insert_dict(self, item, colnames, additional_info=None):
         """Extracts information from a given item to be stored into a pytable row.
@@ -3654,8 +3642,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     try:
                         flags_dict[key] = HDF5StorageService.TYPE_FLAG_MAPPING[dtype]
                     except KeyError:
-                        raise pex.NoSuchServiceError('I cannot store `%s`, I do not understand the'
-                                                     'type `%s`.' % (key, str(dtype)))
+                        raise pex.NoSuchServiceError(f'I cannot store `{key}`, I do not understand the'
+                                                     f'type `{dtype}`.')
 
     def _prm_meta_add_summary(self, instance):
         """Adds data to the summary tables and returns if `instance`s comment has to be stored.
@@ -3756,7 +3744,7 @@ class HDF5StorageService(StorageService, HasLogger):
             except pt.NoSuchNodeError:
                 pass
         except Exception as exc:
-            self._logger.error('Could not store information table due to `%s`.' % repr(exc))
+            self._logger.error(f'Could not store information table due to `{exc!r}`.')
 
         if ((not self._purge_duplicate_comments or definitely_store_comment) and
                     instance.v_comment != ''):
@@ -3780,8 +3768,8 @@ class HDF5StorageService(StorageService, HasLogger):
             except pt.NoSuchNodeError:
                 pass
             except Exception as exc:
-                self._logger.error('Could not store information '
-                                   'table due to `%s`.' % repr(exc))
+                self._logger.error(f'Could not store information '
+                                   f'table due to `{exc!r}`.')
 
     def _prm_store_from_dict(self, fullname, store_dict, hdf5_group, store_flags, kwargs):
         """Stores a `store_dict`"""
@@ -3804,15 +3792,14 @@ class HDF5StorageService(StorageService, HasLogger):
                     else:
                         store_type = self._all_get_from_attrs(hdf5_group, HDF5StorageService.STORAGE_TYPE)
                         if store_type != HDF5StorageService.NESTED_GROUP:
-                            raise ValueError('You want to nested results but `%s` is already '
-                                             'of type `%s`!' % (hdf5_group._v_name, store_type))
+                            raise ValueError(f'You want to nested results but `{hdf5_group._v_name}` is already '
+                                             f'of type `{store_type}`!')
 
             # Iterate through the data and store according to the storage flags
             if key in hdf5_group:
                 # We won't change any data that is found on disk
                 self._logger.debug(
-                    'Found %s already in hdf5 node of %s, so I will ignore it.' %
-                    (key, fullname))
+                    f'Found {key} already in hdf5 node of {fullname}, so I will ignore it.')
                 continue
 
             if flag == HDF5StorageService.TABLE:
@@ -3897,15 +3884,14 @@ class HDF5StorageService(StorageService, HasLogger):
         if store_data == pypetconstants.STORE_NOTHING:
             return
         elif store_data == pypetconstants.STORE_DATA_SKIPPING and instance._stored:
-            self._logger.debug('Already found `%s` on disk I will not store it!' %
-                                   instance.v_full_name)
+            self._logger.debug(f'Already found `{instance.v_full_name}` on disk I will not store it!')
             return
         elif store_data == pypetconstants.OVERWRITE_DATA:
             if not overwrite:
                 overwrite = True
 
         fullname = instance.v_full_name
-        self._logger.debug('Storing `%s`.' % fullname)
+        self._logger.debug(f'Storing `{fullname}`.')
 
         if _hdf5_group is None:
             # If no group is provided we might need to create one
@@ -3954,9 +3940,8 @@ class HDF5StorageService(StorageService, HasLogger):
                     stuff_not_to_be_overwritten = overwrite_set - key_set
 
                     if overwrite!='v_annotations' and len(stuff_not_to_be_overwritten) > 0:
-                        self._logger.warning('Cannot overwrite `%s`, these items are not supposed to '
-                                             'be stored by the leaf node.' %
-                                             str(stuff_not_to_be_overwritten))
+                        self._logger.warning(f'Cannot overwrite `{stuff_not_to_be_overwritten}`, these items are not supposed to '
+                                             'be stored by the leaf node.')
 
                     stuff_to_overwrite = overwrite_set & key_set
                     if len(stuff_to_overwrite) > 0:
@@ -3964,9 +3949,9 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                       delete_only=list(
                                                                           stuff_to_overwrite))
                 else:
-                    raise ValueError('Your value of overwrite `%s` is not understood. '
+                    raise ValueError(f'Your value of overwrite `{overwrite}` is not understood. '
                                      'Please pass `True` of a list of strings to fine grain '
-                                     'overwriting.' % str(overwrite))
+                                     'overwriting.')
 
             self._prm_store_from_dict(fullname, store_dict, _hdf5_group, store_flags, kwargs)
 
@@ -3988,7 +3973,7 @@ class HDF5StorageService(StorageService, HasLogger):
         except:
             # I anything fails, we want to remove the data of the parameter again
             self._logger.error(
-                'Failed storing leaf `%s`. I will remove the hdf5 data I added  again.' % fullname)
+                f'Failed storing leaf `{fullname}`. I will remove the hdf5 data I added  again.')
             # Delete data
             for key in store_dict.keys():
                 if key in  _hdf5_group:
@@ -4033,7 +4018,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 HDF5StorageService.SHARED_DATA)
             setattr(hdf5data._v_attrs, HDF5StorageService.SHARED_DATA_TYPE, flag)
         except:
-            self._logger.error('Failed storing shared data `%s` of `%s`.' % (key, full_name))
+            self._logger.error(f'Failed storing shared data `{key}` of `{full_name}`.')
             raise
 
     def _prm_select_shared_pandas_data(self, pd_node, full_name, **kwargs):
@@ -4057,7 +4042,7 @@ class HDF5StorageService(StorageService, HasLogger):
             pandas_store = self._hdf5store
             return pandas_store.select(pathname, **kwargs)
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name, full_name))
+            self._logger.error(f'Failed loading `{pd_node._v_name}` of `{full_name}`.')
             raise
 
     def _prm_write_shared_array(self, key, data, hdf5_group, full_name, flag, **kwargs):
@@ -4197,10 +4182,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if key in group and not (overwrite or kwargs.get('append', False)):
                 raise ValueError(
-                    'DataFrame `%s` already exists in `%s`. '
-                    'To append pass ``append=`True```.' % (key, fullname))
+                    f'DataFrame `{key}` already exists in `{fullname}`. '
+                    'To append pass ``append=`True```.')
             else:
-                self._logger.debug('Appending to pandas data `%s` in `%s`' % (key, fullname))
+                self._logger.debug(f'Appending to pandas data `{key}` in `{fullname}`')
 
             if 'expectedrows' in kwargs:
                 self._logger.debug('expectedrows no longer supported by pandas, will '
@@ -4216,7 +4201,7 @@ class HDF5StorageService(StorageService, HasLogger):
             self._hdf5file.flush()
 
         except:
-            self._logger.error('Failed storing pandas data `%s` of `%s`.' % (key, fullname))
+            self._logger.error(f'Failed storing pandas data `{key}` of `{fullname}`.')
             raise
 
     def _prm_write_into_other_array(self, key, data, group, fullname,
@@ -4290,7 +4275,7 @@ class HDF5StorageService(StorageService, HasLogger):
             setattr(other_array._v_attrs, HDF5StorageService.STORAGE_TYPE, flag)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing %s `%s` of `%s`.' % (flag, key, fullname))
+            self._logger.error(f'Failed storing {flag} `{key}` of `{fullname}`.')
             raise
 
     def _prm_write_into_array(self, key, data, group, fullname, **kwargs):
@@ -4355,7 +4340,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     HDF5StorageService.ARRAY)
             self._hdf5file.flush()
         except:
-            self._logger.error('Failed storing array `%s` of `%s`.' % (key, fullname))
+            self._logger.error(f'Failed storing array `{key}` of `{fullname}`.')
             raise
 
     def _lnk_delete_link(self, link_name):
@@ -4482,7 +4467,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 if idx == 0:
                     tblname = tablename
                 else:
-                    tblname = tablename + '_%d' % idx
+                    tblname = f'{tablename}_{idx}'
 
                 table = self._hdf5file.create_table(where=hdf5_group, name=tblname,
                                               description=descr_dict,
@@ -4543,7 +4528,7 @@ class HDF5StorageService(StorageService, HasLogger):
                 self._hdf5file.flush()
 
         except:
-            self._logger.error('Failed storing table `%s` of `%s`.' % (tablename, fullname))
+            self._logger.error(f'Failed storing table `{tablename}` of `{fullname}`.')
             raise
 
     def _prm_make_description(self, data, fullname):
@@ -4608,8 +4593,8 @@ class HDF5StorageService(StorageService, HasLogger):
             else:
                 return pt.Col.from_dtype(np.dtype(type(val)))
         except Exception:
-            self._logger.error('Failure in storing `%s` of Parameter/Result `%s`.'
-                               ' Its type was `%s`.' % (key, fullname, repr(type(val))))
+            self._logger.error(f'Failure in storing `{key}` of Parameter/Result `{fullname}`.'
+                               f' Its type was `{type(val)!r}`.')
             raise
 
     @staticmethod
@@ -4638,7 +4623,7 @@ class HDF5StorageService(StorageService, HasLogger):
             load_type = self._all_get_from_attrs(node, HDF5StorageService.STORAGE_TYPE)
 
             if _prefix:
-                load_name = '%s.%s' % (_prefix, node._v_name)
+                load_name = f'{_prefix}.{node._v_name}'
             else:
                 load_name = node._v_name
 
@@ -4798,7 +4783,7 @@ class HDF5StorageService(StorageService, HasLogger):
             return
 
         full_name = instance.v_full_name
-        self._logger.debug('Loading data of %s' % full_name)
+        self._logger.debug(f'Loading data of {full_name}')
 
         load_dict = {}  # Dict that will be used to keep all data for loading the parameter or
         # result
@@ -4827,13 +4812,12 @@ class HDF5StorageService(StorageService, HasLogger):
         if load_only is not None:
             # Check if all data in `load_only` was actually found in the hdf5 file
             if len(load_only) > 0:
-                self._logger.warning('You marked %s for load only, '
-                                     'but I cannot find these for `%s`' %
-                                     (str(load_only), full_name))
+                self._logger.warning(f'You marked {load_only} for load only, '
+                                     f'but I cannot find these for `{full_name}`')
         elif load_except is not None:
             if len(load_except) > 0:
-                self._logger.warning(('You marked `%s` for not loading, but these were not part '
-                                      'of `%s` anyway.' % (str(load_except), full_name)))
+                self._logger.warning(f'You marked `{load_except}` for not loading, but these were not part '
+                                      f'of `{full_name}` anyway.')
 
         # Finally tell the parameter or result to load the data, if there was any ;-)
         if load_dict:
@@ -4844,7 +4828,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     instance.f_lock()
             except:
                 self._logger.error(
-                    'Error while reconstructing data of leaf `%s`.' % full_name)
+                    f'Error while reconstructing data of leaf `{full_name}`.')
                 raise
 
         # Signal completed node loading
@@ -4880,7 +4864,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             return innder_dict
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (leaf._v_name, full_name))
+            self._logger.error(f'Failed loading `{leaf._v_name}` of `{full_name}`.')
             raise
 
     def _prm_read_shared_data(self, shared_node, instance):
@@ -4907,8 +4891,7 @@ class HDF5StorageService(StorageService, HasLogger):
             result = constructor(name=name, parent=instance)
             return result
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (shared_node._v_name,
-                                                                 instance.v_full_name))
+            self._logger.error(f'Failed loading `{shared_node._v_name}` of `{instance.v_full_name}`.')
             raise
 
     def _prm_read_pandas(self, pd_node, full_name):
@@ -4934,7 +4917,7 @@ class HDF5StorageService(StorageService, HasLogger):
             pandas_data = pandas_store.get(pathname)
             return pandas_data
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (pd_node._v_name, full_name))
+            self._logger.error(f'Failed loading `{pd_node._v_name}` of `{full_name}`.')
             raise
 
     def _prm_read_table(self, table_or_group, full_name):
@@ -5024,7 +5007,7 @@ class HDF5StorageService(StorageService, HasLogger):
             return result_table
         except:
             self._logger.error(
-                'Failed loading `%s` of `%s`.' % (table_or_group._v_name, full_name))
+                f'Failed loading `{table_or_group._v_name}` of `{full_name}`.')
             raise
 
     @staticmethod
@@ -5070,7 +5053,7 @@ class HDF5StorageService(StorageService, HasLogger):
 
             return result
         except:
-            self._logger.error('Failed loading `%s` of `%s`.' % (array._v_name, full_name))
+            self._logger.error(f'Failed loading `{array._v_name}` of `{full_name}`.')
             raise
 
     def _hdf5_interact_with_data(self, path_to_data, item_name, request, args, kwargs):

@@ -1,7 +1,5 @@
 """Module to run the clustered Neural Network Simulations as in Litwin-Kumar & Doiron 2012"""
 
-__author__ = 'Robert Meyer'
-
 import os
 import numpy as np
 import matplotlib.pyplot as plt

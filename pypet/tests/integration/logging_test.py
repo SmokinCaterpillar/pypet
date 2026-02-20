@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import logging
 import itertools as itools
 import os
@@ -19,11 +17,11 @@ class LogWhenStored(Result):
 
     def __init__(self, full_name, *args, **kwargs):
         self._level = kwargs['level']
-        super(LogWhenStored, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
 
     def _store(self):
         self._logger.log(self._level, 'STORE_Test! in parameter')
-        return super(LogWhenStored, self)._store()
+        return super()._store()
 
 
 def add_result(traj, level=logging.ERROR):
@@ -52,7 +50,7 @@ def log_all_levels(traj):
     logging.getLogger('pypet.CRITICAL').critical('CRITICAL_Test!')
 
 
-class Dummy(object):
+class Dummy:
     pass
 
 
@@ -75,7 +73,7 @@ class LoggingTest(TrajectoryComparator):
         self.set_mode()
 
     def tearDown(self):
-        super(LoggingTest, self).tearDown()
+        super().tearDown()
 
     def set_mode(self):
         self.mode = Dummy()

@@ -1,7 +1,5 @@
 """Module containing decorators"""
 
-__author__ = 'Robert Meyer'
-
 import functools
 import warnings
 import logging
@@ -59,7 +57,7 @@ def deprecated(msg=''):
     def wrapper(func):
         @functools.wraps(func)
         def new_func(*args, **kwargs):
-            warning_string = "Call to deprecated function or property `%s`." % func.__name__
+            warning_string = f"Call to deprecated function or property `{func.__name__}`."
             warning_string = warning_string + ' ' + msg
             warnings.warn(
                 warning_string,
@@ -109,8 +107,8 @@ def kwargs_mutual_exclusive(param1_name, param2_name, map2to1=None):
         def new_func(*args, **kwargs):
             if param2_name in kwargs:
                 if param1_name in kwargs:
-                    raise ValueError('You cannot specify `%s` and `%s` at the same time, '
-                                     'they are mutually exclusive.' % (param1_name, param2_name))
+                    raise ValueError(f'You cannot specify `{param1_name}` and `{param2_name}` at the same time, '
+                                     f'they are mutually exclusive.')
                 param2 = kwargs.pop(param2_name)
                 if map2to1 is not None:
                     param1 = map2to1(param2)
@@ -148,13 +146,12 @@ def kwargs_api_change(old_name, new_name=None):
 
             if old_name in kwargs:
                 if new_name is None:
-                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`. ' \
-                                 'This keyword is no longer supported, please don`t use it ' \
-                                 'anymore.' % (old_name, func.__name__)
+                    warning_string = (f'Using deprecated keyword argument `{old_name}` in function `{func.__name__}`. '
+                                 'This keyword is no longer supported, please don`t use it '
+                                 'anymore.')
                 else:
-                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
-                                 'please use keyword `%s` instead.' % \
-                                 (old_name, func.__name__, new_name)
+                    warning_string = (f'Using deprecated keyword argument `{old_name}` in function `{func.__name__}`, '
+                                 f'please use keyword `{new_name}` instead.')
                 warnings.warn(warning_string, category=DeprecationWarning)
                 value = kwargs.pop(old_name)
                 if new_name is not None:
@@ -182,8 +179,7 @@ def not_in_run(func):
     def new_func(self, *args, **kwargs):
 
         if self._is_run:
-            raise TypeError('Function `%s` is not available during a single run.' %
-                            func.__name__)
+            raise TypeError(f'Function `{func.__name__}` is not available during a single run.')
 
         return func(self, *args, **kwargs)
 
@@ -205,8 +201,7 @@ def with_open_store(func):
     def new_func(self, *args, **kwargs):
 
         if not self.traj.v_storage_service.is_open:
-            raise TypeError('Function `%s` is only available if the storage is open.' %
-                            func.__name__)
+            raise TypeError(f'Function `{func.__name__}` is only available if the storage is open.')
 
         return func(self, *args, **kwargs)
 
@@ -235,23 +230,19 @@ def retry(n, errors, wait=0.0, logger_name=None):
                     result = func(*args, **kwargs)
                     if retries and logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.debug('Retry of `%s` successful' % func.__name__)
+                        logger.debug(f'Retry of `{func.__name__}` successful')
                     return result
                 except errors:
                     if retries >= n:
                         if logger_name:
                             logger = logging.getLogger(logger_name)
-                            logger.exception('I could not execute `%s` with args %s and kwargs %s, '
-                                             'starting next try. ' % (func.__name__,
-                                                                      str(args),
-                                                                      str(kwargs)))
+                            logger.exception(f'I could not execute `{func.__name__}` with args {args} and kwargs {kwargs}, '
+                                             f'starting next try. ')
                         raise
                     elif logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.debug('I could not execute `%s` with args %s and kwargs %s, '
-                                         'starting next try. ' % (func.__name__,
-                                                                  str(args),
-                                                                  str(kwargs)))
+                        logger.debug(f'I could not execute `{func.__name__}` with args {args} and kwargs {kwargs}, '
+                                         f'starting next try. ')
                     retries += 1
                     if wait:
                         time.sleep(wait)
@@ -264,7 +255,7 @@ def _prfx_getattr_(obj, item):
     """Replacement of __getattr__"""
     if item.startswith('f_') or item.startswith('v_'):
         return getattr(obj, item[2:])
-    raise AttributeError('`%s` object has no attribute `%s`' % (obj.__class__.__name__, item))
+    raise AttributeError(f'`{obj.__class__.__name__}` object has no attribute `{item}`')
 
 
 def _prfx_setattr_(obj, item, value):

@@ -52,3 +52,9 @@ tmp
 
 # profiling
 .profile*
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+__pycache__/

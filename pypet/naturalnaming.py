@@ -45,8 +45,6 @@ Contains the following classes:
 
 """
 
-__author__ = 'Robert Meyer'
-
 import inspect
 import warnings
 import keyword
@@ -113,9 +111,8 @@ class NNTreeNodeKids(HasSlots):
         if item in self._node._children:
             return self._node._children[item]
         else:
-            raise AttributeError('Group/Link/Leaf `%s` unknown for %s '
-                                 '`%s`.' % (item, self._node.__class__.__name__,
-                                            self._node.v_name))
+            raise AttributeError(f'Group/Link/Leaf `{item}` unknown for {self._node.__class__.__name__} '
+                                 f'`{self._node.v_name}`.')
 
     def __dir__(self):
         return self._node.f_dir_data()
@@ -126,7 +123,7 @@ class NNTreeNodeFunc(NNTreeNodeKids):
     __slots__ = ('_prefix',)
 
     def __init__(self, node):
-        super(NNTreeNodeFunc, self).__init__(node)
+        super().__init__(node)
         self._prefix = 'f_'
 
     def _is_part(self, name):
@@ -137,9 +134,8 @@ class NNTreeNodeFunc(NNTreeNodeKids):
         if self._is_part(f_item):
             return getattr(self._node, f_item)
         else:
-            raise AttributeError('Function/Property `%s` unknown for %s '
-                                 '`%s`.' % (item, self._node.__class__.__name__,
-                                            self._node.v_name))
+            raise AttributeError(f'Function/Property `{item}` unknown for {self._node.__class__.__name__} '
+                                 f'`{self._node.v_name}`.')
 
     def __dir__(self):
         result = [x[2:] for x in dir(self._node) if x.startswith(self._prefix) and
@@ -152,11 +148,11 @@ class NNTreeNodeVars(NNTreeNodeFunc):
     __slots__ = ()
 
     def __init__(self, node):
-        super(NNTreeNodeVars, self).__init__(node)
+        super().__init__(node)
         self._prefix = 'v_'
 
     def _is_part(self, name):
-        if super(NNTreeNodeVars, self)._is_part(name):
+        if super()._is_part(name):
             return True
         if name in self._node.__all_slots__:
             return True
@@ -167,14 +163,13 @@ class NNTreeNodeVars(NNTreeNodeFunc):
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
-            return super(NNTreeNodeFunc, self).__setattr__(key, value)
+            return super().__setattr__(key, value)
         v_key = 'v_' + key
         if self._is_part(v_key):
             setattr(self._node, v_key, value)
         else:
-            raise AttributeError('Property `%s` unknown for %s '
-                                 '`%s`.' % (key, self._node.__class__.__name__,
-                                            self._node.v_name))
+            raise AttributeError(f'Property `{key}` unknown for {self._node.__class__.__name__} '
+                                 f'`{self._node.v_name}`.')
 
 
 class NNTreeNode(WithAnnotations):
@@ -184,7 +179,7 @@ class NNTreeNode(WithAnnotations):
                  '_run_branch', '_branch', '_vars', '_func')
 
     def __init__(self, full_name, comment, is_leaf):
-        super(NNTreeNode, self).__init__()
+        super().__init__()
         self._is_leaf = is_leaf  # Whether or not a node is a leaf, aka terminal node.
         self._stored = False
         self._comment = ''
@@ -312,7 +307,7 @@ class NNTreeNode(WithAnnotations):
         return self.__class__.__name__
 
 
-class KnowsTrajectory(object):
+class KnowsTrajectory:
     """ A dummy class which adds the constant ``KNOWS_TRAJECTORY=True`` to a given class.
 
     This signals the trajectory to pass itself onto the class constructor.
@@ -332,7 +327,7 @@ class NNLeafNode(NNTreeNode):
     __slots__ = ('_is_parameter',)
 
     def __init__(self, full_name, comment, is_parameter):
-        super(NNLeafNode, self).__init__(full_name=full_name, comment=comment, is_leaf=True)
+        super().__init__(full_name=full_name, comment=comment, is_leaf=True)
         self._is_parameter = is_parameter
 
     def f_supports_fast_access(self):
@@ -604,8 +599,8 @@ class NaturalNamingInterface(HasLogger):
         if len(store_tuple) > 3:
             kwargs = store_tuple[3]
         if len(store_tuple) > 4:
-            raise ValueError('Your argument tuple %s has to many entries, please call '
-                             'store with [(msg,item,args,kwargs),...]' % str(store_tuple))
+            raise ValueError(f'Your argument tuple {store_tuple} has to many entries, please call '
+                             'store with [(msg,item,args,kwargs),...]')
 
         # #dummy test
         _ = self._fetch_from_node(store_load, node, args, kwargs)
@@ -896,8 +891,8 @@ class NaturalNamingInterface(HasLogger):
                     for child in list(actual_node._children.keys()):
                         actual_node.f_remove_child(child, recursive=True)
                 else:
-                    raise TypeError('Cannot remove group `%s` it contains children. Please '
-                                    'remove with `recursive=True`.' % actual_node.v_full_name)
+                    raise TypeError(f'Cannot remove group `{actual_node.v_full_name}` it contains children. Please '
+                                    'remove with `recursive=True`.')
             self._delete_node(actual_node)
             return True
 
@@ -1198,8 +1193,8 @@ class NaturalNamingInterface(HasLogger):
             if faulty_names:
                 full_name = '.'.join(split_names)
                 raise ValueError(
-                    'Your Parameter/Result/Node `%s` contains the following not admissible names: '
-                    '%s please choose other names.' % (full_name, faulty_names))
+                    f'Your Parameter/Result/Node `{full_name}` contains the following not admissible names: '
+                    f'{faulty_names} please choose other names.')
 
             if add_link:
                 if instance is None:
@@ -1207,7 +1202,7 @@ class NaturalNamingInterface(HasLogger):
                 if instance.v_is_root:
                     raise ValueError('You cannot create a link to the root node')
                 if start_node.v_is_root and name in SUBTREE_MAPPING:
-                    raise ValueError('`%s` is a reserved name for a group under root.' % name)
+                    raise ValueError(f'`{name}` is a reserved name for a group under root.')
                 if not self._root_instance.f_contains(instance, with_links=False, shortcuts=False):
                     raise ValueError('You can only link to items within the trajectory tree!')
 
@@ -1357,8 +1352,7 @@ class NaturalNamingInterface(HasLogger):
                     if name in act_node._links:
                         raise AttributeError('You cannot hop over links when adding '
                                              'data to the tree. '
-                                             'There is a link called `%s` under `%s`.' %
-                                             (name, act_node.v_full_name))
+                                             f'There is a link called `{name}` under `{act_node.v_full_name}`.')
                     if idx == last_idx:
                         if self._root_instance._no_clobber:
                             self._logger.warning('You already have a group/instance/link `%s` '
@@ -1367,8 +1361,8 @@ class NaturalNamingInterface(HasLogger):
                                                  'so I will ignore your addition of '
                                                  'data.' % (name, act_node.v_full_name))
                         else:
-                            raise AttributeError('You already have a group/instance/link `%s` '
-                                                 'under `%s`' % (name, act_node.v_full_name))
+                            raise AttributeError(f'You already have a group/instance/link `{name}` '
+                                                 f'under `{act_node.v_full_name}`')
                 act_node = act_node._children[name]
             return act_node
         except:
@@ -1436,48 +1430,43 @@ class NaturalNamingInterface(HasLogger):
         faulty_names = ''
 
         if parent_node is not None and parent_node.v_is_root and split_names[0] == 'overview':
-            faulty_names = '%s `overview` cannot be added directly under the root node ' \
-                           'this is a reserved keyword,' % (faulty_names)
+            faulty_names = f'{faulty_names} `overview` cannot be added directly under the root node ' \
+                           'this is a reserved keyword,'
 
         for split_name in split_names:
 
             if len(split_name) == 0:
-                faulty_names = '%s `%s` contains no characters, please use at least 1,' % (
-                    faulty_names, split_name)
+                faulty_names = f'{faulty_names} `{split_name}` contains no characters, please use at least 1,'
 
             elif split_name.startswith('_'):
-                faulty_names = '%s `%s` starts with a leading underscore,' % (
-                    faulty_names, split_name)
+                faulty_names = f'{faulty_names} `{split_name}` starts with a leading underscore,'
 
             elif re.match(CHECK_REGEXP, split_name) is None:
-                faulty_names = '%s `%s` contains non-admissible characters ' \
-                               '(use only [A-Za-z0-9_-]),' % \
-                               (faulty_names, split_name)
+                faulty_names = f'{faulty_names} `{split_name}` contains non-admissible characters ' \
+                               '(use only [A-Za-z0-9_-]),'
 
             elif '$' in split_name:
                 if split_name not in self._root_instance._wildcard_keys:
-                    faulty_names = '%s `%s` contains `$` but has no associated ' \
-                                   'wildcard function,' % (faulty_names, split_name)
+                    faulty_names = f'{faulty_names} `{split_name}` contains `$` but has no associated ' \
+                                   'wildcard function,'
 
             elif split_name in self._not_admissible_names:
-                warnings.warn('`%s` is a method/attribute of the '
+                warnings.warn(f'`{split_name}` is a method/attribute of the '
                               'trajectory/treenode/naminginterface, you may not be '
                               'able to access it via natural naming but only by using '
-                              '`[]` square bracket notation. ' % split_name,
+                              '`[]` square bracket notation. ',
                               category=SyntaxWarning)
 
             elif split_name in self._python_keywords:
-                warnings.warn('`%s` is a python keyword, you may not be '
+                warnings.warn(f'`{split_name}` is a python keyword, you may not be '
                               'able to access it via natural naming but only by using '
-                              '`[]` square bracket notation. ' % split_name,
+                              '`[]` square bracket notation. ',
                               category=SyntaxWarning)
 
         name = split_names[-1]
         if len(name) >= pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH:
-            faulty_names = '%s `%s` is too long the name can only have %d characters but it has ' \
-                           '%d,' % \
-                           (faulty_names, name, len(name),
-                            pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH)
+            faulty_names = f'{faulty_names} `{name}` is too long the name can only have {len(name)} characters but it has ' \
+                           f'{pypetconstants.HDF5_STRCOL_MAX_NAME_LENGTH},'
 
         return faulty_names
 
@@ -1518,36 +1507,32 @@ class NaturalNamingInterface(HasLogger):
                                    ParameterGroup,
                                    ConfigGroup,
                                    DerivedParameterGroup):
-                    raise TypeError('You cannot add a `%s` type of group under results' %
-                                    str(type(instance)))
+                    raise TypeError(f'You cannot add a `{type(instance)}` type of group under results')
             elif type_name == PARAMETER_GROUP:
                 if type(instance) in (NNGroupNode,
                                    ResultGroup,
                                    ConfigGroup,
                                    DerivedParameterGroup):
-                    raise TypeError('You cannot add a `%s` type of group under parameters' %
-                                    str(type(instance)))
+                    raise TypeError(f'You cannot add a `{type(instance)}` type of group under parameters')
             elif type_name == CONFIG_GROUP:
                 if type(instance) in (NNGroupNode,
                                    ParameterGroup,
                                    ResultGroup,
                                    DerivedParameterGroup):
-                    raise TypeError('You cannot add a `%s` type of group under config' %
-                                    str(type(instance)))
+                    raise TypeError(f'You cannot add a `{type(instance)}` type of group under config')
             elif type_name == DERIVED_PARAMETER_GROUP:
                 if type(instance) in (NNGroupNode,
                                    ParameterGroup,
                                    ConfigGroup,
                                    ResultGroup):
-                    raise TypeError('You cannot add a `%s` type of group under derived '
-                                    'parameters' % str(type(instance)))
+                    raise TypeError(f'You cannot add a `{type(instance)}` type of group under derived '
+                                    'parameters')
             elif type_name == GROUP:
                 if type(instance) in (ResultGroup,
                                    ParameterGroup,
                                    ConfigGroup,
                                    DerivedParameterGroup):
-                    raise TypeError('You cannot add a `%s` type of group under other data' %
-                                    str(type(instance)))
+                    raise TypeError(f'You cannot add a `{type(instance)}` type of group under other data')
             else:
                 raise RuntimeError('You shall not pass!')
 
@@ -1645,7 +1630,7 @@ class NaturalNamingInterface(HasLogger):
     @staticmethod
     def _make_full_name(location, name):
         if location:
-            return '%s.%s' % (location, name)
+            return f'{location}.{name}'
         else:
             return name
 
@@ -1803,7 +1788,7 @@ class NaturalNamingInterface(HasLogger):
 
             if new_key in result_dict:
                 raise ValueError('Your short names are not unique. '
-                                 'Duplicate key `%s`!' % new_key)
+                                 f'Duplicate key `{new_key}`!')
 
             new_val = self._apply_fast_access(val, fast_access)
             result_dict[new_key] = new_val
@@ -1977,10 +1962,9 @@ class NaturalNamingInterface(HasLogger):
                 if candidate.v_depth - starting_depth <= max_depth:
                     # In case of several solutions raise an error:
                     if result_node is not None:
-                        raise pex.NotUniqueNodeError('Node `%s` has been found more than once, '
-                                                     'full name of first occurrence is `%s` and of'
-                                                     'second `%s`'
-                                                     % (key, goal_name, result_node.v_full_name))
+                        raise pex.NotUniqueNodeError(f'Node `{key}` has been found more than once, '
+                                                     f'full name of first occurrence is `{goal_name}` and of'
+                                                     f'second `{result_node.v_full_name}`')
                     result_node = candidate
 
         if result_node is not None:
@@ -2044,12 +2028,10 @@ class NaturalNamingInterface(HasLogger):
                 # If result_node is not None means that we care about uniqueness and the search
                 # has found more than a single solution.
                 if result_node is not None:
-                    raise pex.NotUniqueNodeError('Node `%s` has been found more than once within '
-                                                 'the same depth %d. '
-                                                 'Full name of first occurrence is `%s` and of '
-                                                 'second `%s`'
-                                                 % (key, child.v_depth, result_node.v_full_name,
-                                                    child.v_full_name))
+                    raise pex.NotUniqueNodeError(f'Node `{key}` has been found more than once within '
+                                                 f'the same depth {child.v_depth}. '
+                                                 f'Full name of first occurrence is `{result_node.v_full_name}` and of '
+                                                 f'second `{child.v_full_name}`')
 
                 result_node = child
                 result_depth = depth
@@ -2263,8 +2245,7 @@ class NaturalNamingInterface(HasLogger):
 
         if len(split_name) > max_depth and shortcuts:
             raise ValueError(
-                'Name of node to search for (%s) is longer thant the maximum depth %d' %
-                (str(name), max_depth))
+                f'Name of node to search for ({name}) is longer thant the maximum depth {max_depth}')
 
         try_auto_load_directly1 = False
         try_auto_load_directly2 = False
@@ -2280,7 +2261,7 @@ class NaturalNamingInterface(HasLogger):
             if key[0] == '_':
                 raise AttributeError('Leading underscores are not allowed '
                                      'for group or parameter '
-                                     'names. Cannot return %s.' % key)
+                                     f'names. Cannot return {key}.')
 
             is_wildcard = self._root_instance.f_is_wildcard(key)
             if (not is_wildcard and key not in self._nodes_and_leaves and
@@ -2302,8 +2283,7 @@ class NaturalNamingInterface(HasLogger):
         if try_auto_load_directly1 and try_auto_load_directly2 and not auto_load:
             for wildcard_pos, wildcard in wildcard_positions:
                 split_name[wildcard_pos] = root.f_wildcard(wildcard, run_idx)
-            raise AttributeError('%s is not part of your trajectory or it\'s tree. ' %
-                                 str('.'.join(split_name)))
+            raise AttributeError(f'{".".join(split_name)} is not part of your trajectory or it\'s tree. ')
 
         if run_idx > -1:
             # If we count the wildcard we have to perform the search twice,
@@ -2377,10 +2357,9 @@ class NaturalNamingInterface(HasLogger):
         name = '.'.join(split_name)
 
         if len(split_name) > max_depth:
-            raise AttributeError('The node or param/result `%s`, cannot be found under `%s`'
+            raise AttributeError(f'The node or param/result `{name}`, cannot be found under `{node.v_full_name}`'
                                  'The name you are looking for is larger than the maximum '
-                                 'search depth.' %
-                                 (name, node.v_full_name))
+                                 'search depth.')
 
         if shortcuts and not try_auto_load_directly:
             first = split_name[0]
@@ -2413,8 +2392,8 @@ class NaturalNamingInterface(HasLogger):
                     result = result._children[name]
                 else:
                     raise AttributeError(
-                        'You did not allow for shortcuts and `%s` was not directly '
-                        'found  under node `%s`.' % (name, result.v_full_name))
+                        f'You did not allow for shortcuts and `{name}` was not directly '
+                        f'found  under node `{result.v_full_name}`.')
 
         if result is None and auto_load:
             try:
@@ -2431,8 +2410,7 @@ class NaturalNamingInterface(HasLogger):
                 raise
 
         if result is None:
-            raise AttributeError('The node or param/result `%s`, cannot be found under `%s`' %
-                                 (name, node.v_full_name))
+            raise AttributeError(f'The node or param/result `{name}`, cannot be found under `{node.v_full_name}`')
         if result.v_is_leaf:
             if auto_load and result.f_is_empty():
 
@@ -2464,7 +2442,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                  '_nn_interface', '_kids')
 
     def __init__(self, full_name='', trajectory=None, comment=''):
-        super(NNGroupNode, self).__init__(full_name, comment=comment, is_leaf=False)
+        super().__init__(full_name, comment=comment, is_leaf=False)
         self._children_ = None
         self._links_ = None
         self._groups_ = None
@@ -2516,13 +2494,13 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                                with_links=False)
 
     def __repr__(self):
-        return '<%s>' % self.__str__()
+        return f'<{self.__str__()}>'
 
     def _get_children_representation(self):
         children_string_list = []
 
         for idx, key in enumerate(self._children):
-            children_string_list.append('(%s: %s)' % (key, str(type(self._children[key]))))
+            children_string_list.append(f'({key}: {type(self._children[key])})')
 
             if idx == 5:
                 children_string_list.append('...')
@@ -2534,14 +2512,13 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     def __str__(self):
         if self.v_comment:
-            commentstring = ' (`%s`)' % self.v_comment
+            commentstring = f' (`{self.v_comment}`)'
         else:
             commentstring = ''
 
         children_string = self._get_children_representation()
 
-        return '%s %s%s: %s' % (self.f_get_class_name(), self.v_full_name, commentstring,
-                                children_string)
+        return f'{self.f_get_class_name()} {self.v_full_name}{commentstring}: {children_string}'
 
     def _add_group_from_storage(self, args, kwargs):
         """Can be called from storage service to create a new group to bypass name checking"""
@@ -2581,7 +2558,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
     def __dir__(self):
         """Adds all children to auto-completion"""
-        result = super(NNGroupNode, self).__dir__()
+        result = super().__dir__()
         if not is_debug():
             result.extend(self.f_dir_data())
         return result
@@ -2619,7 +2596,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
 
-        class Bunch(object):
+        class Bunch:
             """Dummy container class"""
             pass
 
@@ -2636,7 +2613,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         for link_name in self._links:
             linked_node = self._links[link_name]
-            setattr(debug_tree, link_name, 'Link to `%s`' % linked_node.v_full_name)
+            setattr(debug_tree, link_name, f'Link to `{linked_node.v_full_name}`')
 
         for group_name in self._groups:
             group = self._groups[group_name]
@@ -2714,7 +2691,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         if name not in self._links:
-            raise ValueError('No link with name `%s` found under `%s`.' % (name, self._full_name))
+            raise ValueError(f'No link with name `{name}` found under `{self._full_name}`.')
 
         self._nn_interface._remove_link(self, name)
 
@@ -2834,8 +2811,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         if name not in self._children:
-            raise ValueError('Your group `%s` does not contain the child `%s`.' %
-                             (self.v_full_name, name))
+            raise ValueError(f'Your group `{self.v_full_name}` does not contain the child `{name}`.')
         else:
             child = self._children[name]
             if (name not in self._links and
@@ -2933,12 +2909,12 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
     def __setattr__(self, key, value):
         if key.startswith('_'):
             # We set a private attribute
-            super(NNGroupNode, self).__setattr__(key, value)
+            super().__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # If we set a property we need this work around here:
             python_property = getattr(self.__class__, key)
             if python_property.fset is None:
-                raise AttributeError('%s is read only!' % key)
+                raise AttributeError(f'{key} is read only!')
             else:
                 python_property.fset(self, value)
         elif isinstance(value, (NNGroupNode, NNLeafNode)):
@@ -2953,7 +2929,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
                         value._rename(key)
                     elif name != key and not name.startswith(key + '.'):
                         raise AttributeError('The name of your element and the key do not match: '
-                                             '`%s` != `%s`' % (name, key))
+                                             f'`{name}` != `{key}`')
                     if isinstance(value, NNGroupNode):
                         self.f_add_group(value)
                     else:
@@ -2966,9 +2942,9 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
             if instance.v_is_parameter or instance.f_supports_fast_access():
                 instance.f_set(value)
             else:
-                raise AttributeError('Cannot change the value of the result `%s` because '
+                raise AttributeError(f'Cannot change the value of the result `{instance.v_full_name}` because '
                                      'it contains more than one data '
-                                     'item.' % instance.v_full_name)
+                                     'item.')
 
     def __getitem__(self, item):
         """Equivalent to calling `__getattr__`.
@@ -2986,7 +2962,7 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
     # @no_prefix_getattr
     def __getattr__(self, name):
         if isinstance(name, str) and name.startswith('_'):
-            raise AttributeError('`%s` is not part of your trajectory or it\'s tree.' % name)
+            raise AttributeError(f'`{name}` is not part of your trajectory or it\'s tree.')
         return self._nn_interface._get(self, name,
                                        fast_access=self.v_root.v_fast_access,
                                        shortcuts=self.v_root.v_shortcuts,
@@ -3291,9 +3267,8 @@ class NNGroupNode(NNTreeNode, KnowsTrajectory):
 
         """
         if not self.f_contains(name, shortcuts=False):
-            raise ValueError('Your group `%s` does not (directly) contain the child `%s`. '
-                             'Please not that shortcuts are not allowed for `f_store_child`.' %
-                             (self.v_full_name, name))
+            raise ValueError(f'Your group `{self.v_full_name}` does not (directly) contain the child `{name}`. '
+                             'Please not that shortcuts are not allowed for `f_store_child`.')
 
         traj = self._nn_interface._root_instance
         storage_service = traj.v_storage_service

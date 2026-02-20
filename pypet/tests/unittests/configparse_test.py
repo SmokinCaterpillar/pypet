@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 
 from pypet.tests.testutils.ioutils import  run_suite, make_temp_dir,\

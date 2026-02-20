@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import sys
 import os
 import datetime
@@ -63,7 +61,7 @@ def nest_dictionary(flat_dict, separator):
         act_dict[final_key] = val
     return nested_dict
 
-class _Progressbar(object):
+class _Progressbar:
     """Implements a progress bar.
 
     This class is supposed to be a singleton. Do not
@@ -99,14 +97,7 @@ class _Progressbar(object):
         try:
             current_time = datetime.datetime.now()
             time_delta = current_time - self._start_time
-            try:
-                total_seconds = time_delta.total_seconds()
-            except AttributeError:
-                # for backwards-compatibility
-                # Python 2.6 does not support `total_seconds`
-                total_seconds = ((time_delta.microseconds +
-                                    (time_delta.seconds +
-                                     time_delta.days * 24 * 3600) * 10 ** 6) / 10.0 ** 6)
+            total_seconds = time_delta.total_seconds()
             remaining_seconds = int((self._total - self._start_index - 1.0) *
                                     total_seconds / float(index - self._start_index) -
                                     total_seconds)
@@ -178,10 +169,10 @@ class _Progressbar(object):
                 percentage = indexp1 / self._total * 100.0
                 if reset:
                     statement = ('[' + '=' * bars +
-                                 ' ' * spaces + ']' + ' %4.1f' % percentage + '%')
+                                 ' ' * spaces + ']' + f' {percentage:4.1f}' + '%')
                 else:
                     statement = ('[' + '=' * bars +
-                                 ' ' * spaces + ']' + ' %4.1f' % percentage + '%' +
+                                 ' ' * spaces + ']' + f' {percentage:4.1f}' + '%' +
                                  remaining_str)
 
             if fmt_string:
@@ -322,7 +313,7 @@ def convert_ipv6(host):
     if ':' in host:
         #IP 6 address
         host = host.split('%')[0]
-        host = '[%s]' % host
+        host = f'[{host}]'
 
     return  host
 

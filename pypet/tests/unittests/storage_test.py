@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 
 import numpy as np
@@ -24,7 +22,7 @@ class FakeResult(Result):
 
 class FakeResult2(Result):
     def __init__(self, full_name, *args, **kwargs):
-        super(FakeResult2, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
         self._store_call = 0
     def _store(self):
         res = {}

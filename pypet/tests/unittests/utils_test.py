@@ -1,12 +1,7 @@
-__author__ = 'Robert Meyer'
-
 import time
 import sys
 import pickle
-try:
-    from collections import Set, Sequence, Mapping
-except ImportError:
-    from collections.abc import Set, Sequence, Mapping
+from collections.abc import Set, Sequence, Mapping
 
 import pandas as pd
 import numpy as np
@@ -29,7 +24,7 @@ from pypet.utils.decorators import retry
 from pypet import HasSlots
 
 
-class RaisesNTypeErrors(object):
+class RaisesNTypeErrors:
 
     def __init__(self, n):
         self.__name__ = RaisesNTypeErrors.__name__
@@ -233,16 +228,16 @@ class ResultSortFuncTest(unittest.TestCase):
         self.test_sort(500, 1000)
 
 
-class MyDummy(object):
+class MyDummy:
     pass
 
-class MyDummyWithSlots(object):
+class MyDummyWithSlots:
     __slots__ = ('a', 'b')
 
 class MyDummyWithSlots2(HasSlots):
     __slots__ = ('a', 'b')
 
-class MyDummyCMP(object):
+class MyDummyCMP:
     def __init__(self, data):
         self.data = data
 
@@ -497,7 +492,7 @@ class SlotsTest(unittest.TestCase):
 
 class MyCustomLeaf(SparseParameter):
     def __init__(self, full_name, data=None, comment=''):
-        super(MyCustomLeaf, self).__init__(full_name, data, comment)
+        super().__init__(full_name, data, comment)
         self.v_my_property = 42
 
 
@@ -506,7 +501,7 @@ class MyCustomLeaf2(PickleParameter):
     __slots__ = 'v_my_property'
 
     def __init__(self, full_name, data=None, comment=''):
-        super(MyCustomLeaf2, self).__init__(full_name, data, comment)
+        super().__init__(full_name, data, comment)
         self.v_my_property = 42
 
 
@@ -527,12 +522,12 @@ class NamingSchemeTest(unittest.TestCase):
             cp.v_my_other
 
 
-class MyClass(object):
+class MyClass:
         def __init__(self, a, b, c, d=42):
             pass
 
 
-class MyClassNoInit(object):
+class MyClassNoInit:
     pass
 
 

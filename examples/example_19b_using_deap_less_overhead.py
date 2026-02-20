@@ -12,8 +12,6 @@ enough to justify the overhead of sending data to other processes.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import random
 
 from deap import base

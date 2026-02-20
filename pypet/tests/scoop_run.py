@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 try:
     import pypet
 except ImportError:

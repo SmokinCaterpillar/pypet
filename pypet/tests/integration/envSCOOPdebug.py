@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 import os
 
 from pypet import LazyStorageService
@@ -36,7 +34,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.filename = make_temp_dir(os.path.join('experiments',
                                                     'tests',
                                                     'HDF5',
-                                                    'test%s.hdf5' % self.trajname))
+                                                    f'test{self.trajname}.hdf5'))
 
         env = Environment(trajectory=self.trajname,
                           storage_service=LazyStorageService,
@@ -79,7 +77,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
         self.env = env
 
     def set_mode(self):
-        super(MultiprocSCOOPNetlockTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_NETLOCK
         self.multiproc = True
         self.freeze_input = False

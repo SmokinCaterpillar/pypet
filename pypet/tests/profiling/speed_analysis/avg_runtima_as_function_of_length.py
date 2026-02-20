@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 
 
 from pypet import Environment, Trajectory

@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import sys
 import unittest
@@ -484,7 +482,7 @@ class ArrayParameterTest(ParameterTest):
 
 
     def test_store_load_with_hdf5(self):
-        return super(ArrayParameterTest, self).test_store_load_with_hdf5()
+        return super().test_store_load_with_hdf5()
 
 
 

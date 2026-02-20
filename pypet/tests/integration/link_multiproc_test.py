@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import pypet.pypetconstants as pypetconstants
 from pypet.tests.integration.link_test import LinkEnvironmentTest
 from pypet.tests.testutils.ioutils import parse_args, run_suite
@@ -42,7 +40,7 @@ class MultiprocLinkLockTest(LinkEnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'lock', 'pool', 'links'
 
     # def test_run(self):
-    #     super(MultiprocLockTest, self).test_run()
+    #     super().test_run()
 
     def set_mode(self):
         LinkEnvironmentTest.set_mode(self)

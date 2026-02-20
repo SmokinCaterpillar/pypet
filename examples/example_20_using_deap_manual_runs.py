@@ -16,8 +16,6 @@ Here we avoid using an Environment and *manually* execute runs using multiproces
 
 """
 
-__author__ = 'Robert Meyer'
-
 import random
 
 import os

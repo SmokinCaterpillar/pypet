@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 import numpy as np
 from pypet.parameter import Parameter
 from pypet.utils.explore import cartesian_product
@@ -42,8 +40,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
         for x in range(len(traj)):
             traj.v_idx=x
 
-            self.assertTrue(traj.crun.z==traj.x*traj.y,' z != x*y: %s != %s * %s' %
-                                                  (str(traj.crun.z),str(traj.x),str(traj.y)))
+            self.assertTrue(traj.crun.z==traj.x*traj.y,f' z != x*y: {traj.crun.z} != {traj.x} * {traj.y}')
         traj.v_idx=-1
 
     def set_mode(self):
@@ -98,7 +95,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
             # end = time.time()
             # delta = end -start
             # timings.append(delta)
-        print timings
+        print(timings)
 
         merge_traj = self.trajs[0]
         merge_traj.f_load_skeleton()
@@ -111,7 +108,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
                 if not os.path.isdir('./tmp'):
                     os.mkdir('tmp')
                 graphviz = CustomOutput()
-                graphviz.output_file = './tmp/merge_nskelteon_%d.png' % irun
+                graphviz.output_file = f'./tmp/merge_nskelteon_{irun}.png'
                 # service_filter = GlobbingFilter(include=['*storageservice.*', '*ptcompat.*',
                 #                                          '*naturalnaming.*', '*parameter.*',
                 #                                          '*trajectory.*'])

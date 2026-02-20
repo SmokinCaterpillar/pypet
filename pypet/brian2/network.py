@@ -23,8 +23,6 @@ requires parallel processing (see :class:`~pypet.brian2.network.NetworkManager`)
 
 """
 
-__author__ = 'Robert Meyer'
-
 from brian2 import Network, second
 
 from pypet.pypetlogging import HasLogger
@@ -406,13 +404,12 @@ class NetworkRunner(NetworkComponent):
                 if 'order' in duration_param.v_annotations:
                     order = duration_param.v_annotations.order
                 else:
-                    raise RuntimeError('Your duration parameter %s has no order. Please add '
-                                       'an order in `v_annotations.order`.' %
-                                       duration_param.v_full_name)
+                    raise RuntimeError(f'Your duration parameter {duration_param.v_full_name} has no order. Please add '
+                                       f'an order in `v_annotations.order`.')
 
                 if order in subruns:
-                    raise RuntimeError('Your durations must differ in their order, there are two '
-                                       'with order %d.' % order)
+                    raise RuntimeError(f'Your durations must differ in their order, there are two '
+                                       f'with order {order}.')
                 else:
                     subruns[order] = duration_param
                     orders.append(order)
@@ -455,8 +452,7 @@ class NetworkRunner(NetworkComponent):
                                 network_dict)
 
             # 4. Run the network
-            self._logger.info('STARTING subrun `%s` (#%d) lasting %s.' %
-                             (current_subrun.v_name, subrun_number, str(current_subrun.f_get())))
+            self._logger.info(f'STARTING subrun `{current_subrun.v_name}` (#{subrun_number}) lasting {current_subrun.f_get()}.')
             network.run(duration=current_subrun.f_get(), report=self._report,
                               report_period=self._report_period)
 
@@ -705,7 +701,7 @@ class NetworkManager(HasLogger):
         for full_name in explore_dict:
             parameter = explore_dict[full_name]
 
-            print_statement += '%s = %s\n' % (parameter.v_full_name, parameter.f_val_to_str())
+            print_statement += f'{parameter.v_full_name} = {parameter.f_val_to_str()}\n'
 
         print_statement += '-------------------'
 

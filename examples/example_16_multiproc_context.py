@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 import multiprocessing as mp
 import logging

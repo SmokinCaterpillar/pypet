@@ -1,13 +1,5 @@
 """Module containing utilities for logging."""
 
-__author__ = 'Robert Meyer'
-
-try:
-    # Python3
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
-
 
 import configparser as cp
 from io import StringIO
@@ -83,18 +75,14 @@ LOGGING_DICT = {
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_%s_LOG.txt' % (pypetconstants.LOG_RUN,
-                                                           pypetconstants.LOG_HOST,
-                                                           pypetconstants.LOG_PROC))
+                                     f'{pypetconstants.LOG_RUN}_{pypetconstants.LOG_HOST}_{pypetconstants.LOG_PROC}_LOG.txt')
         },
         'file_error': {
             'class': 'logging.FileHandler',
             'formatter': 'file',
             'filename': os.path.join(pypetconstants.LOG_TRAJ,
                                      pypetconstants.LOG_ENV,
-                                     '%s_%s_%s_ERROR.txt' % (pypetconstants.LOG_RUN,
-                                                             pypetconstants.LOG_HOST,
-                                                             pypetconstants.LOG_PROC)),
+                                     f'{pypetconstants.LOG_RUN}_{pypetconstants.LOG_HOST}_{pypetconstants.LOG_PROC}_ERROR.txt'),
             'level': 'ERROR'
         }
     }
@@ -184,8 +172,8 @@ def try_make_dirs(filename):
         dirname = os.path.dirname(os.path.normpath(filename))
         racedirs(dirname)
     except Exception as exc:
-        sys.stderr.write('ERROR during log config file handling, could not create dirs for '
-                         'filename `%s` because of: %s' % (filename, repr(exc)))
+        sys.stderr.write(f'ERROR during log config file handling, could not create dirs for '
+                         f'filename `{filename}` because of: {repr(exc)}')
 
 
 def get_strings(args):
@@ -288,7 +276,7 @@ class HasLogger(HasSlots):
         Removes the logger to allow pickling and returns a copy of `__dict__`.
 
         """
-        state_dict = super(HasLogger, self).__getstate__()
+        state_dict = super().__getstate__()
         if '_logger' in state_dict:
             # Pickling does not work with loggers objects,
             # so we just keep the logger's name:
@@ -301,7 +289,7 @@ class HasLogger(HasSlots):
         Restores `__dict__` from `statedict` and adds a new logger.
 
         """
-        super(HasLogger, self).__setstate__(statedict)
+        super().__setstate__(statedict)
         if '_logger' in statedict:
             # If we re-instantiate the component the
             # logger attribute only contains a name,
@@ -317,11 +305,11 @@ class HasLogger(HasSlots):
         """
         if name is None:
             cls = self.__class__
-            name = '%s.%s' % (cls.__module__, cls.__name__)
+            name = f'{cls.__module__}.{cls.__name__}'
         self._logger = logging.getLogger(name)
 
 
-class LoggingManager(object):
+class LoggingManager:
     """ Manager taking care of all logging related issues.
 
     :param trajectory: Trajectory container of Mock
@@ -384,7 +372,7 @@ class LoggingManager(object):
             if n == -1:
                 # Compute the number of digits and avoid log10(0)
                 digits = int(math.log10(total_runs + 0.1)) + 1
-                self._format_string = 'PROGRESS: Finished %' + '%d' % digits + 'd/%d runs '
+                self._format_string = 'PROGRESS: Finished %' + f'{digits}' + 'd/%d runs '
 
             fmt_string = self._format_string % (n + 1, total_runs) + '%s'
             reprint = log_level == 0
@@ -520,8 +508,8 @@ class LoggingManager(object):
 
             if isinstance(self.log_config, str):
                 if not os.path.isfile(self.log_config):
-                    raise ValueError('Could not find the logger init file '
-                                     '`%s`.' % self.log_config)
+                    raise ValueError(f'Could not find the logger init file '
+                                     f'`{self.log_config}`.')
                 parser = NoInterpolationParser()
                 parser.read(self.log_config)
             elif isinstance(self.log_config, cp.RawConfigParser):
@@ -648,13 +636,13 @@ class NoInterpolationParser(cp.ConfigParser):
     def __init__(self):
         try:
             # Needed for Python 3, see [http://bugs.python.org/issue21265]
-            super(NoInterpolationParser, self).__init__(interpolation=None)
+            super().__init__(interpolation=None)
         except TypeError:
             # Python 2.x
             cp.ConfigParser.__init__(self)
 
 
-class DisableAllLogging(object):
+class DisableAllLogging:
     """Context Manager that disables logging"""
 
     def __enter__(self):
@@ -677,7 +665,7 @@ class StdoutToLogger(HasLogger):
         self._set_logger(name=self._logger_name)
 
     def __getstate__(self):
-        state_dict = super(StdoutToLogger, self).__getstate__()
+        state_dict = super().__getstate__()
         # The original stream cannot be pickled
         state_dict['_original_stream'] = None
 

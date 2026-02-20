@@ -10,8 +10,6 @@ and requires some effort of refactoring.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import os
 import logging
 

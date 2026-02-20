@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import getopt
 import sys
 import os

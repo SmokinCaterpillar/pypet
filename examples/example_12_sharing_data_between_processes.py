@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import multiprocessing as mp
 import numpy as np
 import os # For path names working under Windows and Linux

@@ -5,8 +5,6 @@ parameters (see also :mod:`pypet.parameters`).
 
 """
 
-__author__ = 'Robert Meyer'
-
 import datetime
 import time
 import hashlib
@@ -224,7 +222,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         # This is true during the actual runs:
         self._is_run = False
 
-        super(Trajectory, self).__init__()
+        super().__init__()
 
         # Helper variable: During a multiprocessing single run, the trajectory is usually
         # pickled without all the parameter exploration ranges and all run information
@@ -315,9 +313,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 faulty_names += ' colons >>.<< are not allowed in trajectory names,'
 
             if faulty_names:
-                raise ValueError('Your Trajectory %s f_contains the following not admissible names: '
-                                 '%s please choose other names.'
-                                 % (name, faulty_names))
+                raise ValueError(f'Your Trajectory {name} f_contains the following not admissible names: '
+                                 f'{faulty_names} please choose other names.')
 
             internal_wildcard_functions = {('$', 'crun'): make_run_name,
                                            ('$set', 'crunset'): make_set_name}
@@ -342,8 +339,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
                                                                    trajectory=self, **kwargs)
             if len(unused_kwargs) > 0:
-                raise ValueError('The following keyword arguments were not used: `%s`' %
-                                 str(unused_kwargs))
+                raise ValueError(f'The following keyword arguments were not used: `{unused_kwargs}`')
 
     def f_get_wildcards(self):
         """Returns a list of all defined wildcards"""
@@ -360,7 +356,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 wildcards = (wildcards,)
             for wildcard in wildcards:
                 if wildcard in self._wildcard_keys:
-                    raise ValueError('Your wildcard `%s` is used twice1' % wildcard)
+                    raise ValueError(f'Your wildcard `{wildcard}` is used twice1')
                 self._wildcard_keys[wildcard] = wildcards
             self._wildcard_functions[wildcards] = function
             self._logger.debug('Added wildcard function `%s`.' % str(wildcards))
@@ -378,7 +374,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             return translation
 
     def __getstate__(self):
-        result = super(Trajectory, self).__getstate__()
+        result = super().__getstate__()
 
         # Do not copy run information in case `v_full_copy` is `False`.
         if not self.v_full_copy:
@@ -396,11 +392,11 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
     def __str__(self):
         if self.v_comment:
-            commentstring = '`%s`, ' % self.v_comment
+            commentstring = f'`{self.v_comment}`, '
         else:
             commentstring = ''
 
-        info_string = '(%slen:%d)'  % (commentstring, len(self))
+        info_string = f'({commentstring}len:{len(self)})'
         children_string = self._get_children_representation()
 
         if self._is_run:
@@ -408,8 +404,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         else:
             runstr = ''
 
-        return '%s%s %s %s: %s' % (self.f_get_class_name(), runstr, self.v_name, info_string,
-                                 children_string)
+        return f'{self.f_get_class_name()}{runstr} {self.v_name} {info_string}: {children_string}'
 
     @property
     def v_version(self):
@@ -552,7 +547,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not name.startswith('v_'):
                 name = 'v_' + name
             if not name in self._nn_interface._not_admissible_names:
-                raise AttributeError('Cannot set property `%s` does not exist.' % name)
+                raise AttributeError(f'Cannot set property `{name}` does not exist.')
             else:
                 setattr(self, name, val)
 
@@ -577,8 +572,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         for item in dynamic_imports:
             if not (isinstance(item, str) or inspect.isclass(item)):
-                raise TypeError('Your dynamic import `%s` is neither a class nor a string.' %
-                                str(item))
+                raise TypeError(f'Your dynamic import `{item}` is neither a class nor a string.')
 
         self._dynamic_imports.extend(dynamic_imports)
 
@@ -731,8 +725,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     def _preset(self, name, args, kwargs):
         """Generic preset function, marks a parameter or config for presetting."""
         if self.f_contains(name, shortcuts=False):
-            raise ValueError('Parameter `%s` is already part of your trajectory, use the normal'
-                             'accessing routine to change config.' % name)
+            raise ValueError(f'Parameter `{name}` is already part of your trajectory, use the normal'
+                             'accessing routine to change config.')
         else:
             self._changed_default_parameters[name] = (args, kwargs)
 
@@ -802,8 +796,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             raise pex.PresettingError(
                 'The following parameters were supposed to replace a '
                 'default value, but it was never tried to '
-                'add default values with these names: %s' %
-                str(self._changed_default_parameters))
+                f'add default values with these names: {self._changed_default_parameters}')
 
         self.f_lock_parameters()
         self.f_lock_derived_parameters()
@@ -895,8 +888,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                            max_depth=max_depth,
                                                            auto_load=auto_load)
                             if already_found:
-                                raise pex.NotUniqueNodeError('`%s` has been found several times '
-                                                             'in one run.' % name)
+                                raise pex.NotUniqueNodeError(f'`{name}` has been found several times '
+                                                             'in one run.')
                             else:
                                 already_found = True
 
@@ -914,8 +907,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                                max_depth=max_depth,
                                                                auto_load=auto_load)
                                 if already_found:
-                                    raise pex.NotUniqueNodeError('`%s` has been found several '
-                                                                 'times in one run.' % name)
+                                    raise pex.NotUniqueNodeError(f'`{name}` has been found several '
+                                                                 'times in one run.')
                                 else:
                                     already_found = True
                             except (AttributeError, pex.DataNotInStorageError):
@@ -1007,9 +1000,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         if not set(self._explored_parameters.keys()) == enlarge_set:
             raise TypeError('You have to enlarge dimensions you have explored before! Currently'
                             ' explored parameters are not the ones you specified in your building'
-                            ' dictionary, i.e. %s != %s' %
-                            (str(set(self._explored_parameters.keys())),
-                             str(set(build_dict.keys()))))
+                            f' dictionary, i.e. {set(self._explored_parameters.keys())} != {set(build_dict.keys())}')
         if any(x is None for x in self._explored_parameters.values()):
             raise TypeError('At least one of your explored parameters is not fully loaded, '
                             'please load it.')
@@ -1079,7 +1070,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         dummy = self.f_wildcard('$', -1)
         if dummy in self._run_information:
             raise RuntimeError('Your renaming function does not return an appropriate value for '
-                               '`-1`. `%s` is actual an already given run name.' % dummy)
+                               f'`-1`. `{dummy}` is actual an already given run name.')
 
     def _remove_exploration(self):
         """ Called if trajectory is expanded, deletes all explored parameters from disk """
@@ -1385,7 +1376,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             for key, builditerable in build_dict.items():
                 act_param = self.f_get(key)
                 if not act_param.v_is_leaf or not act_param.v_is_parameter:
-                    raise ValueError('%s is not an appropriate search string for a parameter.' % key)
+                    raise ValueError(f'{key} is not an appropriate search string for a parameter.')
 
                 act_param.f_unlock()
 
@@ -1664,8 +1655,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             self._storage_service, unused_kwargs = storage_factory(storage_service=storage_service,
                                                                    trajectory=self, **kwargs)
         if len(unused_kwargs) > 0:
-            raise ValueError('The following keyword arguments were not used: `%s`' %
-                             str(unused_kwargs))
+            raise ValueError(f'The following keyword arguments were not used: `{unused_kwargs}`')
 
         if dynamic_imports is not None:
             self.f_add_to_dynamic_imports(dynamic_imports)
@@ -1699,7 +1689,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
         if not isinstance(other_trajectory, Trajectory):
             raise TypeError('Can only merge trajectories, the other trajectory'
-                            ' is of type `%s`.' % str(type(other_trajectory)))
+                            f' is of type `{type(other_trajectory)}`.')
 
         if self._stored and not consecutive_merge:
             self.f_load_skeleton()
@@ -1711,8 +1701,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         wildcard_set = set(x[1] for x in self._wildcard_functions.keys())
         diff = wildcard_set.symmetric_difference(other_wildcard_set)
         if diff:
-            raise TypeError('The wildcard sets are not matching. `%s` != `%s`' %
-                            (str(wildcard_set), str(other_wildcard_set)))
+            raise TypeError(f'The wildcard sets are not matching. `{wildcard_set}` != `{other_wildcard_set}`')
 
         # Load all parameters of the current and the other trajectory
         if self._stored:
@@ -1763,8 +1752,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not run_difference_can_be_resolved:
                 raise TypeError('Cannot merge trajectories, '
                                 'they do not live in the same space,the '
-                                'set of parameters `%s` is only '
-                                'found in one trajectory.' % str(diff))
+                                f'set of parameters `{diff}` is only '
+                                'found in one trajectory.')
 
         # Check if corresponding parameters in both trajectories are of the same type
         for key, other_param in allotherparams.items():
@@ -1778,10 +1767,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 pass
             else:
                 if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
-                    raise TypeError('Cannot merge trajectories, values of parameters `%s` are not '
-                                    'of the same type. Types are %s (current) and %s (other).' %
-                                    (key, str(type(my_param.f_get())),
-                                     str(type(other_param.f_get()))))
+                    raise TypeError(f'Cannot merge trajectories, values of parameters `{key}` are not '
+                                    f'of the same type. Types are {type(my_param.f_get())} (current) and {type(other_param.f_get())} (other).')
 
     @not_in_run
     def f_backup(self, **kwargs):
@@ -2101,70 +2088,70 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         short_hexsha = hexsha[0:7]
 
         if keep_info:
-            merge_name = 'merge_%s_%s' % (short_hexsha, formatted_time)
+            merge_name = f'merge_{short_hexsha}_{formatted_time}'
 
-            config_name = 'merge.%s.merged_runs' % merge_name
+            config_name = f'merge.{merge_name}.merged_runs'
             self.f_add_config(config_name, len(used_runs),
                               comment='Number of merged runs')
 
-            config_name = 'merge.%s.timestamp' % merge_name
+            config_name = f'merge.{merge_name}.timestamp'
             self.f_add_config(config_name, timestamp,
                               comment='Timestamp of merge')
 
-            config_name = 'merge.%s.hexsha' % merge_name
+            config_name = f'merge.{merge_name}.hexsha'
             self.f_add_config(config_name, hexsha,
                               comment='SHA-1 identifier of the merge')
 
-            config_name = 'merge.%s.remove_duplicates' % merge_name
+            config_name = f'merge.{merge_name}.remove_duplicates'
             self.f_add_config(config_name, remove_duplicates,
                               comment='Option to remove duplicate entries')
 
             if original_ignore_data:
-                config_name = 'merge.%s.ignore_data' % merge_name
+                config_name = f'merge.{merge_name}.ignore_data'
                 self.f_add_config(config_name, tuple(original_ignore_data),
                                   comment='Data to ignore during merge')
 
-            config_name = 'merge.%s.length_before_merge' % merge_name
+            config_name = f'merge.{merge_name}.length_before_merge'
             self.f_add_config(config_name, len(self),
                               comment='Length of trajectory before merge')
 
             self.config.merge.v_comment = 'Settings and information of the different merges'
 
             if self.v_version != VERSION:
-                config_name = 'merge.%s.version' % merge_name
+                config_name = f'merge.{merge_name}.version'
                 self.f_add_config(config_name, self.v_version,
                                   comment='Pypet version if it differs from the version'
                                           ' of the trajectory')
 
             if trial_parameter is not None:
-                config_name = 'merge.%s.trial_parameter' % merge_name
+                config_name = f'merge.{merge_name}.trial_parameter'
                 self.f_add_config(config_name, len(other_trajectory),
                                   comment='Name of trial parameter')
 
             if keep_other_trajectory_info:
 
                 if other_trajectory.v_version != self.v_version:
-                    config_name = 'merge.%s.other_trajectory.version' % merge_name
+                    config_name = f'merge.{merge_name}.other_trajectory.version'
                     self.f_add_config(config_name, other_trajectory.v_version,
                                       comment='The version of pypet you used to manage the other'
                                               ' trajectory. Only added if other trajectory\'s'
                                               ' version differs from current trajectory version.')
 
-                config_name = 'merge.%s.other_trajectory.name' % merge_name
+                config_name = f'merge.{merge_name}.other_trajectory.name'
                 self.f_add_config(config_name, other_trajectory.v_name,
                                   comment='Name of other trajectory merged into the current one')
 
-                config_name = 'merge.%s.other_trajectory.timestamp' % merge_name
+                config_name = f'merge.{merge_name}.other_trajectory.timestamp'
                 self.f_add_config(config_name, other_trajectory.v_timestamp,
                                   comment='Timestamp of creation of other trajectory '
                                           'merged into the current one')
 
-                config_name = 'merge.%s.other_trajectory.length' % merge_name
+                config_name = f'merge.{merge_name}.other_trajectory.length'
                 self.f_add_config(config_name, len(other_trajectory),
                                   comment='Length of other trajectory')
 
                 if other_trajectory.v_comment:
-                    config_name = 'merge.%s.other_trajectory.comment' % merge_name
+                    config_name = f'merge.{merge_name}.other_trajectory.comment'
                     self.f_add_config(config_name, other_trajectory.v_comment,
                                       comment='Comment of other trajectory')
 
@@ -2480,7 +2467,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                 my_instance = self.f_get(new_key, shortcuts=False)
 
             if not my_instance.f_is_empty():
-                raise RuntimeError('Something is wrong! Your item `%s` should be empty.' % new_key)
+                raise RuntimeError(f'Something is wrong! Your item `{new_key}` should be empty.')
 
             load_dict = other_instance._store()
             my_instance._load(load_dict)
@@ -2570,8 +2557,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             my_trial_parameter = self.f_get(trial_parameter_name)
             other_trial_parameter = other_trajectory.f_get(trial_parameter_name)
             if not isinstance(my_trial_parameter, BaseParameter):
-                raise TypeError('Your trial_parameter `%s` does not evaluate to a real parameter'
-                                ' in the trajectory' % trial_parameter_name)
+                raise TypeError(f'Your trial_parameter `{trial_parameter_name}` does not evaluate to a real parameter'
+                                ' in the trajectory')
 
             # Extract the ranges of both trial parameters
             if my_trial_parameter.f_has_range():
@@ -2593,16 +2580,15 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             if mytrialset != set(range(mymaxtrial_T1 + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
-                                'contain integers from 0 to %d, but it in fact it '
-                                'contains `%s`.' % (mymaxtrial_T1, str(mytrialset)))
+                                f'contain integers from 0 to {mymaxtrial_T1}, but it in fact it '
+                                f'contains `{mytrialset}`.')
 
             othertrialset = set(other_trial_list)
             othermaxtrial_T2 = max(othertrialset)  # maximum trial index in other trajectory aka T2
             if othertrialset != set(range(othermaxtrial_T2 + 1)):
                 raise TypeError('In order to specify a trial parameter, this parameter must '
-                                'contain integers from 0 to %d, but it infact it contains `%s` '
-                                'in the other trajectory.' %
-                                (othermaxtrial_T2, str(othertrialset)))
+                                f'contain integers from 0 to {othermaxtrial_T2}, but it infact it contains `{othertrialset}` '
+                                'in the other trajectory.')
 
             # If the trial parameter's name was just given in parts we update it here
             # to the full name
@@ -2638,8 +2624,8 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
 
             my_param = self.f_get(key)
             if not my_param._values_of_same_type(my_param.f_get(), other_param.f_get()):
-                raise TypeError('The parameters with name `%s` are not of the same type, cannot '
-                                'merge trajectory.' % key)
+                raise TypeError(f'The parameters with name `{key}` are not of the same type, cannot '
+                                'merge trajectory.')
 
             # We have taken care about the trial parameter before, it is already
             # marked for merging
@@ -2743,7 +2729,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
             if not fullname in self._explored_parameters:
                 self._explored_parameters[fullname] = my_param
 
-        return used_runs, list(params_to_change.keys())
+        return used_runs, list(params_to_change)
 
     @not_in_run
     def f_migrate(self, new_name=None, in_store=False,
@@ -2781,8 +2767,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
                                                     storage_service=new_storage_service,
                                                     trajectory=self, **kwargs)
         if len(unused_kwargs) > 0:
-            raise ValueError('The following keyword arguments were not used: `%s`' %
-                             str(unused_kwargs))
+            raise ValueError(f'The following keyword arguments were not used: `{unused_kwargs}`')
 
         self._stored = in_store
 
@@ -3035,8 +3020,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         for name in name_list:
             param = self.f_get(name)
             if not param.v_is_parameter:
-                raise TypeError('`%s` is not a parameter it is a %s, find idx is not applicable' %
-                                (name, str(type(param))))
+                raise TypeError(f'`{name}` is not a parameter it is a {type(param)}, find idx is not applicable')
 
             if param.f_has_range():
                 iter_list.append(iter(param.f_get_range(copy=False)))
@@ -3983,23 +3967,23 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
     @not_in_run
     @copydoc(ConfigGroup.f_add_config)
     def f_add_config(self, *args, **kwargs):
-        return super(Trajectory, self).f_add_config(*args, **kwargs)
+        return super().f_add_config(*args, **kwargs)
 
 
     @not_in_run
     @copydoc(ConfigGroup.f_add_config_group)
     def f_add_config_group(self, *args, **kwargs):
-        return super(Trajectory, self).f_add_config_group(*args, **kwargs)
+        return super().f_add_config_group(*args, **kwargs)
 
     @not_in_run
     @copydoc(ParameterGroup.f_add_parameter)
     def f_add_parameter(self, *args, **kwargs):
-        return super(Trajectory, self).f_add_parameter(*args, **kwargs)
+        return super().f_add_parameter(*args, **kwargs)
 
     @not_in_run
     @copydoc(ParameterGroup.f_add_parameter_group)
     def f_add_parameter_group(self, *args, **kwargs):
-        return super(Trajectory, self).f_add_parameter_group(*args, **kwargs)
+        return super().f_add_parameter_group(*args, **kwargs)
 
     def __dir__(self):
         """Adds all children to auto-completion
@@ -4007,7 +3991,7 @@ class Trajectory(DerivedParameterGroup, ResultGroup, ParameterGroup, ConfigGroup
         In case of a single run it spares all non-available functions
 
         """
-        result = super(Trajectory, self).__dir__()
+        result = super().__dir__()
         if self._is_run:
             result = [x for x in result if not x.startswith('f_') or
                       not getattr(getattr(self, x), '_not_in_run', False)]

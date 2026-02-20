@@ -1,5 +1,3 @@
-__author__ = 'Henri Bunting'
-
 
 try:
     import brian2

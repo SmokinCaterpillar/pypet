@@ -1,7 +1,5 @@
 
 
-__author__ = 'Robert Meyer'
-
 try:
     from ._version import __version__
 except ImportError:

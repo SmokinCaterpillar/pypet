@@ -1,5 +1,3 @@
-__author__ = ('Robert Meyer', 'Mehmet Nevvaf Timur')
-
 import sys
 import unittest
 

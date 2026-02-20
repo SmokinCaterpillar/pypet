@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 
 try:
     import scoop
@@ -29,7 +27,7 @@ class MultiprocSCOOPNetqueueTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop'
 
     def set_mode(self):
-        super(MultiprocSCOOPNetqueueTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_NETQUEUE
         self.multiproc = True
         self.freeze_input = False
@@ -45,7 +43,7 @@ class MultiprocSCOOPNetqueueTest(EnvironmentTest):
         pass
 
     # def test_run(self):
-    #     return super(MultiprocSCOOPLocalTest, self).test_run()
+    #     return super().test_run()
 
 
 @unittest.skipIf(scoop_not_functional_check(), 'Only makes sense if scoop is installed')
@@ -54,7 +52,7 @@ class MultiprocSCOOPSortLocalTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop'
 
     def set_mode(self):
-        super(MultiprocSCOOPSortLocalTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
         self.freeze_input = False
         self.multiproc = True
@@ -74,7 +72,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop', 'freeze_input'
 
     def set_mode(self):
-        super(MultiprocFrozenSCOOPLocalTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_LOCAL
         self.multiproc = True
         self.freeze_input = True
@@ -90,7 +88,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
         pass
 
     # def test_run(self):
-    #     return super(MultiprocSCOOPLocalTest, self).test_run()
+    #     return super().test_run()
 
 
 # @unittest.skipIf(scoop is None, 'Only makes sense if scoop is installed')
@@ -99,7 +97,7 @@ class MultiprocFrozenSCOOPLocalTest(EnvironmentTest):
 #     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'local', 'scoop', 'freeze_input'
 #
 #     def set_mode(self):
-#         super(MultiprocFrozenSCOOPSortLocalTest, self).set_mode()
+#         super().set_mode()
 #         self.mode = pypetconstants.WRAP_MODE_LOCAL
 #         self.freeze_input = True
 #         self.multiproc = True
@@ -114,7 +112,7 @@ class MultiprocFrozenSCOOPSortNetlockTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'scoop', 'freeze_input'
 
     def set_mode(self):
-        super(MultiprocFrozenSCOOPSortNetlockTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_NETLOCK
         self.freeze_input = True
         self.multiproc = True
@@ -135,7 +133,7 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop', 'freeze_input', 'mehmet'
 
     def set_mode(self):
-        super(MultiprocFrozenSCOOPSortNetqueueTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_NETQUEUE
         self.freeze_input = True
         self.multiproc = True
@@ -156,7 +154,7 @@ class MultiprocFrozenSCOOPSortNetqueueTest(ResultSortTest):
 #     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netqueue', 'scoop'
 #
 #     def set_mode(self):
-#         super(MultiprocSCOOPNetqueueTest, self).set_mode()
+#         super().set_mode()
 #         self.mode = pypetconstants.WRAP_MODE_NETQUEUE
 #         self.multiproc = True
 #         self.freeze_input = False
@@ -175,7 +173,7 @@ class MultiprocSCOOPNetlockTest(EnvironmentTest):
     tags = 'integration', 'hdf5', 'environment', 'multiproc', 'netlock', 'scoop'
 
     def set_mode(self):
-        super(MultiprocSCOOPNetlockTest, self).set_mode()
+        super().set_mode()
         self.mode = pypetconstants.WRAP_MODE_NETLOCK
         self.multiproc = True
         self.freeze_input = False

@@ -5,8 +5,6 @@ The network has been implemented using the *pypet* network framework.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import os # To allow path names work under Windows and Linux
 import brian2

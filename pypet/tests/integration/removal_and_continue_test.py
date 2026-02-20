@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 import unittest
 import numpy as np
@@ -25,10 +23,10 @@ from pypet.tests.testutils.data import create_param_dict, add_params, multiply, 
 class CustomParameter(Parameter):
 
     def __init__(self, *args, **kwargs):
-        super(CustomParameter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
-class Multiply(object):
+class Multiply:
 
     def __init__(self):
         self.var=42
@@ -49,7 +47,7 @@ class ContinueTest(TrajectoryComparator):
             for env in self.envs:
                 env.f_disable_logging()
 
-        super(ContinueTest, self).tearDown()
+        super().tearDown()
 
     def make_run(self,env):
 
@@ -338,7 +336,7 @@ class ContinueTest(TrajectoryComparator):
 class ContinueMPTest(ContinueTest):
 
     # def test_removal(self):
-    #     return super(ContinueMPTest, self).test_removal()
+    #     return super().test_removal()
 
     tags = 'integration', 'hdf5', 'environment', 'continue', 'multiproc', 'nopool', 'dill'
 

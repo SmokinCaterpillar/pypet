@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 import logging
 import platform
@@ -15,7 +13,7 @@ from pypet.utils.mpwrappers import QueueStorageServiceSender, PipeStorageService
     ReferenceWrapper
 import time
 
-class Multiply(object):
+class Multiply:
 
     def __init__(self):
         self.var=42
@@ -39,7 +37,7 @@ class Multiply(object):
 class CustomParameter(Parameter):
 
     def __init__(self, *args, **kwargs):
-        super(CustomParameter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 def postproc(traj, results, idx):
     get_root_logger().info(idx)

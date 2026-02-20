@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os # For path names being viable under Windows and Linux
 import logging
 

@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os # To allow pathnames under Windows and Linux
 
 from pypet import Trajectory, NotUniqueNodeError

@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 import random
 import time
 import multiprocessing as mp
@@ -27,7 +25,7 @@ from pypet.utils.helpful_functions import is_ipv6
 class FaultyServer(LockerServer):
     """Simulates a server that forgets to send from time to time"""
     def __init__(self, url):
-        super(FaultyServer, self).__init__(url)
+        super().__init__(url)
         self._srep = 0
 
     def _pre_respond_hook(self, response):

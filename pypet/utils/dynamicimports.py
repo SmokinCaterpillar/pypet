@@ -4,8 +4,6 @@ This is done in an independent module to avoid cluttered name spaces.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import importlib
 import inspect
 
@@ -64,5 +62,5 @@ def create_class(class_name, dynamic_imports):
                 if class_name == class_name_to_test:
                     new_class = load_class(dynamic_class)
                     return new_class
-        raise ImportError('Could not create the class named `%s`.' % class_name)
+        raise ImportError(f'Could not create the class named `{class_name}`.')
 

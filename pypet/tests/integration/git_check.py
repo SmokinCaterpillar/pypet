@@ -8,7 +8,7 @@ except ImportError:
     # Check if pypet is installed otherwise append /pypet folder
     # this is important for travis-ci
     path = os.path.abspath('../../../')
-    print('Adding pypet path:`%s`' % path)
+    print(f'Adding pypet path:`{path}`')
     sys.path.append(path)
 
 
@@ -45,7 +45,7 @@ def fail_on_diff():
                   git_fail=True)
         raise RuntimeError('You should not be here!')
     except GitDiffError as exc:
-        print('I expected the GitDiffError: `%s`' % repr(exc))
+        print(f'I expected the GitDiffError: `{exc!r}`')
 
 
 def main(fail=False):

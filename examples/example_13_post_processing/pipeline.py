@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 import logging
 import os # For path names working under Windows and Linux
 

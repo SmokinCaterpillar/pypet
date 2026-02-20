@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 from pypet import Trajectory, pypetexceptions, PickleResult
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, run_suite, parse_args

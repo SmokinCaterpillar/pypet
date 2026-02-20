@@ -7,8 +7,6 @@ Use at your own risk!
 
 """
 
-__author__ = 'Robert Meyer'
-
 import warnings
 
 import pandas as pd
@@ -47,7 +45,7 @@ class StorageContextManager(HasLogger):
         try:
             self.close_store()
         except Exception as exc:
-            self._logger.error('Could not close file because of `%s`' % repr(exc))
+            self._logger.error(f'Could not close file because of `{exc!r}`')
             if exc_type is None:
                 raise
             else:
@@ -132,7 +130,7 @@ def make_shared_result(result, key, trajectory, new_class=None):
         elif isinstance(data, (np.ndarray, np.matrix)):
             new_class = SharedCArray
         else:
-            raise RuntimeError('Your data `%s` is not understood.' % key)
+            raise RuntimeError(f'Your data `{key}` is not understood.')
     shared_data = new_class(result.f_translate_key(key), result, trajectory=trajectory)
     result[key] = shared_data
     shared_data._request_data('make_shared')
@@ -577,7 +575,7 @@ class SharedPandasFrame(SharedData):
     def create_shared_data(self, **kwargs):
         if 'format' not in kwargs:
             kwargs['format'] = 'table'
-        return super(SharedPandasFrame, self).create_shared_data(**kwargs)
+        return super().create_shared_data(**kwargs)
 
     def put(self, data=None, format='table', append=False, **kwargs):
         # data = self._extract_data(data)
@@ -626,7 +624,7 @@ class SharedResult(Result, KnowsTrajectory):
 
     def __init__(self, full_name, trajectory, *args, **kwargs):
         self._traj = trajectory
-        super(SharedResult, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
 
     @property
     def v_traj(self):
@@ -634,7 +632,7 @@ class SharedResult(Result, KnowsTrajectory):
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
-        result = super(SharedResult, self)._supports(item)
+        result = super()._supports(item)
         result = result or type(item) in SharedResult.SUPPORTED_DATA
         return result
 
@@ -647,11 +645,11 @@ class SharedResult(Result, KnowsTrajectory):
             pass
 
     def f_set_single(self, name, item):
-        super(SharedResult, self).f_set_single(name, item)
+        super().f_set_single(name, item)
         self._pass_to_shared(name, item)
 
     def _load(self, load_dict):
-        super(SharedResult, self)._load(load_dict)
+        super()._load(load_dict)
         for key in self:
             item = self[key]
             self._pass_to_shared(key, item)

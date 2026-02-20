@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 
 
 from pypet import Environment, Trajectory
@@ -12,7 +10,7 @@ import time
 SIZE = 100
 
 def job(traj):
-    traj.f_ares('set_%d.$.result' % int(traj.v_idx / SIZE), 42, comment='A result')
+    traj.f_ares(f'set_{int(traj.v_idx / SIZE)}.$.result', 42, comment='A result')
 
 
 

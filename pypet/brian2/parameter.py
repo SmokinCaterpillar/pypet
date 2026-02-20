@@ -11,8 +11,6 @@ BRIAN2 Monitors.
 
 """
 
-__author__ = ['Henri Bunting', 'Robert Meyer']
-
 import ast
 
 import brian2.numpy_ as np
@@ -93,13 +91,13 @@ class Brian2Parameter(Parameter):
     __slots__ = ()
 
     def __init__(self, full_name, data=None, comment=''):
-        super(Brian2Parameter, self).__init__(full_name, data, comment)
+        super().__init__(full_name, data, comment)
 
     def f_supports(self, data):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        elif super(Brian2Parameter, self).f_supports(data):
+        elif super().f_supports(data):
             return True
         return False
 
@@ -119,7 +117,7 @@ class Brian2Parameter(Parameter):
             except TypeError:
                 return False
 
-        elif not super(Brian2Parameter, self)._values_of_same_type(val1, val2):
+        elif not super()._values_of_same_type(val1, val2):
             return False
 
         return True
@@ -127,7 +125,7 @@ class Brian2Parameter(Parameter):
     def _store(self):
 
         if not isinstance(self._data, Quantity):
-            return super(Brian2Parameter, self)._store()
+            return super()._store()
         else:
             store_dict = {}
             unit = get_unit_fast(self._data)
@@ -145,7 +143,7 @@ class Brian2Parameter(Parameter):
 
     def _load(self, load_dict):
         if self.v_locked:
-            raise pex.ParameterLockedException('Parameter `%s` is locked!' % self.v_full_name)
+            raise pex.ParameterLockedException(f'Parameter `{self.v_full_name}` is locked!')
 
         try:
             data_table = load_dict['data' + Brian2Parameter.IDENTIFIER]
@@ -165,7 +163,7 @@ class Brian2Parameter(Parameter):
                 self._explored = True
 
         except KeyError:
-            super(Brian2Parameter, self)._load(load_dict)
+            super()._load(load_dict)
 
         self._default = self._data
         self._locked = True
@@ -187,22 +185,21 @@ class Brian2Result(Result):
     __slots__ = ()
 
     def __init__(self, full_name, *args, **kwargs):
-        super(Brian2Result, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
 
 
     def f_set_single(self, name, item):
         if Brian2Result.IDENTIFIER in name:
-            raise AttributeError('Your result name contains the identifier for brian data,'
-                                 ' please do not use %s in your result names.' %
-                                 Brian2Result.IDENTIFIER)
+            raise AttributeError(f'Your result name contains the identifier for brian data,'
+                                 f' please do not use {Brian2Result.IDENTIFIER} in your result names.')
         else:
-            super(Brian2Result, self).f_set_single(name, item)
+            super().f_set_single(name, item)
 
     def _supports(self, data):
         """ Simply checks if data is supported """
         if isinstance(data, Quantity):
             return True
-        elif super(Brian2Result, self)._supports(data):
+        elif super()._supports(data):
             return True
         return False
 
@@ -348,10 +345,10 @@ class Brian2MonitorResult(Brian2Result):
 
     def __init__(self, full_name, *args, **kwargs):
         self._monitor_type = None
-        super(Brian2MonitorResult, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
 
     def _store(self):
-        store_dict = super(Brian2MonitorResult, self)._store()
+        store_dict = super()._store()
 
         if self._monitor_type is not None:
             store_dict['monitor_type'] = self._monitor_type
@@ -361,7 +358,7 @@ class Brian2MonitorResult(Brian2Result):
     def _load(self, load_dict):
         if 'monitor_type' in load_dict:
             self._monitor_type = load_dict.pop('monitor_type')
-        super(Brian2MonitorResult, self)._load(load_dict)
+        super()._load(load_dict)
 
     @property
     def v_monitor_type(self):
@@ -382,7 +379,7 @@ class Brian2MonitorResult(Brian2Result):
 
             self._extract_monitor_data(item)
         else:
-            super(Brian2MonitorResult, self).f_set_single(name, item)
+            super().f_set_single(name, item)
 
     def _extract_monitor_data(self, monitor):
 
@@ -402,7 +399,7 @@ class Brian2MonitorResult(Brian2Result):
             self._extract_population_rate_monitor(monitor)
 
         else:
-            raise ValueError('Monitor Type %s is not supported (yet)' % str(type(monitor)))
+            raise ValueError(f'Monitor Type {type(monitor)} is not supported (yet)')
 
     def _extract_state_monitor(self, monitor):
 

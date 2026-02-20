@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 
 
 from pypet import Environment, Trajectory
@@ -54,7 +52,7 @@ def get_runtime(length):
         if not os.path.isdir('./tmp'):
             os.mkdir('tmp')
         graphviz = CustomOutput()
-        graphviz.output_file = './tmp/run_profile_storage_%d.png' % len(traj)
+        graphviz.output_file = f'./tmp/run_profile_storage_{len(traj)}.png'
         service_filter = GlobbingFilter(include=['*storageservice.*'])
 
         config = Config(groups=True, verbose=True)

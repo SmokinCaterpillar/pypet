@@ -1,18 +1,16 @@
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import itertools as itools
 import hashlib
 from collections import deque
 
 
-class Universe(object):
+class Universe:
     """Contains everything"""
     def __contains__(self, item):
         return True
 
 
-class IteratorChain(object):
+class IteratorChain:
     """Helper class that chains arbitrary generators and iterators and iterables.
 
     Preferably used over itertools.chain to avoid recursive calls.
@@ -70,7 +68,7 @@ class IteratorChain(object):
                 return
 
 
-class ChainMap(object):
+class ChainMap:
     """Combine multiple mappings for sequential lookup.
     """
 
@@ -98,7 +96,7 @@ class ChainMap(object):
         return itools.chain(*iter_list)
 
 
-class HashArray(object):
+class HashArray:
     """Hashable wrapper for numpy arrays"""
 
     def __init__(self, ndarray):
@@ -120,7 +118,7 @@ class HashArray(object):
         return int(hashlib.sha1(self._ndarray.view(np.uint8)).hexdigest(), 16)
 
 
-class TrajectoryMock(object):
+class TrajectoryMock:
     """Helper class that mocks properties of a trajectory.
 
     The full trajectory is not needed to rename a log file.

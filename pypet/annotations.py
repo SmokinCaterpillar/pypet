@@ -20,8 +20,6 @@ This module contains two classes:
 
 """
 
-__author__ = 'Robert Meyer'
-
 from pypet.pypetlogging import HasLogger
 from pypet.slots import HasSlots
 
@@ -91,7 +89,7 @@ class Annotations(HasSlots):
     def __setattr__(self, key, value):
         if key.startswith('_'):
             # We set a private attribute
-            super(Annotations, self).__setattr__(key, value)
+            super().__setattr__(key, value)
         else:
             self.f_set_single(key, value)
 
@@ -106,7 +104,7 @@ class Annotations(HasSlots):
             if key == 0:
                 key = 'annotation'
             else:
-                key = 'annotation_%d' % key
+                key = f'annotation_{key}'
         return key
 
     def f_get(self, *args):
@@ -126,9 +124,8 @@ class Annotations(HasSlots):
             if len(self._dict) == 1:
                 return self._dict[list(self._dict.keys())[0]]
             elif len(self._dict) > 1:
-                raise ValueError('Your annotation contains more than one entry: '
-                                 '`%s` Please use >>f_get<< with one of these.' %
-                                 (str(list(self._dict.keys()))))
+                raise ValueError(f'Your annotation contains more than one entry: '
+                                 f'`{list(self._dict.keys())}` Please use >>f_get<< with one of these.')
             else:
                 raise AttributeError('Your annotation is empty, cannot access data.')
 
@@ -138,7 +135,7 @@ class Annotations(HasSlots):
             try:
                 result_list.append(self._dict[name])
             except KeyError:
-                raise AttributeError('Your annotation does not contain %s.' % name)
+                raise AttributeError(f'Your annotation does not contain {name}.')
 
         if len(args) == 1:
             return result_list[0]
@@ -165,7 +162,7 @@ class Annotations(HasSlots):
         try:
             del self._dict[key]
         except KeyError:
-            raise AttributeError('Your annotations do not contain %s' % key)
+            raise AttributeError(f'Your annotations do not contain {key}')
 
 
     def f_set_single(self, name, data):
@@ -176,7 +173,7 @@ class Annotations(HasSlots):
         """Returns all annotations lexicographically sorted as a concatenated string."""
         resstr = ''
         for key in sorted(self._dict.keys()):
-            resstr += '%s=%s; ' % (key, str(self._dict[key]))
+            resstr += f'{key}={self._dict[key]}; '
         return resstr[:-2]
 
     def __str__(self):

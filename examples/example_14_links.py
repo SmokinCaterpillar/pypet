@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os # To allow file paths working under Windows and Linux
 
 from pypet import Environment, Result, Parameter

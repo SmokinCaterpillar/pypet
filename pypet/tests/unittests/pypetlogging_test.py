@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import sys
 import unittest
 
@@ -9,7 +7,7 @@ from pypet.pypetlogging import LoggingManager
 from pypet.tests.testutils.ioutils import get_log_config, run_suite, parse_args
 from pypet.utils.comparisons import nested_equal
 
-class FakeTraj(object):
+class FakeTraj:
     def __init__(self):
         self.v_environment_name = 'env'
         self.v_name = 'traj'

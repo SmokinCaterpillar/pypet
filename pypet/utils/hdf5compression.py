@@ -1,7 +1,5 @@
 """Module to allow hdf5 compression via ptrepack directly within python scripts"""
 
-__author__ = 'Robert Meyer'
-
 import os
 import subprocess
 
@@ -66,12 +64,11 @@ def compact_hdf5_file(filename, name=None, index=None, keep_backup=True):
                '--fletcher32', str(int(fletcher32)),
                abs_filename, abs_tmp_filename]
     str_command = ' '.join(command)
-    print('Executing command `%s`' % str_command)
+    print(f'Executing command `{str_command}`')
 
     retcode = subprocess.call(command)
     if retcode != 0:
-        print('#### ERROR: Compacting `%s` failed with errorcode %s! ####' %
-              (filename, str(retcode)))
+        print(f'#### ERROR: Compacting `{filename}` failed with errorcode {retcode}! ####')
     else:
         print('#### Compacting successful ####')
         print('Renaming files')

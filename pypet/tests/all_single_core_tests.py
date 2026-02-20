@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 
 from pypet.tests.testutils.ioutils import run_suite, TEST_IMPORT_ERROR, discover_tests, \
     parse_args

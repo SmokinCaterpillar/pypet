@@ -1,7 +1,5 @@
 """Module containing the superclass having slots"""
 
-__author__ = 'Robert Meyer'
-
 
 def get_all_slots(cls):
     """Iterates through a class' (`cls`) mro to get all slots as a set."""
@@ -23,7 +21,7 @@ class MetaSlotMachine(type):
 
     """
     def __init__(cls, name, bases, dictionary):
-        super(MetaSlotMachine, cls).__init__(name, bases, dictionary)
+        super().__init__(name, bases, dictionary)
         cls.__all_slots__ = get_all_slots(cls)
 
 

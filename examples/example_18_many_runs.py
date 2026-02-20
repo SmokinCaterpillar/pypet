@@ -6,8 +6,6 @@ using the `$set` wildcard.
 
 """
 
-__author__ = 'Robert Meyer'
-
 
 import os # To allow file paths working under Windows and Linux
 

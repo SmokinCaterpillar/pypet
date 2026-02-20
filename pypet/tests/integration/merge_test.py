@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 
 import numpy as np
 from pypet.parameter import Parameter
@@ -28,7 +26,7 @@ class MergeTest(TrajectoryComparator):
             for env in self.envs:
                 env.f_disable_logging()
 
-        super(MergeTest, self).tearDown()
+        super().tearDown()
 
     def make_run(self,env):
 
@@ -596,7 +594,7 @@ class TestMergeResultsSort(ResultSortTest):
         if hasattr(self, 'env2'):
             self.env2.f_disable_logging()
 
-        super(TestMergeResultsSort, self).tearDown()
+        super().tearDown()
 
     def test_merge_normally(self):
 
@@ -789,7 +787,7 @@ class TestConsecutiveMerges(TrajectoryComparator):
     def tearDown(self):
         for env in self.envs:
             env.f_disable_logging()
-        super(TestConsecutiveMerges, self).tearDown()
+        super().tearDown()
 
 if __name__ == '__main__':
     opt_args = parse_args()

@@ -4,8 +4,6 @@ We also simulate famous rule 110: http://en.wikipedia.org/wiki/Rule_110
 
 """
 
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import os
 import matplotlib.pyplot as plt

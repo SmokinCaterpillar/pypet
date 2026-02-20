@@ -1,5 +1,3 @@
-__author__ = 'robert'
-
 import os
 
 from pypet import Trajectory

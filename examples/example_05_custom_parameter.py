@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import numpy as np
 import inspect
 import os # For path names being viable under Windows and Linux
@@ -66,7 +64,7 @@ class FunctionParameter(Parameter):
     def f_set(self, data):
         if callable(data):
             data = inspect.getsource(data)
-        return super(FunctionParameter, self).f_set(data)
+        return super().f_set(data)
 
     # For more complicate parameters you might consider implementing:
     # `f_supports` (we do not need it since we convert the data to stuff the parameter already

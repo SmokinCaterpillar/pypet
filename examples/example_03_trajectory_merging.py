@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os # For using pathnames under Windows and Linux
 
 from pypet import Environment, cartesian_product

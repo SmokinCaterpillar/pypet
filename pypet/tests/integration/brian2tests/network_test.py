@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 
 from pypet.tests.testutils.ioutils import unittest, run_suite, make_temp_dir, get_log_config, \
     parse_args

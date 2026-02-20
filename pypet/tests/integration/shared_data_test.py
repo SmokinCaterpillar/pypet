@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import os
 import logging
 import random
@@ -168,7 +166,7 @@ class StorageDataEnvironmentTest(TrajectoryComparator):
     def tearDown(self):
         self.env.f_disable_logging()
 
-        super(StorageDataEnvironmentTest, self).tearDown()
+        super().tearDown()
 
     def add_array_params(self, traj):
         length = len(traj)
@@ -424,7 +422,7 @@ class MultiprocStorageLockTest(StorageDataEnvironmentTest):
         self.use_pool=True
 
     def test_run_large(self):
-        return super(MultiprocStorageLockTest, self).test_run_large()
+        return super().test_run_large()
 
 
 @unittest.skipIf(zmq is None, 'Can only be run with zmq')
@@ -442,7 +440,7 @@ class MultiprocStorageNetlockTest(StorageDataEnvironmentTest):
         self.url = get_random_port_url()
 
     def test_run_large(self):
-        return super(MultiprocStorageNetlockTest, self).test_run_large()
+        return super().test_run_large()
 
 
 class MultiprocStorageNoPoolLockTest(StorageDataEnvironmentTest):

@@ -1,5 +1,3 @@
-__author__ = 'Robert Meyer'
-
 import multiprocessing
 # Monkey Patch from here: https://bitbucket.org/ned/coveragepy/issue/117/enable-coverage-measurement-of-code-run-by
 def coverage_multiprocessing_process(): # pragma: no cover
@@ -38,7 +36,7 @@ import os
 
 pypetpath=os.path.abspath(os.getcwd())
 sys.path.append(pypetpath)
-print('Appended path `%s`' % pypetpath)
+print(f'Appended path `{pypetpath}`')
 
 from pypet.tests.testutils.ioutils import run_suite, discover_tests, TEST_IMPORT_ERROR, parse_args
 

@@ -1,5 +1,3 @@
-__author__ = ['Henri Bunting', 'Robert Meyer']
-
 
 import numpy as np
 
