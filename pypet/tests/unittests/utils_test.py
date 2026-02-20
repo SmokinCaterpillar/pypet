@@ -63,8 +63,7 @@ class CartesianTest(unittest.TestCase):
                                           ('param1','param2'))
         result_dict = {'param1':[1,1,2,2,3,3],'param2': [42.0,52.5,42.0,52.5,42.0,52.5]}
 
-        self.assertTrue(nested_equal(cartesian_dict,result_dict), '%s != %s' %
-                                                        (str(cartesian_dict),str(result_dict)))
+        self.assertTrue(nested_equal(cartesian_dict,result_dict), f'{cartesian_dict} != {result_dict}')
 
     def test_cartesian_product_combined_params(self):
         cartesian_dict=cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'],\
@@ -73,8 +72,7 @@ class CartesianTest(unittest.TestCase):
         result_dict={'param3':[1,1,2,2,3,3],'param1' : [42.0,52.5,42.0,52.5,42.0,52.5],
                       'param2':['a','b','a','b','a','b']}
 
-        self.assertTrue(nested_equal(cartesian_dict,result_dict), '%s != %s' %
-                                                    (str(cartesian_dict),str(result_dict)))
+        self.assertTrue(nested_equal(cartesian_dict,result_dict), f'{cartesian_dict} != {result_dict}')
 
 
 class ProgressBarTest(unittest.TestCase):

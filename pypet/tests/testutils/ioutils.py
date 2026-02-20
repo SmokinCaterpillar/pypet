@@ -60,7 +60,7 @@ def get_log_path(traj, process_name=None):
 def get_random_port_url():
     """Determines the local server url with a random port"""
     url = port_to_tcp()
-    errwrite('USING URL: %s \n' % url)
+    errwrite(f'USING URL: {url} \n')
     return url
 
 
@@ -130,8 +130,8 @@ def make_temp_dir(filename, signal=False):
         actual_tempdir = os.path.join(tempfile.gettempdir(), testParams['tempdir'])
 
         if signal:
-            errwrite('I used `tempfile.gettempdir()` to create the temporary folder '
-                             '`%s`.' % actual_tempdir)
+            errwrite(f'I used `tempfile.gettempdir()` to create the temporary folder '
+                             f'`{actual_tempdir}`.')
         testParams['actual_tempdir'] = actual_tempdir
         if not os.path.isdir(testParams['actual_tempdir']):
             try:
@@ -328,11 +328,11 @@ def parse_args():
 
         if opt == '--folder':
             opt_dict['folder'] = arg
-            errwrite('I will put all data into folder `%s`.' % arg)
+            errwrite(f'I will put all data into folder `{arg}`.')
 
         if opt == '--suite':
             opt_dict['suite_no'] = arg
-            errwrite('I will run suite `%s`.' % arg)
+            errwrite(f'I will run suite `{arg}`.')
 
     sys.argv = [sys.argv[0]]
     return opt_dict

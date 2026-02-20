@@ -676,8 +676,8 @@ class HDF5StorageService(StorageService, HasLogger):
     @pandas_format.setter
     def pandas_format(self, pandas_format):
         if pandas_format not in ('f', 'fixed', 'table', 't'):
-            raise ValueError('''Pandas format can only be 'table' (or 't') and 'fixed' (or 'f')
-                            not `%s`.''' % pandas_format)
+            raise ValueError(f'''Pandas format can only be 'table' (or 't') and 'fixed' (or 'f')
+                            not `{pandas_format}`.''')
         self._pandas_format = pandas_format
 
     @property
@@ -1367,9 +1367,8 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.' + attr_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.debug('Could not find `%s` in traj config, '
-                                     'using (default) value `%s`.' %
-                                     (attr_name, str(getattr(self, attr_name))))
+                self._logger.debug(f'Could not find `{attr_name}` in traj config, '
+                                     f'using (default) value `{getattr(self, attr_name)}`.')
 
         for attr_name, table_name in HDF5StorageService.NAME_TABLE_MAPPING.items():
             try:
@@ -1378,18 +1377,16 @@ class HDF5StorageService(StorageService, HasLogger):
                 config = traj.f_get('config.hdf5.overview.' + table_name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.debug('Could not find `%s` in traj config, '
-                                     'using (default) value `%s`.' %
-                                     (table_name, str(getattr(self, attr_name))))
+                self._logger.debug(f'Could not find `{table_name}` in traj config, '
+                                     f'using (default) value `{getattr(self, attr_name)}`.')
 
         for attr_name, name in HDF5StorageService.PR_ATTR_NAME_MAPPING.items():
             try:
                 config = traj.f_get('config.hdf5.' + name).f_get()
                 setattr(self, attr_name, config)
             except AttributeError:
-                self._logger.debug('Could not find `%s` in traj config, '
-                                     'using (default) value `%s`.' %
-                                     (name, str(getattr(self, attr_name))))
+                self._logger.debug(f'Could not find `{name}` in traj config, '
+                                     f'using (default) value `{getattr(self, attr_name)}`.')
 
         if ((not self._overview_results_summary or
                     not self._overview_derived_parameters_summary) and
@@ -1480,8 +1477,7 @@ class HDF5StorageService(StorageService, HasLogger):
                                                                          self._trajectory_name)
                 else:
                     raise ValueError('I don`t know which trajectory to load')
-                self._logger.debug('Opening HDF5 file `%s` in mode `a` with trajectory `%s`' %
-                                   (self._filename, self._trajectory_name))
+                self._logger.debug(f'Opening HDF5 file `{self._filename}` in mode `a` with trajectory `{self._trajectory_name}`')
 
             elif mode == 'r':
 
@@ -1503,9 +1499,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
                     if (self._trajectory_index >= len(nodelist) or
                             self._trajectory_index < -len(nodelist)):
-                        raise ValueError('Trajectory No. %d does not exists, there are only '
-                                         '%d trajectories in %s.'
-                                         % (self._trajectory_index, len(nodelist), self._filename))
+                        raise ValueError(f'Trajectory No. {self._trajectory_index} does not exists, there are only '
+                                         f'{len(nodelist)} trajectories in {self._filename}.')
 
                     self._trajectory_group = nodelist[self._trajectory_index]
                     self._trajectory_name = self._trajectory_group._v_name
@@ -1513,16 +1508,14 @@ class HDF5StorageService(StorageService, HasLogger):
                 elif self._trajectory_name is not None:
                     # Otherwise pick the trajectory group by name
                     if not '/' + self._trajectory_name in self._hdf5file:
-                        raise ValueError('File %s does not contain trajectory %s.'
-                                         % (self._filename, self._trajectory_name))
+                        raise ValueError(f'File {self._filename} does not contain trajectory {self._trajectory_name}.')
 
                     self._trajectory_group = self._hdf5file.get_node('/' + self._trajectory_name)
                 else:
                     raise ValueError('Please specify a name of a trajectory to load or its '
                                      'index, otherwise I cannot open one.')
 
-                self._logger.debug('Opening HDF5 file `%s` in mode `r` with trajectory `%s`' %
-                                   (self._filename, self._trajectory_name))
+                self._logger.debug(f'Opening HDF5 file `{self._filename}` in mode `r` with trajectory `{self._trajectory_name}`')
 
             else:
                 raise RuntimeError('You shall not pass!')
@@ -1846,10 +1839,10 @@ class HDF5StorageService(StorageService, HasLogger):
 
         if not (load_parameters in loadconstants and load_derived_parameters in loadconstants and
                         load_results in loadconstants and load_other_data in loadconstants):
-            raise ValueError('Please give a valid option on how to load data. Options for '
-                             '`load_parameter`, `load_derived_parameters`, `load_results`, '
-                             'and `load_other_data` are %s. See function documentation for '
-                             'the semantics of the values.' % str(loadconstants))
+            raise ValueError(f'Please give a valid option on how to load data. Options for '
+                             f'`load_parameter`, `load_derived_parameters`, `load_results`, '
+                             f'and `load_other_data` are {loadconstants}. See function documentation for '
+                             'the semantics of the values.')
 
         traj._stored = not as_new
 
@@ -2013,9 +2006,8 @@ class HDF5StorageService(StorageService, HasLogger):
             try:
                 setattr(self, attr_name, conversion_function(row[name_in_row]))
             except (IndexError, ValueError) as exc:
-                self._logger.error('Using default hdf5 setting, '
-                                   'could not extract `%s` hdf5 setting because of: %s' %
-                                        (name_in_row, repr(exc)))
+                self._logger.error(f'Using default hdf5 setting, '
+                                   f'could not extract `{name_in_row}` hdf5 setting because of: {exc!r}')
 
         if 'hdf5_settings' in self._overview_group:
             hdf5_table = self._overview_group.hdf5_settings
@@ -2108,8 +2100,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     _hdf5_group = self._hdf5file.get_node(where=self._trajectory_group,
                                                   name=hdf5_group_name)
                 except pt.NoSuchNodeError:
-                    self._logger.error('Cannot find `%s` the hdf5 node `%s` does not exist!'
-                                       % (traj_node.v_full_name, hdf5_group_name))
+                    self._logger.error(f'Cannot find `{traj_node.v_full_name}` the hdf5 node `{hdf5_group_name}` does not exist!')
                     raise
 
         split_names = branch_name.split('.')
@@ -2151,19 +2142,17 @@ class HDF5StorageService(StorageService, HasLogger):
         curr_python = pypetconstants.python_version_string
 
         if (version != VERSION or curr_python != python) and not force:
-            raise pex.VersionMismatchError('Current pypet version is %s used under python %s '
+            raise pex.VersionMismatchError(f'Current pypet version is {VERSION} used under python {curr_python} '
                                            '  but your trajectory'
-                                           ' was created with version %s and python %s.'
+                                           f' was created with version {version} and python {python}.'
                                            ' Use >>force=True<< to perform your load regardless'
-                                           ' of version mismatch.' %
-                                           (VERSION, curr_python, version, python))
+                                           ' of version mismatch.')
         elif version != VERSION or curr_python != python:
-            self._logger.warning('Current pypet version is %s with python %s but your trajectory'
-                                 ' was created with version %s under python %s.'
+            self._logger.warning(f'Current pypet version is {VERSION} with python {curr_python} but your trajectory'
+                                 f' was created with version {version} under python {python}.'
                                  ' Yet, you enforced the load, so I will'
                                  ' handle the trajectory despite the'
-                                 ' version mismatch.' %
-                                 (VERSION, curr_python, version, python))
+                                 ' version mismatch.')
 
 
     #################################### Storing a Trajectory ####################################
@@ -2759,10 +2748,9 @@ class HDF5StorageService(StorageService, HasLogger):
                 else:
                     raise RuntimeError('You shall not pass!')
         except pt.NoSuchNodeError:
-            self._logger.error('Link `%s` under `%s` is broken, cannot load it, '
+            self._logger.error(f'Link `{hdf5_soft_link._v_name}` under `{new_traj_node.v_full_name}` is broken, cannot load it, '
                                'I will ignore it, you have to '
-                               'manually delete it!' %
-                               (hdf5_soft_link._v_name, new_traj_node.v_full_name))
+                               'manually delete it!')
 
     def _tree_store_nodes_dfs(self, parent_traj_node, name, store_data, with_links, recursive,
                           max_depth, current_depth,
@@ -3418,9 +3406,8 @@ class HDF5StorageService(StorageService, HasLogger):
 
         """
         if len(string) > max_length:
-            logger.debug('The string `%s` was too long I truncated it to'
-                         ' %d characters' %
-                         (string, max_length))
+            logger.debug(f'The string `{string}` was too long I truncated it to'
+                         f' {max_length} characters')
             string = string[0:max_length - 3] + '...'.encode('utf-8')
 
         return string

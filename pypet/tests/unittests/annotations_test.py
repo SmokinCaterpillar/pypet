@@ -31,7 +31,7 @@ class AnnotationsTest(unittest.TestCase):
         pred = lambda x: 'config' not in x.v_full_name
 
         x = len([node for node in self.traj.f_iter_nodes(recursive=True, predicate=pred)])
-        self.assertTrue(x == 5, '%s != %s' % (str(x), str(5)))
+        self.assertTrue(x == 5, f'{x} != {5}')
 
     def tearDown(self):
         remove_data()
@@ -76,7 +76,7 @@ class AnnotationsTest(unittest.TestCase):
                 anno = self.annotations[name]
                 node_anno = node.v_annotations[name]
                 self.assertTrue(comp.nested_equal(anno, node_anno),
-                                                  '%s != %s' % (str(anno), str(node_anno)))
+                                                  f'{anno} != {node_anno}')
 
     def test_pickling(self):
         dump = pickle.dumps(self.traj)
@@ -141,7 +141,7 @@ class AnnotationsTest(unittest.TestCase):
             new_dict[key]=val
 
         for key in sorted(new_dict.keys()):
-            resstr+='%s=%s; ' % (key,str(new_dict[key]))
+            resstr+=f'{key}={new_dict[key]}; '
         return resstr[:-2]
 
     def test_to_str(self):
@@ -156,10 +156,10 @@ class AnnotationsTest(unittest.TestCase):
                     name = 'annotation'
                 self.assertTrue(name in ann_str)
 
-            self.assertEqual(dict_str, ann_str, '%s!=%s' % (dict_str, ann_str))
+            self.assertEqual(dict_str, ann_str, f'{dict_str}!={ann_str}')
 
             ann_str = str(node.v_annotations)
-            self.assertEqual(dict_str, ann_str, '%s!=%s' % (dict_str, ann_str))
+            self.assertEqual(dict_str, ann_str, f'{dict_str}!={ann_str}')
 
     def test_single_get_and_getattr_and_setattr(self):
 
@@ -207,7 +207,7 @@ class AnnotationsTest(unittest.TestCase):
                 if integer == 0:
                     name = 'annotation'
                 else:
-                    name = 'annotation_%d' % integer
+                    name = f'annotation_{integer}'
 
                 self.assertTrue(name in node.v_annotations)
 

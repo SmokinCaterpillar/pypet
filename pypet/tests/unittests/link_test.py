@@ -171,7 +171,7 @@ class LinkTrajectoryTests(TrajectoryComparator):
         traj2 = Trajectory(filename=filename)
         traj2.f_load(name=traj.v_name, load_data=2)
 
-        self.assertTrue(traj.kk == traj2.gg, '%s != %s' % (traj.kk, traj2.gg))
+        self.assertTrue(traj.kk == traj2.gg, f'{traj.kk} != {traj2.gg}')
         self.assertTrue(traj.cd.test is traj.test)
 
         self.assertTrue(len(traj._linked_by), len(traj2._linked_by))

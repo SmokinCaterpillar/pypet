@@ -33,7 +33,7 @@ class ParameterTest(TrajectoryComparator):
                     param._equal_values(ChainMap(),ChainMap())
 
     def test_store_load_with_hdf5(self):
-        traj_name = 'test_%s' % self.__class__.__name__
+        traj_name = f'test_{self.__class__.__name__}'
         filename = make_temp_dir(traj_name + '.hdf5')
         traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
                           filename = filename, overwrite_file=True)
@@ -50,7 +50,7 @@ class ParameterTest(TrajectoryComparator):
         self.compare_trajectories(traj, new_traj)
 
     def test_store_load_with_hdf5_no_data(self):
-        traj_name = 'test_%s' % self.__class__.__name__
+        traj_name = f'test_{self.__class__.__name__}'
         filename = make_temp_dir(traj_name + 'nodata.hdf5')
         traj = Trajectory(name=traj_name, dynamic_imports=self.dynamic_imports,
                           filename = filename, overwrite_file=True)
@@ -108,10 +108,10 @@ class ParameterTest(TrajectoryComparator):
         for param in self.param.values():
 
             if not param.v_explored:
-                self.assertFalse(param.v_locked, 'Param %s is locked' % param.v_full_name)
+                self.assertFalse(param.v_locked, f'Param {param.v_full_name} is locked')
                 param.f_lock()
             else:
-                self.assertTrue(param.v_locked, 'Param %s is locked' % param.v_full_name)
+                self.assertTrue(param.v_locked, f'Param {param.v_full_name} is locked')
 
             with self.assertRaises(pex.ParameterLockedException):
                 param.f_set(3)
@@ -206,26 +206,26 @@ class ParameterTest(TrajectoryComparator):
             param = self.param[paramname]
             val1=param.f_get_range()[1]
             val2=param[1]
-            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            self.assertTrue(comp.nested_equal(val1,val2), f'{val1} != {val2}')
 
     def test_get_data(self):
         for paramname in self.param:
             param = self.param[paramname]
             val1=param.data
             val2=param.f_get()
-            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            self.assertTrue(comp.nested_equal(val1,val2), f'{val1} != {val2}')
             val3=param['data']
-            self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+            self.assertTrue(comp.nested_equal(val3,val2), f'{val3} != {val2}')
 
             val1=param.default
             val2=param._default
-            self.assertTrue(comp.nested_equal(val1,val2), '%s != %s' % (str(val1),str(val2)))
+            self.assertTrue(comp.nested_equal(val1,val2), f'{val1} != {val2}')
             val3=param['default']
-            self.assertTrue(comp.nested_equal(val3,val2), '%s != %s' % (str(val3),str(val2)))
+            self.assertTrue(comp.nested_equal(val3,val2), f'{val3} != {val2}')
             val4=param.f_get_default()
-            self.assertTrue(comp.nested_equal(val4,val2), '%s != %s' % (str(val4),str(val2)))
+            self.assertTrue(comp.nested_equal(val4,val2), f'{val4} != {val2}')
             val5 = param[-1]
-            self.assertTrue(comp.nested_equal(val5,val2), '%s != %s' % (str(val5),str(val2)))
+            self.assertTrue(comp.nested_equal(val5,val2), f'{val5} != {val2}')
 
     def test_type_error_for_get_item(self):
         for name,param in self.param.items():
@@ -260,7 +260,7 @@ class ParameterTest(TrajectoryComparator):
             if not key in self.explore_dict:
                 self.param[key]._restore_default()
                 param_val = self.param[key].f_get()
-                self.assertTrue(np.all(repr(val) == repr(param_val)),'%s != %s'  %(str(val),str(param_val)))
+                self.assertTrue(np.all(repr(val) == repr(param_val)),f'{val} != {param_val}')
 
 
 
@@ -293,7 +293,7 @@ class ParameterTest(TrajectoryComparator):
                 param._expand(self.explore_dict[name])
 
                 self.assertTrue(len(param) == 2*len(self.explore_dict[name]),
-                                'Expanding of %s did not work.' % name)
+                                f'Expanding of {name} did not work.')
 
 
     def test_exploration(self):
@@ -305,15 +305,15 @@ class ParameterTest(TrajectoryComparator):
                 assert isinstance(param, BaseParameter)
                 param._set_parameter_access(idx)
 
-                self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
+                self.assertTrue(np.all(repr(param.f_get())==repr(val))),f'{param.f_get()} != {val}'
 
                 param_val = self.param[key].f_get_range()[idx]
-                self.assertTrue(np.all(str(val) == str(param_val)),'%s != %s'  %(str(val),str(param_val)))
+                self.assertTrue(np.all(str(val) == str(param_val)),f'{val} != {param_val}')
 
             param._restore_default()
-            self.assertTrue(param.v_explored and param.f_has_range(), 'Error for %s' % key)
+            self.assertTrue(param.v_explored and param.f_has_range(), f'Error for {key}')
             val = self.data[key]
-            self.assertTrue(np.all(repr(param.f_get())==repr(val))),'%s != %s'%( str(param.f_get()),str(val))
+            self.assertTrue(np.all(repr(param.f_get())==repr(val))),f'{param.f_get()} != {val}'
 
 
     def test_storage_and_loading(self):
@@ -527,8 +527,7 @@ class PickleParameterTest(ParameterTest):
             self.assertEqual(param.v_full_name, self.location+'.'+key)
             self.assertEqual(param.v_name, key)
             self.assertEqual(param.v_location, self.location)
-            self.assertEqual(param.v_protocol, self.protocols[key], '%d != %d' %
-                                                        (param.v_protocol, self.protocols[key]))
+            self.assertEqual(param.v_protocol, self.protocols[key], f'{param.v_protocol} != {self.protocols[key]}')
 
     def explore(self):
 
