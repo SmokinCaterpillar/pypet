@@ -20,15 +20,15 @@ analyses becomes a piece of cake!
 
 Python 3.12 or higher and
 
-* tables >=  3.5.0
+* tables >= 3.9.0
 
-* pandas >= 1.0.0
+* pandas >= 2.1.0
 
-* numpy >= 1.16.0
+* numpy >= 1.26.0
 
-* scipy >= 1.3.0
+* scipy >= 1.12.0
 
-* HDF5 >= 1.10.0
+* HDF5 >= 1.14.0
 
 
 There are also some optional packages that you can but do not have to install.
@@ -39,15 +39,15 @@ If you want to combine *pypet* with SCOOP you need
 
 For git integration you additionally need
 
-* GitPython >= 3.1.3
+* GitPython >= 3.1.40
 
 To utilize the cap feature for multiprocessing you need
 
-* psutil >= 5.7.0
+* psutil >= 5.9.6
 
 To utilize the continuing of crashed trajectories you need
 
-* dill >= 0.3.1
+* dill >= 0.3.7
 
 Automatic Sumatra records are supported for
 
