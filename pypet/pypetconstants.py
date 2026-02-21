@@ -67,7 +67,11 @@ PARAMETERTYPEDICT = {bool.__name__: bool,
                      complex.__name__: complex,
                      float.__name__: float,
                      int.__name__: int,
-                     numpy.bool_.__name__: numpy.bool_,
+                     # In NumPy 2.x, np.bool_.__name__ changed from 'bool_' to 'bool',
+                     # colliding with bool.__name__. Use explicit 'bool_' key to avoid
+                     # overwriting the Python bool entry, and for backward compatibility
+                     # with HDF5 files created under NumPy 1.x.
+                     'bool_': numpy.bool_,
                      numpy.complex128.__name__: numpy.complex128,
                      numpy.complex64.__name__: numpy.complex64,
                      numpy.float32.__name__: numpy.float32,

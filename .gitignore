@@ -53,6 +53,9 @@ tmp
 # profiling
 .profile*
 
+# Virtual environments
+.venv/
+
 # Tool caches
 .ruff_cache/
 .mypy_cache/

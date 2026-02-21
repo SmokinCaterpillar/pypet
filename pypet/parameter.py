@@ -1264,10 +1264,7 @@ class ArrayParameter(Parameter):
                 # Supports smart storage by hashable arrays
                 # Keys are the hashable arrays or tuples and values are the indices
                 smart_dict = {}
-
-                store_dict["explored_data" + ArrayParameter.IDENTIFIER] = ObjectTable(
-                    columns=["idx"], index=list(range(len(self)))
-                )
+                idx_values = [None] * len(self)
 
                 count = 0
                 for idx, elem in enumerate(self._explored_range):
@@ -1294,9 +1291,7 @@ class ArrayParameter(Parameter):
 
                     name = self._build_name(name_idx)
                     # Store the reference to the array
-                    store_dict["explored_data" + ArrayParameter.IDENTIFIER]["idx"][
-                        idx
-                    ] = name_idx
+                    idx_values[idx] = name_idx
 
                     # Only if the array was not encountered before,
                     # store the array and remember the index
@@ -1304,6 +1299,10 @@ class ArrayParameter(Parameter):
                         store_dict[name] = elem
                         smart_dict[hash_elem] = name_idx
                         count += 1
+
+                store_dict["explored_data" + ArrayParameter.IDENTIFIER] = ObjectTable(
+                    data={"idx": idx_values}
+                )
 
             self._locked = True
 
@@ -1318,6 +1317,7 @@ class ArrayParameter(Parameter):
             'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array
 
         """
+        name_idx = int(name_idx)
         return f"explored{ArrayParameter.IDENTIFIER}.set_{name_idx // 1000:05d}.xa_{name_idx:08d}"
 
     def _load(self, load_dict):
@@ -1488,10 +1488,7 @@ class SparseParameter(ArrayParameter):
             if self.f_has_range():
                 # # Supports smart storage by hashing
                 smart_dict = {}
-
-                store_dict["explored_data" + SparseParameter.IDENTIFIER] = ObjectTable(
-                    columns=["idx"], index=list(range(len(self)))
-                )
+                idx_values = [None] * len(self)
 
                 count = 0
                 for idx, elem in enumerate(self._explored_range):
@@ -1506,18 +1503,20 @@ class SparseParameter(ArrayParameter):
                         name_idx = count
                         add = True
 
-                    store_dict["explored_data" + SparseParameter.IDENTIFIER]["idx"][
-                        idx
-                    ] = name_idx
+                    idx_values[idx] = name_idx
 
                     if add:
 
                         store_dict[
-                            f"xspm{SparseParameter.IDENTIFIER}{name_idx:08d}"
+                            f"xspm{SparseParameter.IDENTIFIER}{int(name_idx):08d}"
                         ] = serial_string
 
                         smart_dict[serial_string] = name_idx
                         count += 1
+
+                store_dict["explored_data" + SparseParameter.IDENTIFIER] = ObjectTable(
+                    data={"idx": idx_values}
+                )
 
             self._locked = True
 
@@ -1556,7 +1555,7 @@ class SparseParameter(ArrayParameter):
                 explore_list = []
                 for irun, name_idx in enumerate(idx_col):
                     serial_string = load_dict[
-                        f"xspm{SparseParameter.IDENTIFIER}{name_idx:08d}"
+                        f"xspm{SparseParameter.IDENTIFIER}{int(name_idx):08d}"
                     ]
                     matrix = self._reconstruct_matrix(serial_string)
                     explore_list.append(matrix)
@@ -1629,7 +1628,7 @@ class PickleParameter(Parameter):
         Explored data is stored as 'xp_XXXXXXXX' where 'XXXXXXXX' is the index of the object.
 
         """
-        return f"xp_{name_id:08d}"
+        return f"xp_{int(name_id):08d}"
 
     def _store(self):
         """Returns a dictionary for storage.
@@ -1651,11 +1650,8 @@ class PickleParameter(Parameter):
 
         if self.f_has_range():
 
-            store_dict["explored_data"] = ObjectTable(
-                columns=["idx"], index=list(range(len(self)))
-            )
-
             smart_dict = {}
+            idx_values = [None] * len(self)
             count = 0
 
             for idx, val in enumerate(self._explored_range):
@@ -1670,12 +1666,16 @@ class PickleParameter(Parameter):
                     add = True
 
                 name = self._build_name(name_id)
-                store_dict["explored_data"]["idx"][idx] = name_id
+                idx_values[idx] = name_id
 
                 if add:
                     store_dict[name] = pickle.dumps(val, protocol=self.v_protocol)
                     smart_dict[obj_id] = name_id
                     count += 1
+
+            store_dict["explored_data"] = ObjectTable(
+                data={"idx": idx_values}
+            )
 
         self._locked = True
 

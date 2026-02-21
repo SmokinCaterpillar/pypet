@@ -17,7 +17,7 @@ if tables_version < 3:
 import tables.parameters as ptpa
 
 import numpy as np
-from pandas import DataFrame, Series, HDFStore
+from pandas import DataFrame, Series, HDFStore, StringDtype
 
 import pypet.pypetconstants as pypetconstants
 import pypet.pypetexceptions as pex
@@ -3114,8 +3114,14 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if not typestr is None:
                 # Check if current type and stored type match
-                # if not convert the data
-                if typestr != type(data).__name__:
+                # if not convert the data.
+                # We check both the type name AND the actual type identity,
+                # because in NumPy 2.x np.bool_.__name__ == 'bool' == bool.__name__
+                # so name comparison alone can't detect the mismatch.
+                expected_type = pypetconstants.PARAMETERTYPEDICT.get(typestr)
+                name_mismatch = typestr != type(data).__name__
+                type_mismatch = expected_type is not None and type(data) is not expected_type
+                if name_mismatch or type_mismatch:
 
                     if typestr == str.__name__:
                         data = data.decode(self._encoding)
@@ -3139,8 +3145,13 @@ class HDF5StorageService(StorageService, HasLogger):
 
             if len(data) > 0:
                 first_item = data[0]
-                # Check if the type of the first item was conserved
-                if not typestr == type(first_item).__name__:
+                # Check if the type of the first item was conserved.
+                # Also check actual type identity for NumPy 2.x where
+                # np.bool_.__name__ == 'bool' == bool.__name__.
+                expected_type = pypetconstants.PARAMETERTYPEDICT.get(typestr)
+                name_mismatch = typestr != type(first_item).__name__
+                type_mismatch = expected_type is not None and type(first_item) is not expected_type
+                if name_mismatch or type_mismatch:
 
                     if not isinstance(data, list):
                         data = list(data)
@@ -4175,6 +4186,17 @@ class HDF5StorageService(StorageService, HasLogger):
                                    'ignore the option')
 
             name = group._v_pathname + '/' + key
+            # Pandas 3.0+ uses StringDtype (arrow-backed) by default for string
+            # columns, which PyTables cannot handle. Convert to object dtype.
+            if isinstance(data, DataFrame):
+                str_cols = [c for c in data.columns
+                            if isinstance(data[c].dtype, StringDtype)]
+                if str_cols:
+                    data = data.copy()
+                    for c in str_cols:
+                        data[c] = data[c].astype(object)
+            elif isinstance(data, Series) and isinstance(data.dtype, StringDtype):
+                data = data.astype(object)
             self._hdf5store.put(name, data, **kwargs)
             self._hdf5store.flush()
             self._hdf5file.flush()
@@ -4461,7 +4483,7 @@ class HDF5StorageService(StorageService, HasLogger):
                     # Fill the columns with data, note if the parameter was extended nstart!=0
 
                     for key in descr_dict:
-                        row[key] = data[key][n]
+                        row[key] = data[key].iloc[n]
 
                     row.append()
 
@@ -4515,28 +4537,40 @@ class HDF5StorageService(StorageService, HasLogger):
     def _prm_make_description(self, data, fullname):
         """ Returns a description dictionary for pytables table creation"""
 
+        def _first_element(seq):
+            """Get first element, handling both pandas Series and plain lists."""
+            return seq.iloc[0] if hasattr(seq, 'iloc') else seq[0]
+
         def _convert_lists_and_tuples(series_of_data):
-            """Converts lists and tuples to numpy arrays"""
-            if isinstance(series_of_data[0],
-                          (list, tuple)):  # and not isinstance(series_of_data[0], np.ndarray):
+            """Converts lists and tuples to numpy arrays."""
+            if isinstance(_first_element(series_of_data), (list, tuple)):
                 # If the first data item is a list, the rest must be as well, since
                 # data has to be homogeneous
                 for idx, item in enumerate(series_of_data):
-                    series_of_data[idx] = np.array(item)
+                    if hasattr(series_of_data, 'iloc'):
+                        series_of_data.iloc[idx] = np.array(item)
+                    else:
+                        series_of_data[idx] = np.array(item)
+                return True
+            return False
 
+        is_dataframe = hasattr(data, 'iloc')
         descriptiondict = {}  # dictionary containing the description to build a pytables table
         original_data_type_dict = {}  # dictionary containing the original data types
 
         for key in data:
             val = data[key]
 
-
             # remember the original data types
-            self._all_set_attributes_to_recall_natives(val[0], PTItemMock(original_data_type_dict),
+            self._all_set_attributes_to_recall_natives(_first_element(val),
+                                                       PTItemMock(original_data_type_dict),
                                                        HDF5StorageService.FORMATTED_COLUMN_PREFIX %
                                                        key)
 
-            _convert_lists_and_tuples(val)
+            if _convert_lists_and_tuples(val):
+                # Write back to DataFrame — required for pandas 3.0+ Copy-on-Write
+                if is_dataframe:
+                    data[key] = val
 
             # get a pytables column from the data
             col = self._all_get_table_col(key, val, fullname)
@@ -4552,7 +4586,7 @@ class HDF5StorageService(StorageService, HasLogger):
         Note that data in `column` must be homogeneous!
 
         """
-        val = column[0]
+        val = column.iloc[0] if hasattr(column, 'iloc') else column[0]
 
         try:
 
