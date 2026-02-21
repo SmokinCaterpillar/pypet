@@ -5,8 +5,9 @@ echo "+++++++++++ Installing libraries +++++++++++++"
 sudo apt-get install -y gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
 echo "+++++++++++ Installing Stuff for Python $PYTHON_VERSION +++++++++++"
 if [[ ${DEPS:-latest} == "minimum" ]]; then
-    conda install -y pip numexpr cython \
-        numpy=1.26.0 scipy=1.12.0 pandas=2.1.0 pytables=3.9.0
+    conda install -y pip numexpr cython
+    pip install "numpy>=1.26.0,<1.27" "scipy>=1.12.0,<1.13" \
+        "pandas>=2.1.0,<2.2" "tables>=3.9.0,<3.10"
 else
     conda install -y pip numpy scipy numexpr cython pandas pytables
 fi
