@@ -107,12 +107,12 @@ you can list all installed packages with ``pip freeze``.
 
 Simply install *pypet* via ``pip install pypet``
 
-The package release can also be found on https://pypi.org/project/pypet/.
+The package release can also be found on <https://pypi.org/project/pypet/>.
 
 
 ## Documentation and Support
 
-Documentation can be found on https://pypet.readthedocs.io/.
+Documentation can be found on <https://pypet.readthedocs.io/>.
 
 If you have any further questions feel free to contact me at **robert.meyer (at) alcemy.tech**.
 
@@ -130,17 +130,17 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 
 * Support for many different **data formats**
 
-    * python native data types: bool, int, float, str, complex
+  * python native data types: bool, int, float, str, complex
 
-    * list, tuple, dict
+  * list, tuple, dict
 
-    * Numpy arrays and matrices
+  * Numpy arrays and matrices
 
-    * Scipy sparse matrices
+  * Scipy sparse matrices
 
-    * pandas DataFrames (http://pandas.pydata.org/)
+  * pandas DataFrames (<http://pandas.pydata.org/>)
 
-    * BRIAN2 quantities and monitors (http://briansimulator.org/)
+  * BRIAN2 quantities and monitors (<http://briansimulator.org/>)
 
 * Easily **extendable** to other data formats!
 
@@ -342,7 +342,7 @@ Running all tests can take up to 20 minutes. The test suite encompasses more tha
 and has a code coverage of about **90%**!
 
 Moreover, *pypet* is continuously tested with Python 3.12 and 3.13 for **Linux** using
-GitHub Actions. The source code is available at https://github.com/SmokinCaterpillar/pypet/.
+GitHub Actions. The source code is available at <https://github.com/SmokinCaterpillar/pypet/>.
 
 
 ## License

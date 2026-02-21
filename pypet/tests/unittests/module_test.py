@@ -19,7 +19,7 @@ class TestAllImport(unittest.TestCase):
         for class_name in pypet.__all__:
             if class_name == 'test':
                 continue
-            logstr = f'Evaulauting {class_name}: {eval(class_name)!r}'
+            logstr = f'Evaluating {class_name}: {globals()[class_name]!r}'
             get_root_logger().info(logstr)
 
     def test_if_all_is_complete(self):

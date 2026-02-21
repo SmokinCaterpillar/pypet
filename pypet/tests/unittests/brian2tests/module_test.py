@@ -22,7 +22,7 @@ class TestAllBrian2Import(unittest.TestCase):
 
     def test_import_star(self):
         for class_name in pypet.brian2.__all__:
-            logstr = f'Evaluauting {class_name}: {eval(class_name)!r}'
+            logstr = f'Evaluating {class_name}: {globals()[class_name]!r}'
             get_root_logger().info(logstr)
 
     def test_if_all_is_complete(self):
