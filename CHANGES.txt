@@ -1,3 +1,8 @@
+pypet 0.7.0
+
+* Modernization to be fit for
+* Requiring Python 3.12+
+
 pypet 0.6.1
 
 * Support for NumPy >= 1.20
