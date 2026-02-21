@@ -56,6 +56,9 @@ tmp
 # Virtual environments
 .venv/
 
+# Lockfiles
+uv.lock
+
 # Tool caches
 .ruff_cache/
 .mypy_cache/
