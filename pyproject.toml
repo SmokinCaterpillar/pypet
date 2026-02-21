@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=65.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypet"
+dynamic = ["version"]
+description = "A toolkit for numerical simulations to allow easy parameter exploration and storage of results."
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.12"
+authors = [
+    {name = "Robert Meyer", email = "robert.meyer@alcemy.tech"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "tables",
+    "pandas",
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+brian2 = ["brian2"]
+scoop = ["scoop"]
+git = ["GitPython"]
+monitoring = ["psutil"]
+sumatra = ["Sumatra", "GitPython"]
+dill = ["dill"]
+network = ["pyzmq"]
+dev = [
+    "pytest",
+    "ruff",
+    "pre-commit",
+    "brian2",
+    "GitPython",
+    "psutil",
+    "dill",
+    "scoop",
+]
+
+[project.urls]
+Homepage = "https://github.com/SmokinCaterpillar/pypet"
+Documentation = "https://pypet.readthedocs.io/"
+Repository = "https://github.com/SmokinCaterpillar/pypet"
+Issues = "https://github.com/SmokinCaterpillar/pypet/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "pypet._version.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["pypet*"]
+
+[tool.setuptools.package-data]
+"pypet.tests" = ["testdata/*.hdf5"]
+"pypet" = ["logging/*.ini"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "UP031",  # %-format — handled separately in Phase 6
+    "UP032",  # .format() — handled separately in Phase 6
+    "E501",   # line too long — existing code, not worth bulk-fixing
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pypet"]
+
+[tool.pytest.ini_options]
+testpaths = ["pypet/tests"]
+python_files = ["*_test.py", "test_*.py"]
+python_classes = ["*Test", "Test*"]
