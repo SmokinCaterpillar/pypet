@@ -24,15 +24,15 @@ def run_network():
     monitor_dict = {}
     defaultclock.dt = 0.01 * ms
 
-    281 * pF
-    30 * nS
+    C = 281 * pF  # noqa: F841
+    gL = 30 * nS  # noqa: F841
     EL = -70.6 * mV
-    -50.4 * mV
-    2 * mV
-    40 * ms
+    VT = -50.4 * mV  # noqa: F841
+    DeltaT = 2 * mV  # noqa: F841
+    tauw = 40 * ms  # noqa: F841
     a = 4 * nS
-    0.08 * nA
-    8 * nA
+    b = 0.08 * nA  # noqa: F841
+    I = 8 * nA  # noqa: F841
     Vcut = "vm>2*mV"  # practical threshold condition
     N = 10
 
