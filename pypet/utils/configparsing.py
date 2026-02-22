@@ -1,15 +1,16 @@
 """Helper module that allows parsing of `.ini` files"""
 
-import functools
 import ast
-import os
 import configparser as cp
+import functools
+import os
 
 from pypet.pypetlogging import use_simple_logging
 
 
 def parse_config(init_func):
     """Decorator wrapping the environment to use a config file"""
+
     @functools.wraps(init_func)
     def new_func(env, *args, **kwargs):
         config_interpreter = ConfigInterpreter(kwargs)
@@ -18,20 +19,22 @@ def parse_config(init_func):
         init_func(env, *args, **new_kwargs)
         # Add parameters and config data from the `.ini` file
         config_interpreter.add_parameters(env.traj)
+
     return new_func
 
 
 class ConfigInterpreter:
-    """ Helper class that parses an `.ini` file and passes the data to an environment."""
+    """Helper class that parses an `.ini` file and passes the data to an environment."""
+
     def __init__(self, kwargs):
         self.kwargs = kwargs
-        self.config_file = kwargs.pop('config', None)
+        self.config_file = kwargs.pop("config", None)
         self.parser = None
         if self.config_file:
             if isinstance(self.config_file, str):
                 # Check if the config file exists
                 if not os.path.isfile(self.config_file):
-                    raise ValueError(f'`{self.config_file}` does not exist.')
+                    raise ValueError(f"`{self.config_file}` does not exist.")
                 # If yes parse it with a config parser
                 self.parser = cp.ConfigParser()
                 self.parser.read(self.config_file)
@@ -39,8 +42,9 @@ class ConfigInterpreter:
                 # Already instantiaded parsers are also accepted
                 self.parser = self.config_file
             else:
-                raise RuntimeError(f'Your config file/parser format `{self.config_file}` '
-                                   f'is not understood.')
+                raise RuntimeError(
+                    f"Your config file/parser format `{self.config_file}` is not understood."
+                )
 
     def _collect_section(self, section):
         """Collects all settings within a section"""
@@ -59,7 +63,7 @@ class ConfigInterpreter:
     def _collect_config(self):
         """Collects all info from three sections"""
         kwargs = {}
-        sections = ('storage_service', 'trajectory', 'environment')
+        sections = ("storage_service", "trajectory", "environment")
         for section in sections:
             kwargs.update(self._collect_section(section))
         return kwargs
@@ -72,20 +76,20 @@ class ConfigInterpreter:
                 # Already specified kwargs take precedence over the ini file
                 if key not in self.kwargs:
                     self.kwargs[key] = new_kwargs[key]
-            if not use_simple_logging(self.kwargs) and 'log_config' not in self.kwargs:
-                self.kwargs['log_config'] = self.config_file
+            if not use_simple_logging(self.kwargs) and "log_config" not in self.kwargs:
+                self.kwargs["log_config"] = self.config_file
         return self.kwargs
 
     def add_parameters(self, traj):
         """Adds parameters and config from the `.ini` file to the trajectory"""
         if self.config_file:
-            parameters = self._collect_section('parameters')
+            parameters = self._collect_section("parameters")
             for name in parameters:
                 value = parameters[name]
                 if not isinstance(value, tuple):
                     value = (value,)
                 traj.f_add_parameter(name, *value)
-            config = self._collect_section('config')
+            config = self._collect_section("config")
             for name in config:
                 value = config[name]
                 if not isinstance(value, tuple):

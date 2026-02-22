@@ -74,6 +74,9 @@ ignore = [
     "UP031",  # %-format — handled separately in Phase 6
     "UP032",  # .format() — handled separately in Phase 6
     "E501",   # line too long — existing code, not worth bulk-fixing
+    "E402",   # module-level import not at top — intentional sys.path, conditional imports
+    "E731",   # lambda assignment — used in test discovery predicates, pipeline lambdas
+    "E741",   # ambiguous variable name — domain-specific (matrix indices, etc.)
 ]
 
 [tool.ruff.lint.isort]

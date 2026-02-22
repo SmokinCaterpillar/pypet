@@ -1,30 +1,34 @@
-import time
-import pickle
-from collections.abc import Set, Sequence, Mapping
-
-import pandas as pd
-import numpy as np
-import random
 import copy as cp
-
-from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
-    get_root_logger, parse_args
-from pypet.trajectory import Trajectory
-from pypet.parameter import ArrayParameter, Parameter, SparseParameter, PickleParameter
-
+import pickle
+import random
+import time
 import unittest
+from collections.abc import Mapping, Sequence, Set
 
-from pypet.utils.explore import cartesian_product, find_unique_points
-from pypet.utils.helpful_functions import progressbar, nest_dictionary, flatten_dictionary, \
-    result_sort, get_matching_kwargs
-from pypet.utils.comparisons import nested_equal
-from pypet.utils.helpful_classes import IteratorChain
-from pypet.utils.decorators import retry
+import numpy as np
+import pandas as pd
+
 from pypet import HasSlots
+from pypet.parameter import ArrayParameter, Parameter, PickleParameter, SparseParameter
+from pypet.tests.testutils.ioutils import (
+    get_root_logger,
+    parse_args,
+    run_suite,
+)
+from pypet.utils.comparisons import nested_equal
+from pypet.utils.decorators import retry
+from pypet.utils.explore import cartesian_product, find_unique_points
+from pypet.utils.helpful_classes import IteratorChain
+from pypet.utils.helpful_functions import (
+    flatten_dictionary,
+    get_matching_kwargs,
+    nest_dictionary,
+    progressbar,
+    result_sort,
+)
 
 
 class RaisesNTypeErrors:
-
     def __init__(self, n):
         self.__name__ = RaisesNTypeErrors.__name__
         self.n = n
@@ -33,50 +37,57 @@ class RaisesNTypeErrors:
     def __call__(self):
         if self.retries < self.n:
             self.retries += 1
-            raise TypeError('Nope!')
+            raise TypeError("Nope!")
 
 
 class RetryTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'retry'
+    tags = "unittest", "utils", "retry"
 
     def test_fail_after_n_tries(self):
         x = RaisesNTypeErrors(5)
-        x = retry(4, TypeError, 0.01, 'ERROR')(x)
+        x = retry(4, TypeError, 0.01, "ERROR")(x)
         with self.assertRaises(TypeError):
             x()
 
     def test_succeeds_after_retries(self):
         x = RaisesNTypeErrors(5)
-        x = retry(5, TypeError, 0.01, 'ERROR')(x)
+        x = retry(5, TypeError, 0.01, "ERROR")(x)
         x()
 
 
 class CartesianTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'cartesian_product'
+    tags = "unittest", "utils", "cartesian_product"
 
     def test_cartesian_product(self):
 
-        cartesian_dict=cartesian_product({'param1':[1,2,3], 'param2':[42.0, 52.5]},
-                                          ('param1','param2'))
-        result_dict = {'param1':[1,1,2,2,3,3],'param2': [42.0,52.5,42.0,52.5,42.0,52.5]}
+        cartesian_dict = cartesian_product(
+            {"param1": [1, 2, 3], "param2": [42.0, 52.5]}, ("param1", "param2")
+        )
+        result_dict = {"param1": [1, 1, 2, 2, 3, 3], "param2": [42.0, 52.5, 42.0, 52.5, 42.0, 52.5]}
 
-        self.assertTrue(nested_equal(cartesian_dict,result_dict), f'{cartesian_dict} != {result_dict}')
+        self.assertTrue(
+            nested_equal(cartesian_dict, result_dict), f"{cartesian_dict} != {result_dict}"
+        )
 
     def test_cartesian_product_combined_params(self):
-        cartesian_dict=cartesian_product( {'param1': [42.0, 52.5], 'param2':['a', 'b'],\
-            'param3' : [1,2,3]}, (('param3',),('param1', 'param2')))
+        cartesian_dict = cartesian_product(
+            {"param1": [42.0, 52.5], "param2": ["a", "b"], "param3": [1, 2, 3]},
+            (("param3",), ("param1", "param2")),
+        )
 
-        result_dict={'param3':[1,1,2,2,3,3],'param1' : [42.0,52.5,42.0,52.5,42.0,52.5],
-                      'param2':['a','b','a','b','a','b']}
+        result_dict = {
+            "param3": [1, 1, 2, 2, 3, 3],
+            "param1": [42.0, 52.5, 42.0, 52.5, 42.0, 52.5],
+            "param2": ["a", "b", "a", "b", "a", "b"],
+        }
 
-        self.assertTrue(nested_equal(cartesian_dict,result_dict), f'{cartesian_dict} != {result_dict}')
+        self.assertTrue(
+            nested_equal(cartesian_dict, result_dict), f"{cartesian_dict} != {result_dict}"
+        )
 
 
 class ProgressBarTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'progress_bar'
+    tags = "unittest", "utils", "progress_bar"
 
     def test_progressbar(self):
 
@@ -96,8 +107,8 @@ class ProgressBarTest(unittest.TestCase):
         for irun in range(total):
             time.sleep(0.005)
             s = progressbar(irun, total, percentage_step, time=True)
-            if s and 'remaining' in s:
-               shows_time = True
+            if s and "remaining" in s:
+                shows_time = True
 
         self.assertTrue(shows_time)
 
@@ -105,7 +116,7 @@ class ProgressBarTest(unittest.TestCase):
         for irun in range(total):
             time.sleep(0.005)
             s = progressbar(irun, total, percentage_step, time=False)
-            if s and 'remaining' in s:
+            if s and "remaining" in s:
                 shows_time = True
 
         self.assertFalse(shows_time)
@@ -118,10 +129,9 @@ class ProgressBarTest(unittest.TestCase):
             time.sleep(0.005)
             progressbar(irun, total, 5)
 
-        for irun in range(2*total):
+        for irun in range(2 * total):
             time.sleep(0.005)
-            progressbar(irun, 2*total, 10)
-
+            progressbar(irun, 2 * total, 10)
 
     def test_progressbar_float(self):
 
@@ -131,9 +141,9 @@ class ProgressBarTest(unittest.TestCase):
             time.sleep(0.005)
             progressbar(irun, total, 5.1)
 
-        for irun in range(2*total):
+        for irun in range(2 * total):
             time.sleep(0.005)
-            progressbar(irun, 2*total, 0.5)
+            progressbar(irun, 2 * total, 0.5)
 
     def test_progressbar_logging(self):
         logger = get_root_logger()
@@ -146,80 +156,98 @@ class ProgressBarTest(unittest.TestCase):
 
         for irun in range(total):
             time.sleep(0.005)
-            progressbar(irun, total, logger='GetLogger')
+            progressbar(irun, total, logger="GetLogger")
+
 
 class TestFindUnique(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'find_unique'
+    tags = "unittest", "utils", "find_unique"
 
     def test_find_unique(self):
-        paramA = Parameter('ggg', 33)
+        paramA = Parameter("ggg", 33)
         paramA._explore([1, 2, 1, 2, 1, 2])
-        paramB = Parameter('hhh', 'a')
-        paramB._explore(['a', 'a', 'a', 'a', 'b', 'b'])
+        paramB = Parameter("hhh", "a")
+        paramB._explore(["a", "a", "a", "a", "b", "b"])
         unique_elements = find_unique_points([paramA, paramB])
         self.assertTrue(len(unique_elements) == 4)
         self.assertTrue(len(unique_elements[1][1]) == 2)
         self.assertTrue(len(unique_elements[3][1]) == 1)
 
-        paramC = ArrayParameter('jjj', np.zeros((3,3)))
-        paramC._explore([np.ones((3,3)),
-                         np.ones((3,3)),
-                         np.ones(499),
-                         np.ones((3,3)),
-                         np.zeros((3,3,3)),
-                         np.ones(1)])
+        paramC = ArrayParameter("jjj", np.zeros((3, 3)))
+        paramC._explore(
+            [
+                np.ones((3, 3)),
+                np.ones((3, 3)),
+                np.ones(499),
+                np.ones((3, 3)),
+                np.zeros((3, 3, 3)),
+                np.ones(1),
+            ]
+        )
         unique_elements = find_unique_points([paramA, paramC])
         self.assertTrue(len(unique_elements) == 5)
         self.assertTrue(len(unique_elements[1][1]) == 2)
         self.assertTrue(len(unique_elements[0][1]) == 1)
 
         unique_elements = find_unique_points([paramC, paramB])
-        self.assertTrue((len(unique_elements))==4)
-        self.assertTrue(len(unique_elements[0][1])==3)
-        self.assertTrue(len(unique_elements[3][1])==1)
+        self.assertTrue((len(unique_elements)) == 4)
+        self.assertTrue(len(unique_elements[0][1]) == 3)
+        self.assertTrue(len(unique_elements[3][1]) == 1)
 
 
 class TestDictionaryMethods(unittest.TestCase):
-
-    tags = 'unittest', 'utils'
+    tags = "unittest", "utils"
 
     def test_nest_dicitionary(self):
-        mydict = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
-        nested = nest_dictionary(mydict, separator='.')
-        expected = {'a':{'b':{'c':4}, 'c':5}, 'd':4}
+        mydict = {"a.b.c": 4, "a.c": 5, "d": 4}
+        nested = nest_dictionary(mydict, separator=".")
+        expected = {"a": {"b": {"c": 4}, "c": 5}, "d": 4}
         self.assertTrue(expected == nested)
 
     def test_flatten_dictionary(self):
-        mydict = {'a':{'b':{'c':4}, 'c':5}, 'd':4}
-        flattened = flatten_dictionary(mydict, separator='.')
-        expected = {'a.b.c' : 4, 'a.c' : 5, 'd':4}
+        mydict = {"a": {"b": {"c": 4}, "c": 5}, "d": 4}
+        flattened = flatten_dictionary(mydict, separator=".")
+        expected = {"a.b.c": 4, "a.c": 5, "d": 4}
         self.assertTrue(flattened == expected)
 
 
 class ResultSortFuncTest(unittest.TestCase):
-    tags = 'unittest', 'utils', 'result_sort'
+    tags = "unittest", "utils", "result_sort"
 
     def result_sort_sorted(the_list, start_index=0):
         to_sort = the_list[start_index:]
         sorted_list = sorted(to_sort, key=lambda key: key[0])
         for idx_count, elem in enumerate(sorted_list):
-            the_list[idx_count+start_index] = elem
+            the_list[idx_count + start_index] = elem
         return the_list
 
     def test_sort(self, start_index=0, n=100):
-        to_sort = list(range(n)) # list for Python 3
+        to_sort = list(range(n))  # list for Python 3
         random.shuffle(to_sort)
-        to_sort = [(x,x) for x in to_sort]
+        to_sort = [(x, x) for x in to_sort]
         result_sort(to_sort, start_index)
         if start_index == 0:
-            compare = [(x,x,) for x in range(n)]
+            compare = [
+                (
+                    x,
+                    x,
+                )
+                for x in range(n)
+            ]
         else:
             copy_to_sort = cp.deepcopy(to_sort)
             compare = result_sort(copy_to_sort, start_index)
         self.assertEqual(to_sort, compare)
         if start_index != 0:
-            self.assertNotEqual(to_sort[:start_index], [(x,x,) for x in range(n)][:start_index])
+            self.assertNotEqual(
+                to_sort[:start_index],
+                [
+                    (
+                        x,
+                        x,
+                    )
+                    for x in range(n)
+                ][:start_index],
+            )
 
     def test_sort_with_index(self):
         self.test_sort(500, 1000)
@@ -228,11 +256,14 @@ class ResultSortFuncTest(unittest.TestCase):
 class MyDummy:
     pass
 
+
 class MyDummyWithSlots:
-    __slots__ = ('a', 'b')
+    __slots__ = ("a", "b")
+
 
 class MyDummyWithSlots2(HasSlots):
-    __slots__ = ('a', 'b')
+    __slots__ = ("a", "b")
+
 
 class MyDummyCMP:
     def __init__(self, data):
@@ -245,6 +276,7 @@ class MyDummyCMP:
             return -1
         else:
             return 1
+
 
 class MyDummySet(Set):
     def __init__(self, *args, **kwargs):
@@ -262,6 +294,7 @@ class MyDummySet(Set):
     def __iter__(self):
         return self._set.__iter__()
 
+
 class MyDummyList(Sequence):
     def __init__(self, *args, **kwargs):
         self._list = list(*args, **kwargs)
@@ -274,6 +307,7 @@ class MyDummyList(Sequence):
 
     def append(self, item):
         return self._list.append(item)
+
 
 class MyDummyMapping(Mapping):
     def __init__(self, *args, **kwargs):
@@ -288,9 +322,9 @@ class MyDummyMapping(Mapping):
     def __len__(self):
         return self._dict.__len__()
 
-class TestEqualityOperations(unittest.TestCase):
 
-    tags = 'unittest', 'utils', 'equality'
+class TestEqualityOperations(unittest.TestCase):
+    tags = "unittest", "utils", "equality"
 
     def test_nested_equal(self):
         self.assertTrue(nested_equal(4, 4))
@@ -302,20 +336,20 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertFalse(nested_equal(4, np.int8(5)))
 
-        self.assertFalse(nested_equal( np.int8(5), 4))
+        self.assertFalse(nested_equal(np.int8(5), 4))
 
-        frameA = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
-        frameB = pd.DataFrame(data={'a':[np.zeros((19,19))]}, dtype=object)
+        frameA = pd.DataFrame(data={"a": [np.zeros((19, 19))]}, dtype=object)
+        frameB = pd.DataFrame(data={"a": [np.zeros((19, 19))]}, dtype=object)
 
         self.assertTrue(nested_equal(frameA, frameB))
         self.assertTrue(nested_equal(frameB, frameA))
 
-        frameB.loc[0,'a'][0,0] = 3
+        frameB.loc[0, "a"][0, 0] = 3
         self.assertFalse(nested_equal(frameA, frameB))
         self.assertFalse(nested_equal(frameB, frameA))
 
-        seriesA = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
-        seriesB = pd.Series(data=[[np.zeros((19,19))]], dtype=object)
+        seriesA = pd.Series(data=[[np.zeros((19, 19))]], dtype=object)
+        seriesB = pd.Series(data=[[np.zeros((19, 19))]], dtype=object)
 
         self.assertTrue(nested_equal(seriesA, seriesB))
 
@@ -326,9 +360,8 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertFalse(nested_equal(seriesB, seriesA))
 
-
-        seriesA = pd.Series([1,2,3])
-        seriesB = pd.Series([1,2,3])
+        seriesA = pd.Series([1, 2, 3])
+        seriesB = pd.Series([1, 2, 3])
 
         self.assertTrue(nested_equal(seriesA, seriesB))
 
@@ -341,7 +374,6 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertTrue(nested_equal(a, b))
         self.assertTrue(nested_equal(b, a))
-
 
         a.h = [1, 2, 42]
         b.h = [1, 2, 43]
@@ -360,41 +392,41 @@ class TestEqualityOperations(unittest.TestCase):
 
         self.assertTrue(nested_equal(b, a))
 
-        a = MyDummySet([1,2,3])
+        a = MyDummySet([1, 2, 3])
         a.add(4)
-        b = MyDummySet([1,2,3,4])
+        b = MyDummySet([1, 2, 3, 4])
         self.assertTrue(nested_equal(a, b))
 
         self.assertTrue(nested_equal(b, a))
 
-        a = MyDummyList([1,2,3])
+        a = MyDummyList([1, 2, 3])
         a.append(4)
-        b = MyDummyList([1,2,3,4])
+        b = MyDummyList([1, 2, 3, 4])
         self.assertTrue(nested_equal(a, b))
 
         self.assertTrue(nested_equal(b, a))
 
-        a = MyDummyMapping(a='b', c=42)
-        b = MyDummyMapping(a='b', c=42)
+        a = MyDummyMapping(a="b", c=42)
+        b = MyDummyMapping(a="b", c=42)
         self.assertTrue(nested_equal(a, b))
 
         self.assertTrue(nested_equal(b, a))
 
-        a = MyDummySet([1,2,3])
+        a = MyDummySet([1, 2, 3])
         a.add(4)
-        b = MyDummySet([1,2,3,5])
+        b = MyDummySet([1, 2, 3, 5])
         self.assertFalse(nested_equal(a, b))
         self.assertFalse(nested_equal(b, a))
 
-        a = MyDummyList([1,2,3])
+        a = MyDummyList([1, 2, 3])
         a.append(5)
-        b = MyDummyList([1,2,3,4])
+        b = MyDummyList([1, 2, 3, 4])
         self.assertFalse(nested_equal(a, b))
 
         self.assertFalse(nested_equal(b, a))
 
-        a = MyDummyMapping(a='b', c=a)
-        b = MyDummyMapping(a='b', c=b)
+        a = MyDummyMapping(a="b", c=a)
+        b = MyDummyMapping(a="b", c=b)
         self.assertFalse(nested_equal(a, b))
 
         self.assertFalse(nested_equal(b, a))
@@ -421,14 +453,13 @@ class TestEqualityOperations(unittest.TestCase):
 
 
 class TestIteratorChain(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'iterators'
+    tags = "unittest", "utils", "iterators"
 
     def test_next(self):
         l1 = (x for x in range(3))
-        l2 = iter([3,4,5])
+        l2 = iter([3, 4, 5])
         l3 = iter([6])
-        l4 = iter([7,8])
+        l4 = iter([7, 8])
 
         chain = IteratorChain(l1, l2, l3)
         for irun in range(9):
@@ -439,9 +470,9 @@ class TestIteratorChain(unittest.TestCase):
 
     def test_iter(self):
         l1 = (x for x in range(3))
-        l2 = iter([3,4,5])
+        l2 = iter([3, 4, 5])
         l3 = iter([6])
-        l4 = iter([7,8])
+        l4 = iter([7, 8])
 
         chain = IteratorChain(l1, l2, l3)
         count = 0
@@ -455,16 +486,17 @@ class TestIteratorChain(unittest.TestCase):
 
         self.assertEqual(len(elem_list), 9)
 
+
 class Slots1(HasSlots):
-    __slots__ = 'hi'
+    __slots__ = "hi"
 
 
 class Slots2(Slots1):
-    __slots__ = ['ho']
+    __slots__ = ["ho"]
 
 
 class Slots3(Slots2):
-    __slots__ = ('hu', 'he')
+    __slots__ = ("hu", "he")
 
 
 class Slots4(Slots3):
@@ -472,56 +504,53 @@ class Slots4(Slots3):
 
 
 class SlotsTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'slots'
+    tags = "unittest", "utils", "slots"
 
     def test_all_slots(self):
         slot = Slots4()
-        all_slots = set(('hi', 'ho', 'hu', 'he', '__weakref__'))
+        all_slots = set(("hi", "ho", "hu", "he", "__weakref__"))
         self.assertEqual(all_slots, slot.__all_slots__)
 
     def test_pickling(self):
         slot = Slots4()
-        all_slots = set(('hi', 'ho', 'hu', 'he', '__weakref__'))
+        all_slots = set(("hi", "ho", "hu", "he", "__weakref__"))
         new_slot = pickle.loads(pickle.dumps(slot))
         self.assertEqual(all_slots, new_slot.__all_slots__)
 
 
 class MyCustomLeaf(SparseParameter):
-    def __init__(self, full_name, data=None, comment=''):
+    def __init__(self, full_name, data=None, comment=""):
         super().__init__(full_name, data, comment)
         self.v_my_property = 42
 
 
 class MyCustomLeaf2(PickleParameter):
+    __slots__ = "v_my_property"
 
-    __slots__ = 'v_my_property'
-
-    def __init__(self, full_name, data=None, comment=''):
+    def __init__(self, full_name, data=None, comment=""):
         super().__init__(full_name, data, comment)
         self.v_my_property = 42
 
 
 class NamingSchemeTest(unittest.TestCase):
-
-    tags = 'unittest', 'utils', 'naming', 'slots'
+    tags = "unittest", "utils", "naming", "slots"
 
     def test_v_property(self):
-        cp = MyCustomLeaf('test')
+        cp = MyCustomLeaf("test")
         self.assertEqual(cp.vars.my_property, cp.v_my_property)
         with self.assertRaises(AttributeError):
             cp.v_my_other
 
     def test_v_property_slots(self):
-        cp = MyCustomLeaf2('test')
+        cp = MyCustomLeaf2("test")
         self.assertEqual(cp.vars.my_property, cp.v_my_property)
         with self.assertRaises(AttributeError):
             cp.v_my_other
 
 
 class MyClass:
-        def __init__(self, a, b, c, d=42):
-            pass
+    def __init__(self, a, b, c, d=42):
+        pass
 
 
 class MyClassNoInit:
@@ -541,28 +570,28 @@ def dummy(a, b, c, d=42):
 
 
 class MatchingkwargsTest(unittest.TestCase):
-    tags = 'unittest', 'utils', 'naming',  'argspec'
+    tags = "unittest", "utils", "naming", "argspec"
 
     def test_more_than_def(self):
         kwargs = dict(a=42, f=43)
         res = get_matching_kwargs(dummy, kwargs)
         self.assertEqual(len(res), 1)
-        self.assertIn('a', res)
-        self.assertEqual(res['a'], 42)
+        self.assertIn("a", res)
+        self.assertEqual(res["a"], 42)
 
     def test_more_than_def_args(self):
         kwargs = dict(a=42, f=43)
         res = get_matching_kwargs(argsfunc, kwargs)
         self.assertEqual(len(res), 1)
-        self.assertIn('a', res)
-        self.assertEqual(res['a'], 42)
+        self.assertIn("a", res)
+        self.assertEqual(res["a"], 42)
 
     def test_init_method(self):
         kwargs = dict(a=42, f=43)
         res = get_matching_kwargs(MyClass, kwargs)
         self.assertEqual(len(res), 1)
-        self.assertIn('a', res)
-        self.assertEqual(res['a'], 42)
+        self.assertIn("a", res)
+        self.assertEqual(res["a"], 42)
 
     def test_no_match_no_init(self):
         kwargs = dict(a=42, f=43)
@@ -573,15 +602,12 @@ class MatchingkwargsTest(unittest.TestCase):
         kwargs = dict(a=42, f=43)
         res = get_matching_kwargs(kwargs_func, kwargs)
         self.assertEqual(len(res), 2)
-        self.assertIn('a', res)
-        self.assertEqual(res['a'], 42)
-        self.assertIn('f', res)
-        self.assertEqual(res['f'], 43)
+        self.assertIn("a", res)
+        self.assertEqual(res["a"], 42)
+        self.assertIn("f", res)
+        self.assertEqual(res["f"], 43)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     opt_args = parse_args()
     run_suite(**opt_args)
-
-

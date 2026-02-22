@@ -5,8 +5,7 @@ import sys
 
 
 class _SigintHandler:
-
-    SIGINT = '__SIGINT__'
+    SIGINT = "__SIGINT__"
 
     def __init__(self):
         self.original_handler = signal.getsignal(signal.SIGINT)
@@ -32,16 +31,17 @@ class _SigintHandler:
 
         """
         if self.hit:
-            prompt = 'Exiting immediately!'
+            prompt = "Exiting immediately!"
             raise KeyboardInterrupt(prompt)
         else:
             self.hit = True
-            prompt = ('\nYou killed the process(es) via `SIGINT` (`CTRL+C`). '
-                      'I am trying to exit '
-                      'gracefully. Using `SIGINT` (`CTRL+C`) '
-                      'again will cause an immediate exit.\n')
+            prompt = (
+                "\nYou killed the process(es) via `SIGINT` (`CTRL+C`). "
+                "I am trying to exit "
+                "gracefully. Using `SIGINT` (`CTRL+C`) "
+                "again will cause an immediate exit.\n"
+            )
             sys.stderr.write(prompt)
 
+
 sigint_handling = _SigintHandler()
-
-

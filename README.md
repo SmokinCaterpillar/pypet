@@ -308,16 +308,16 @@ Cheers,
     You might want to check out their SpykeViewer (<https://github.com/rproepp/spykeviewer>)
     tool for visualization of MEA recordings and NEO (<http://pythonhosted.org/neo>) data
 
-*   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
-    for this project
+* Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
+  for this project
 
-*   Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
+* Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
 
-*   Thanks to Henri Bunting for his work on the BRIAN2 subpackage
+* Thanks to Henri Bunting for his work on the BRIAN2 subpackage
 
-*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
-    the Research Training Group GRK 1589/1, and the
-    Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
+* Thanks to the BCCN Berlin (<http://www.bccn-berlin.de>),
+  the Research Training Group GRK 1589/1, and the
+  Neural Information Processing Group (<http://www.ni.tu-berlin.de>) for support
 
 
 ## Tests

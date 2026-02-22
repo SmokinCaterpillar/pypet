@@ -1,4 +1,4 @@
-""" An example showing how to use DEAP optimization (http://pythonhosted.org/deap/).
+"""An example showing how to use DEAP optimization (http://pythonhosted.org/deap/).
 
 DEAP can be combined with *pypet* to keep track of all the data and the full trajectory
 of points created by a genetic algorithm.
@@ -16,29 +16,27 @@ Here we avoid using an Environment and *manually* execute runs using multiproces
 
 """
 
+import multiprocessing as multip
+import os
 import random
 
-import os
-import multiprocessing as multip
 try:
     from itertools import izip
 except ImportError:
     # For Python 3
     izip = zip
 
-from deap import base
-from deap import creator
-from deap import tools
+from deap import base, creator, tools
 
-from pypet import Trajectory, cartesian_product, manual_run, MultiprocContext
+from pypet import MultiprocContext, Trajectory, cartesian_product, manual_run
 
 
-@manual_run(store_meta_data=True)   # Important decorator for manual execution of runs
+@manual_run(store_meta_data=True)  # Important decorator for manual execution of runs
 def eval_one_max(traj, individual):
     """The fitness function"""
-    traj.f_add_result('$set.$.individual', list(individual))
+    traj.f_add_result("$set.$.individual", list(individual))
     fitness = sum(individual)
-    traj.f_add_result('$set.$.fitness', fitness)
+    traj.f_add_result("$set.$.fitness", fitness)
     traj.f_store()
     return (fitness,)  # DEAP wants a tuple here!
 
@@ -56,26 +54,24 @@ def eval_wrapper(the_tuple):
 def main():
 
     # No environment here ;-)
-    filename = os.path.join('experiments', 'example_20.hdf5')
-    traj = Trajectory('onemax', filename=filename, overwrite_file=True)
-
+    filename = os.path.join("experiments", "example_20.hdf5")
+    traj = Trajectory("onemax", filename=filename, overwrite_file=True)
 
     # ------- Add parameters ------- #
-    traj.f_add_parameter('popsize', 100)
-    traj.f_add_parameter('CXPB', 0.5)
-    traj.f_add_parameter('MUTPB', 0.2)
-    traj.f_add_parameter('NGEN', 20)
+    traj.f_add_parameter("popsize", 100)
+    traj.f_add_parameter("CXPB", 0.5)
+    traj.f_add_parameter("MUTPB", 0.2)
+    traj.f_add_parameter("NGEN", 20)
 
-    traj.f_add_parameter('generation', 0)
-    traj.f_add_parameter('ind_idx', 0)
-    traj.f_add_parameter('ind_len', 50)
+    traj.f_add_parameter("generation", 0)
+    traj.f_add_parameter("ind_idx", 0)
+    traj.f_add_parameter("ind_len", 50)
 
-    traj.f_add_parameter('indpb', 0.005)
-    traj.f_add_parameter('tournsize', 3)
+    traj.f_add_parameter("indpb", 0.005)
+    traj.f_add_parameter("tournsize", 3)
 
-    traj.f_add_parameter('seed', 42)
+    traj.f_add_parameter("seed", 42)
     traj.f_store(only_init=True)
-
 
     # ------- Create and register functions with DEAP ------- #
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -85,8 +81,9 @@ def main():
     # Attribute generator
     toolbox.register("attr_bool", random.randint, 0, 1)
     # Structure initializers
-    toolbox.register("individual", tools.initRepeat, creator.Individual,
-        toolbox.attr_bool, traj.ind_len)
+    toolbox.register(
+        "individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, traj.ind_len
+    )
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     # Operator registering
@@ -98,13 +95,11 @@ def main():
     pool = multip.Pool(4)
     toolbox.register("map", pool.map)  # We use the pool's map function!
 
-
     # ------- Initialize Population -------- #
     random.seed(traj.seed)
 
     pop = toolbox.population(n=traj.popsize)
-    CXPB, MUTPB, NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
-
+    CXPB, MUTPB, _NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
 
     start_idx = 0  # We need to count executed runs
 
@@ -116,10 +111,10 @@ def main():
         eval_pop = [ind for ind in pop if not ind.fitness.valid]
 
         # Add as many explored runs as individuals that need to be evaluated
-        traj.f_expand(cartesian_product({'generation': [g], 'ind_idx': range(len(eval_pop))}))
+        traj.f_expand(cartesian_product({"generation": [g], "ind_idx": range(len(eval_pop))}))
 
         # We need to make the storage service multiprocessing safe
-        mc = MultiprocContext(traj, wrap_mode='QUEUE')
+        mc = MultiprocContext(traj, wrap_mode="QUEUE")
         mc.f_start()
 
         # Create a single iterable to be passed to our fitness function (wrapper).
@@ -127,7 +122,7 @@ def main():
         # go over the whole iterator at once and store it in memory.
         # So for every run we need a copy of the trajectory.
         # Alternatively, you could use `yields='self'` and use the pool's `imap` function.
-        zip_iterable = izip(traj.f_iter_runs(start_idx, yields='copy'), eval_pop)
+        zip_iterable = izip(traj.f_iter_runs(start_idx, yields="copy"), eval_pop)
 
         fitnesses = toolbox.map(eval_wrapper, zip_iterable)
         # fitnesses is just a list of tuples [(fitness,), ...]
@@ -148,17 +143,16 @@ def main():
 
         length = len(pop)
         mean = sum(fits) / length
-        sum2 = sum(x*x for x in fits)
-        std = abs(sum2 / length - mean**2)**0.5
+        sum2 = sum(x * x for x in fits)
+        std = abs(sum2 / length - mean**2) ** 0.5
 
         print("  Min %s" % min(fits))
         print("  Max %s" % max(fits))
         print("  Avg %s" % mean)
         print("  Std %s" % std)
 
-
         # ------- Create the next generation by crossover and mutation -------- #
-        if g < traj.NGEN -1:   # not necessary for the last generation
+        if g < traj.NGEN - 1:  # not necessary for the last generation
             # Select the next generation individuals
             offspring = toolbox.select(pop, len(pop))
             # Clone the selected individuals

@@ -1,12 +1,12 @@
-import os
-import multiprocessing as mp
 import logging
+import multiprocessing as mp
+import os
 
-from pypet import Trajectory, MultiprocContext
+from pypet import MultiprocContext, Trajectory
 
 
 def manipulate_multiproc_safe(traj):
-    """ Target function that manipulates the trajectory.
+    """Target function that manipulates the trajectory.
 
     Stores the current name of the process into the trajectory and
     **overwrites** previous settings.
@@ -28,14 +28,17 @@ def main():
     # We don't use an environment so we enable logging manually
     logging.basicConfig(level=logging.INFO)
 
-    filename = os.path.join('hdf5','example_16.hdf5')
+    filename = os.path.join("hdf5", "example_16.hdf5")
     traj = Trajectory(filename=filename, overwrite_file=True)
 
     # The result that will be manipulated
-    traj.f_add_result('last_process_name', 'N/A',
-                      comment='Name of the last process that manipulated the trajectory')
+    traj.f_add_result(
+        "last_process_name",
+        "N/A",
+        comment="Name of the last process that manipulated the trajectory",
+    )
 
-    with MultiprocContext(trajectory=traj, wrap_mode='LOCK') as _mc:
+    with MultiprocContext(trajectory=traj, wrap_mode="LOCK") as _mc:
         # The multiprocessing context manager wraps the storage service of the trajectory
         # and passes the wrapped service to the trajectory.
         # Also restores the original storage service in the end.
@@ -54,8 +57,8 @@ def main():
     # Reload the data from disk and overwrite the existing result in RAM
     traj.results.f_load(load_data=3)
     # Print the name of the last process the trajectory was manipulated by
-    print('The last process to manipulate the trajectory was: `%s`' % traj.last_process_name)
+    print("The last process to manipulate the trajectory was: `%s`" % traj.last_process_name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

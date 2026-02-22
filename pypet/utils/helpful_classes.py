@@ -1,11 +1,13 @@
-import numpy as np
-import itertools as itools
 import hashlib
+import itertools as itools
 from collections import deque
+
+import numpy as np
 
 
 class Universe:
     """Contains everything"""
+
     def __contains__(self, item):
         return True
 
@@ -18,6 +20,7 @@ class IteratorChain:
     You can already pass some `iterators` on creation.
 
     """
+
     def __init__(self, *iterables):
         # Deque containing the iterators to come
         self._chain = deque()
@@ -52,7 +55,7 @@ class IteratorChain:
                 except IndexError:
                     # If we run out of iterators we are sure that
                     # there can be no more element
-                    raise StopIteration('Reached end of iterator chain')
+                    raise StopIteration("Reached end of iterator chain")
 
     def __next__(self):
         """For python 3 compatibility"""
@@ -69,8 +72,7 @@ class IteratorChain:
 
 
 class ChainMap:
-    """Combine multiple mappings for sequential lookup.
-    """
+    """Combine multiple mappings for sequential lookup."""
 
     def __init__(self, *maps):
         self._maps = maps
@@ -102,7 +104,7 @@ class HashArray:
     def __init__(self, ndarray):
         """Creates a new hashable object encapsulating an ndarray.
 
-            :param ndarray: The wrapped ndarray.
+        :param ndarray: The wrapped ndarray.
 
         """
         self._ndarray = ndarray
@@ -126,6 +128,7 @@ class TrajectoryMock:
     this class is used.
 
     """
+
     def __init__(self, traj):
         self.v_environment_name = traj.v_environment_name
         self.v_name = traj.v_name

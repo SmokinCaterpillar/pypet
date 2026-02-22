@@ -1,8 +1,8 @@
+import logging
+import multiprocessing as mp
+import os
 import random
 import time
-import multiprocessing as mp
-import logging
-import os
 
 try:
     import scoop
@@ -14,16 +14,22 @@ try:
 except ImportError:
     zmq = None
 
-from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, remove_data, \
-    get_root_logger, parse_args, unittest, get_random_port_url, errwrite
-from pypet.tests.testutils.data import TrajectoryComparator
-from pypet.utils.mpwrappers import LockerClient, LockerServer, TimeOutLockerServer
 from pypet.pypetlogging import DisableAllLogging
+from pypet.tests.testutils.data import TrajectoryComparator
+from pypet.tests.testutils.ioutils import (
+    get_random_port_url,
+    make_temp_dir,
+    parse_args,
+    run_suite,
+    unittest,
+)
 from pypet.utils.helpful_functions import is_ipv6
+from pypet.utils.mpwrappers import LockerClient, LockerServer, TimeOutLockerServer
 
 
 class FaultyServer(LockerServer):
     """Simulates a server that forgets to send from time to time"""
+
     def __init__(self, url):
         super().__init__(url)
         self._srep = 0
@@ -33,9 +39,9 @@ class FaultyServer(LockerServer):
         load_every = 5
         respond = True
         if self._srep % fail_every == 0 and response != self.CLOSED:
-            self._logger.warn('Simulating message loss; '
-                              'Loosing: `%s`; '
-                              'LockDB: %s' % (response, str(self._locks)))
+            self._logger.warn(
+                "Simulating message loss; Loosing: `%s`; LockDB: %s" % (response, str(self._locks))
+            )
             self._socket.close(0)
             self._context.term()
             time.sleep(2.5)
@@ -45,7 +51,7 @@ class FaultyServer(LockerServer):
             self._socket.bind(self._url)
             respond = False
         elif self._srep % load_every == 0:
-            self._logger.warn('Simulating heavy CPU load')
+            self._logger.warn("Simulating heavy CPU load")
             time.sleep(0.11)
 
         self._srep += 1
@@ -95,30 +101,30 @@ def the_job(args):
     """
     # logging.basicConfig(level=1)
     idx, lock, filename = args
-    client_id = 'N/A'
+    client_id = "N/A"
     try:
         random.seed()
 
         sleep_time = random.uniform(0.0, 0.05)  # Random sleep time
         lock.start()
         client_id = str(lock._get_id())
-        sidx = ':' + client_id + ':' + str(idx) +'\n'
+        sidx = ":" + client_id + ":" + str(idx) + "\n"
 
         lock.acquire()
-        with open(filename, mode='a') as fh:
-            fh.write('PAR:__THIS__:0' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("PAR:__THIS__:0" + sidx)
         lock.release()
         time.sleep(sleep_time / 2.0)
 
         lock.acquire()
-        with open(filename, mode='a') as fh:
-            fh.write('PAR:__HAPPENING__:1' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("PAR:__HAPPENING__:1" + sidx)
         lock.release()
         time.sleep(sleep_time * 1.5)
 
         lock.acquire()
-        with open(filename, mode='a') as fh:
-            fh.write('PAR:__PARALLEL__:2' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("PAR:__PARALLEL__:2" + sidx)
         lock.release()
         time.sleep(sleep_time)
 
@@ -134,51 +140,49 @@ def the_job(args):
         # lock.release()
         # time.sleep(sleep_time / 1.5)
 
-
         lock.acquire()
 
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:BEGIN:0' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:BEGIN:0" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time / 2.0)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:This:1' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:This:1" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:is:2' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:is:2" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time * 1.5)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:a:3' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:a:3" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time / 3.0)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:sequential:4' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:sequential:4" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time / 1.5)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:block:5' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:block:5" + sidx)
             flush_and_sync(fh)
         time.sleep(sleep_time / 3.0)
-        with open(filename, mode='a') as fh:
-            fh.write('SEQ:END:6' + sidx)
+        with open(filename, mode="a") as fh:
+            fh.write("SEQ:END:6" + sidx)
             flush_and_sync(fh)
 
         lock.release()
-    except:
-        logging.getLogger().exception('Error in job `%d` (%s)' % (idx, client_id))
+    except Exception:
+        logging.getLogger().exception("Error in job `%d` (%s)" % (idx, client_id))
 
 
-@unittest.skipIf(zmq is None, 'Cannot be run without zmq')
+@unittest.skipIf(zmq is None, "Cannot be run without zmq")
 class TestNetLock(TrajectoryComparator):
-
     ITERATIONS = 33
 
-    tags = 'unittest', 'mpwrappers', 'netlock'
+    tags = "unittest", "mpwrappers", "netlock"
 
     def check_file(self, filename):
-        current_msg = 'END'
+        current_msg = "END"
         current_id = -1
         current_counter = 0
         iterations = set()
@@ -186,37 +190,46 @@ class TestNetLock(TrajectoryComparator):
         with open(filename) as fh:
             for line in fh:
                 lines.append(line)
-                split_line = line.split(':')
+                split_line = line.split(":")
                 if len(split_line) == 5:
                     seq, msg, counter, id_, iteration = split_line
-                    if seq == 'PAR':
+                    if seq == "PAR":
                         continue
                     iteration = int(iteration)
                     counter = int(counter)
                     iterations.add(iteration)
-                    errstring = (f'\nCurrent idx `{current_id}` new `{id_}`;\n '
-                               f'Current msg `{current_msg}`, new `{msg}`;\n'
-                               f'Curent counter `{current_counter}`, '
-                               f'new `{counter}`;\n '
-                               f'Iteration {iteration}')
-                    if msg == 'BEGIN':
-                        self.assertEqual(current_msg, 'END', 'MSG beginning in the middle.' +
-                                         errstring)
+                    errstring = (
+                        f"\nCurrent idx `{current_id}` new `{id_}`;\n "
+                        f"Current msg `{current_msg}`, new `{msg}`;\n"
+                        f"Curent counter `{current_counter}`, "
+                        f"new `{counter}`;\n "
+                        f"Iteration {iteration}"
+                    )
+                    if msg == "BEGIN":
+                        self.assertEqual(
+                            current_msg, "END", "MSG beginning in the middle." + errstring
+                        )
 
                     else:
-                        self.assertEqual(current_counter, counter - 1,
-                                                   'Counters not matching.' + errstring)
-                        self.assertEqual(current_id, id_,
-                                                   'IDs not matching.' + errstring)
+                        self.assertEqual(
+                            current_counter, counter - 1, "Counters not matching." + errstring
+                        )
+                        self.assertEqual(current_id, id_, "IDs not matching." + errstring)
                     current_counter = counter
                     current_id = id_
                     current_msg = msg
                 else:
-                    self.assertEqual(len(split_line), 5, f'Cannot split `{split_line}`\n '
-                                                         f'---Text:---\n '
-                                                         f'{chr(10).join(lines)}')
+                    self.assertEqual(
+                        len(split_line),
+                        5,
+                        f"Cannot split `{split_line}`\n ---Text:---\n {chr(10).join(lines)}",
+                    )
 
-        self.assertEqual(len(iterations), self.ITERATIONS, f'{len(iterations)} != {self.ITERATIONS}, Iterations:\n' +  str(iterations))
+        self.assertEqual(
+            len(iterations),
+            self.ITERATIONS,
+            f"{len(iterations)} != {self.ITERATIONS}, Iterations:\n" + str(iterations),
+        )
         for irun in range(self.ITERATIONS):
             self.assertIn(irun, iterations)
 
@@ -237,7 +250,7 @@ class TestNetLock(TrajectoryComparator):
         path, file = os.path.split(filename)
         if not os.path.isdir(path):
             os.makedirs(path)
-        fh = open(filename, mode='w')
+        fh = open(filename, mode="w")
         fh.close()
 
     def test_errors(self):
@@ -247,30 +260,51 @@ class TestNetLock(TrajectoryComparator):
         sck = ctx.socket(zmq.REQ)
         sck.ipv6 = is_ipv6(url)
         sck.connect(url)
-        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test'
-                        + LockerServer.DELIMITER + 'hi' + LockerServer.DELIMITER + '12344')
+        sck.send_string(
+            LockerServer.UNLOCK
+            + LockerServer.DELIMITER
+            + "test"
+            + LockerServer.DELIMITER
+            + "hi"
+            + LockerServer.DELIMITER
+            + "12344"
+        )
         response = sck.recv_string()
         self.assertTrue(response.startswith(LockerServer.RELEASE_ERROR))
 
-        sck.send_string(LockerServer.LOCK + LockerServer.DELIMITER + 'test'
-                        + LockerServer.DELIMITER + 'hi' + LockerServer.DELIMITER + '12344')
+        sck.send_string(
+            LockerServer.LOCK
+            + LockerServer.DELIMITER
+            + "test"
+            + LockerServer.DELIMITER
+            + "hi"
+            + LockerServer.DELIMITER
+            + "12344"
+        )
         response = sck.recv_string()
         self.assertEqual(response, LockerServer.GO)
 
-        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test'
-                        + LockerServer.DELIMITER + 'ha' + LockerServer.DELIMITER + '12344')
+        sck.send_string(
+            LockerServer.UNLOCK
+            + LockerServer.DELIMITER
+            + "test"
+            + LockerServer.DELIMITER
+            + "ha"
+            + LockerServer.DELIMITER
+            + "12344"
+        )
         response = sck.recv_string()
         self.assertTrue(response.startswith(LockerServer.RELEASE_ERROR))
 
-        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + 'test')
+        sck.send_string(LockerServer.UNLOCK + LockerServer.DELIMITER + "test")
         response = sck.recv_string()
         self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
 
-        sck.send_string(LockerServer.LOCK + LockerServer.DELIMITER + 'test')
+        sck.send_string(LockerServer.LOCK + LockerServer.DELIMITER + "test")
         response = sck.recv_string()
         self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
 
-        sck.send_string('Wooopiee!')
+        sck.send_string("Wooopiee!")
         response = sck.recv_string()
         self.assertTrue(response.startswith(LockerServer.MSG_ERROR))
 
@@ -283,7 +317,7 @@ class TestNetLock(TrajectoryComparator):
 
     def test_single_core(self):
         url = get_random_port_url()
-        filename = make_temp_dir('locker_test/score.txt')
+        filename = make_temp_dir("locker_test/score.txt")
         self.create_file(filename)
         self.start_server(url)
         lock = LockerClient(url)
@@ -296,12 +330,12 @@ class TestNetLock(TrajectoryComparator):
     def test_concurrent_pool_faulty(self):
         prev = self.ITERATIONS
         self.ITERATIONS = 11
-        #logging.basicConfig(level=1)
+        # logging.basicConfig(level=1)
         with DisableAllLogging():
-            self.test_concurrent_pool(faulty=True, filename='locker_test/faulty_pool.txt')
+            self.test_concurrent_pool(faulty=True, filename="locker_test/faulty_pool.txt")
         self.ITERATIONS = prev
 
-    def test_concurrent_pool(self, faulty=False, filename='locker_test/pool.txt'):
+    def test_concurrent_pool(self, faulty=False, filename="locker_test/pool.txt"):
         pool = mp.Pool(5)
         url = get_random_port_url()
         filename = make_temp_dir(filename)
@@ -316,14 +350,14 @@ class TestNetLock(TrajectoryComparator):
         self.check_file(filename)
         self.lock_process.join()
 
-    @unittest.skipIf(scoop is None, 'Can only be run with scoop')
+    @unittest.skipIf(scoop is None, "Can only be run with scoop")
     def test_concurrent_scoop(self):
         # test several restarts
         old_iter = self.ITERATIONS
         for jrun in range(3):
             self.ITERATIONS = 11
             url = get_random_port_url()
-            filename = make_temp_dir('locker_test/scoop.txt')
+            filename = make_temp_dir("locker_test/scoop.txt")
             self.create_file(filename)
             self.start_server(url)
             lock = LockerClient(url)
@@ -351,6 +385,7 @@ class TestNetLock(TrajectoryComparator):
         lock.send_done()
         self.lock_process.join()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     opt_args = parse_args()
     run_suite(**opt_args)

@@ -1,5 +1,3 @@
-
-
 try:
     from ._version import __version__
 except ImportError:
@@ -9,27 +7,59 @@ except ImportError:
 
 
 from pypet.environment import Environment, MultiprocContext
-from pypet.trajectory import Trajectory, load_trajectory
-from pypet.storageservice import HDF5StorageService, LazyStorageService
-from pypet.naturalnaming import ParameterGroup, DerivedParameterGroup, ConfigGroup,\
-    ResultGroup, NNGroupNode, NNLeafNode, KnowsTrajectory
-from pypet.parameter import Parameter, ArrayParameter, SparseParameter,\
-    PickleParameter, Result, SparseResult, PickleResult, ObjectTable, BaseParameter, BaseResult
-from pypet.pypetexceptions import DataNotInStorageError, NoSuchServiceError,\
-    NotUniqueNodeError, ParameterLockedException, PresettingError, TooManyGroupsError,\
-    VersionMismatchError, GitDiffError
+from pypet.naturalnaming import (
+    ConfigGroup,
+    DerivedParameterGroup,
+    KnowsTrajectory,
+    NNGroupNode,
+    NNLeafNode,
+    ParameterGroup,
+    ResultGroup,
+)
+from pypet.parameter import (
+    ArrayParameter,
+    BaseParameter,
+    BaseResult,
+    ObjectTable,
+    Parameter,
+    PickleParameter,
+    PickleResult,
+    Result,
+    SparseParameter,
+    SparseResult,
+)
+from pypet.pypetexceptions import (
+    DataNotInStorageError,
+    GitDiffError,
+    NoSuchServiceError,
+    NotUniqueNodeError,
+    ParameterLockedException,
+    PresettingError,
+    TooManyGroupsError,
+    VersionMismatchError,
+)
 from pypet.pypetlogging import HasLogger, rename_log_file
+from pypet.shareddata import (
+    SharedArray,
+    SharedCArray,
+    SharedEArray,
+    SharedPandasFrame,
+    SharedResult,
+    SharedTable,
+    SharedVLArray,
+    StorageContextManager,
+    make_ordinary_result,
+    make_shared_result,
+)
+from pypet.slots import HasSlots
+from pypet.storageservice import HDF5StorageService, LazyStorageService
+from pypet.trajectory import Trajectory, load_trajectory
+from pypet.utils.decorators import manual_run
 from pypet.utils.explore import cartesian_product, find_unique_points
 from pypet.utils.hdf5compression import compact_hdf5_file
 from pypet.utils.helpful_functions import progressbar, racedirs
-from pypet.shareddata import SharedArray, SharedCArray, SharedEArray,\
-    SharedVLArray, SharedPandasFrame, SharedTable, SharedResult,\
-    StorageContextManager, make_ordinary_result, make_shared_result
-from pypet.slots import HasSlots
-from pypet.utils.trajectory_utils import merge_all_in_folder
-from pypet.utils.decorators import manual_run
 from pypet.utils.pypettest import test
-
+from pypet.utils.trajectory_utils import merge_all_in_folder
 
 __all__ = [
     Trajectory.__name__,
@@ -83,5 +113,5 @@ __all__ = [
     find_unique_points.__name__,
     merge_all_in_folder.__name__,
     manual_run.__name__,
-    test.__name__
+    test.__name__,
 ]

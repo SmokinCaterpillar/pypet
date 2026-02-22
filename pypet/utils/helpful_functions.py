@@ -1,10 +1,12 @@
-import sys
-import os
 import datetime
-import numpy as np
 import inspect
 import logging
+import os
 import socket
+import sys
+
+import numpy as np
+
 try:
     import zmq
 except ImportError:
@@ -19,7 +21,7 @@ def is_debug():
     :return: True of False
 
     """
-    return 'pydevd' in sys.modules
+    return "pydevd" in sys.modules
 
 
 def flatten_dictionary(nested_dict, separator):
@@ -42,7 +44,7 @@ def flatten_dictionary(nested_dict, separator):
 
 
 def nest_dictionary(flat_dict, separator):
-    """ Nests a given flat dictionary.
+    """Nests a given flat dictionary.
 
     Nested keys are created by splitting given keys around the `separator`.
 
@@ -53,13 +55,14 @@ def nest_dictionary(flat_dict, separator):
         act_dict = nested_dict
         final_key = split_key.pop()
         for new_key in split_key:
-            if not new_key in act_dict:
+            if new_key not in act_dict:
                 act_dict[new_key] = {}
 
             act_dict = act_dict[new_key]
 
         act_dict[final_key] = val
     return nested_dict
+
 
 class _Progressbar:
     """Implements a progress bar.
@@ -68,8 +71,9 @@ class _Progressbar:
     import the class itself but use the `progressbar` function from this module.
 
     """
+
     def __init__(self):
-        self._start_time = None   # Time of start/reset
+        self._start_time = None  # Time of start/reset
         self._start_index = None  # Index of start/reset
         self._current_index = np.inf  # Current index
         self._percentage_step = None  # Percentage step for bar update
@@ -98,17 +102,31 @@ class _Progressbar:
             current_time = datetime.datetime.now()
             time_delta = current_time - self._start_time
             total_seconds = time_delta.total_seconds()
-            remaining_seconds = int((self._total - self._start_index - 1.0) *
-                                    total_seconds / float(index - self._start_index) -
-                                    total_seconds)
+            remaining_seconds = int(
+                (self._total - self._start_index - 1.0)
+                * total_seconds
+                / float(index - self._start_index)
+                - total_seconds
+            )
             remaining_delta = datetime.timedelta(seconds=remaining_seconds)
-            remaining_str = ', remaining: ' + str(remaining_delta)
+            remaining_str = ", remaining: " + str(remaining_delta)
         except ZeroDivisionError:
-            remaining_str = ''
+            remaining_str = ""
         return remaining_str
 
-    def __call__(self, index, total, percentage_step=5, logger='print', log_level=logging.INFO,
-                 reprint=False, time=True, length=20, fmt_string=None,  reset=False):
+    def __call__(
+        self,
+        index,
+        total,
+        percentage_step=5,
+        logger="print",
+        log_level=logging.INFO,
+        reprint=False,
+        time=True,
+        length=20,
+        fmt_string=None,
+        reset=False,
+    ):
         """Plots a progress bar to the given `logger` for large for loops.
 
         To be used inside a for-loop at the end of the loop.
@@ -144,9 +162,7 @@ class _Progressbar:
 
 
         """
-        reset = (reset or
-                 index <= self._current_index or
-                 total != self._total)
+        reset = reset or index <= self._current_index or total != self._total
         if reset:
             self._reset(index, total, percentage_step, length)
 
@@ -159,27 +175,32 @@ class _Progressbar:
             if time:
                 remaining_str = self._get_remaining(index)
             else:
-                remaining_str = ''
+                remaining_str = ""
 
             if ending:
-                statement = '[' + '=' * self._length +']100.0%'
+                statement = "[" + "=" * self._length + "]100.0%"
             else:
                 bars = int((indexp1 / self._total) * self._length)
                 spaces = self._length - bars
                 percentage = indexp1 / self._total * 100.0
                 if reset:
-                    statement = ('[' + '=' * bars +
-                                 ' ' * spaces + ']' + f' {percentage:4.1f}' + '%')
+                    statement = "[" + "=" * bars + " " * spaces + "]" + f" {percentage:4.1f}" + "%"
                 else:
-                    statement = ('[' + '=' * bars +
-                                 ' ' * spaces + ']' + f' {percentage:4.1f}' + '%' +
-                                 remaining_str)
+                    statement = (
+                        "["
+                        + "=" * bars
+                        + " " * spaces
+                        + "]"
+                        + f" {percentage:4.1f}"
+                        + "%"
+                        + remaining_str
+                    )
 
             if fmt_string:
                 statement = fmt_string % statement
-            if logger == 'print':
+            if logger == "print":
                 if reprint:
-                    print('\r' + statement, end='', flush=True)
+                    print("\r" + statement, end="", flush=True)
                 else:
                     print(statement)
             elif logger is not None:
@@ -196,8 +217,18 @@ class _Progressbar:
 _progressbar = _Progressbar()
 
 
-def progressbar(index, total, percentage_step=10, logger='print', log_level=logging.INFO,
-                 reprint=True, time=True, length=20, fmt_string=None, reset=False):
+def progressbar(
+    index,
+    total,
+    percentage_step=10,
+    logger="print",
+    log_level=logging.INFO,
+    reprint=True,
+    time=True,
+    length=20,
+    fmt_string=None,
+    reset=False,
+):
     """Plots a progress bar to the given `logger` for large for loops.
 
     To be used inside a for-loop at the end of the loop:
@@ -242,9 +273,18 @@ def progressbar(index, total, percentage_step=10, logger='print', log_level=logg
         The progressbar string or `None` if the string has not been updated.
 
     """
-    return _progressbar(index=index, total=total, percentage_step=percentage_step,
-                        logger=logger, log_level=log_level, reprint=reprint,
-                        time=time, length=length, fmt_string=fmt_string, reset=reset)
+    return _progressbar(
+        index=index,
+        total=total,
+        percentage_step=percentage_step,
+        logger=logger,
+        log_level=log_level,
+        reprint=reprint,
+        time=time,
+        length=length,
+        fmt_string=fmt_string,
+        reset=reset,
+    )
 
 
 def _get_argspec(func):
@@ -258,8 +298,10 @@ def _get_argspec(func):
     args = []
     uses_starstar = False
     for par in parameters.values():
-        if (par.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or
-                    par.kind == inspect.Parameter.KEYWORD_ONLY):
+        if (
+            par.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+            or par.kind == inspect.Parameter.KEYWORD_ONLY
+        ):
             args.append(par.name)
         elif par.kind == inspect.Parameter.VAR_KEYWORD:
             uses_starstar = True
@@ -289,7 +331,7 @@ def result_sort(result_list, start_index=0):
     minmax = [x[0] for x in to_sort]
     minimum = min(minmax)
     maximum = max(minmax)
-    #print minimum, maximum
+    # print minimum, maximum
     sorted_list = [None for _ in range(minimum, maximum + 1)]
     for elem in to_sort:
         key = elem[0] - minimum
@@ -304,35 +346,35 @@ def result_sort(result_list, start_index=0):
 
 def format_time(timestamp):
     """Formats timestamp to human readable format"""
-    format_string = '%Y_%m_%d_%Hh%Mm%Ss'
+    format_string = "%Y_%m_%d_%Hh%Mm%Ss"
     formatted_time = datetime.datetime.fromtimestamp(timestamp).strftime(format_string)
     return formatted_time
 
 
 def convert_ipv6(host):
-    if ':' in host:
-        #IP 6 address
-        host = host.split('%')[0]
-        host = f'[{host}]'
+    if ":" in host:
+        # IP 6 address
+        host = host.split("%")[0]
+        host = f"[{host}]"
 
-    return  host
+    return host
 
 
 def is_ipv6(url):
-    return '[' in url
+    return "[" in url
 
 
 def port_to_tcp(port=None):
     """Returns local tcp address for a given `port`, automatic port if `None`"""
-    #address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
+    # address = 'tcp://' + socket.gethostbyname(socket.getfqdn())
     domain_name = socket.getfqdn()
     try:
         addr_list = socket.getaddrinfo(domain_name, None)
     except Exception:
-        addr_list = socket.getaddrinfo('127.0.0.1', None)
+        addr_list = socket.getaddrinfo("127.0.0.1", None)
     family, socktype, proto, canonname, sockaddr = addr_list[0]
     host = convert_ipv6(sockaddr[0])
-    address =  'tcp://' + host
+    address = "tcp://" + host
     if port is None:
         port = ()
     if not isinstance(port, int):
@@ -343,28 +385,27 @@ def port_to_tcp(port=None):
             socket_.ipv6 = is_ipv6(address)
             port = socket_.bind_to_random_port(address, *port)
         except Exception:
-            print('Could not connect to {} using {}'.format(address, addr_list))
-            pypet_root_logger = logging.getLogger('pypet')
-            pypet_root_logger.exception('Could not connect to {}'.format(address))
+            print("Could not connect to {} using {}".format(address, addr_list))
+            pypet_root_logger = logging.getLogger("pypet")
+            pypet_root_logger.exception("Could not connect to {}".format(address))
             raise
         socket_.close()
         context.term()
-    return address + ':' + str(port)
+    return address + ":" + str(port)
 
 
 def racedirs(path):
     """Like os.makedirs but takes care about race conditions"""
     if os.path.isfile(path):
-        raise IOError('Path `%s` is already a file not a directory')
+        raise OSError("Path `%s` is already a file not a directory")
     while True:
         try:
             if os.path.isdir(path):
                 # only break if full path has been created or exists
                 break
             os.makedirs(path)
-        except EnvironmentError as exc:
+        except OSError as exc:
             # Part of the directory path already exist
             if exc.errno != 17:
                 # This error won't be any good
                 raise
-
