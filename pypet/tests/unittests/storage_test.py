@@ -218,7 +218,7 @@ class StorageTest(TrajectoryComparator):
         self.assertTrue(traj.f_get("f").v_name == "f")
 
         with self.assertRaises(AttributeError):
-            pass
+            traj.conf.jjjj  # noqa: B018
         traj.f_set_properties(fast_access=True)
 
         traj.crun = Result("", k=43, m="JJJ")

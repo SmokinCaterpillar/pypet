@@ -5,20 +5,35 @@ set -u # Treat references to unset variables as an error
 
 if [[ $TEST_SUITE == ON ]]
     then
-        echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ./pypet/tests/all_tests.py
+        if [[ $SCOOP == ON ]]; then
+            echo "Running test suite (with SCOOP)"
+            python -m scoop -n 3 ./pypet/tests/all_tests.py
+        else
+            echo "Running test suite"
+            python ./pypet/tests/all_tests.py
+        fi
     fi
 
 if [[ $TEST_SUITE == MULTIPROC ]]
     then
-        echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ./pypet/tests/all_multi_core_tests.py
+        if [[ $SCOOP == ON ]]; then
+            echo "Running multiproc test suite (with SCOOP)"
+            python -m scoop -n 3 ./pypet/tests/all_multi_core_tests.py
+        else
+            echo "Running multiproc test suite"
+            python ./pypet/tests/all_multi_core_tests.py
+        fi
     fi
 
 if [[ $TEST_SUITE == SINGLECORE ]]
     then
-        echo "Running test suite (with SCOOP)"
-        python -m scoop -n 3 ./pypet/tests/all_single_core_tests.py
+        if [[ $SCOOP == ON ]]; then
+            echo "Running single core test suite (with SCOOP)"
+            python -m scoop -n 3 ./pypet/tests/all_single_core_tests.py
+        else
+            echo "Running single core test suite"
+            python ./pypet/tests/all_single_core_tests.py
+        fi
     fi
 
 if [[ $GIT_TEST == ON ]]

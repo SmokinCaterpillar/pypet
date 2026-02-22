@@ -7,6 +7,26 @@ This is done in an independent module to avoid cluttered name spaces.
 import importlib
 import inspect
 
+from pypet.naturalnaming import (  # noqa: F401
+    ConfigGroup,
+    DerivedParameterGroup,
+    NNGroupNode,
+    NNLeafNode,
+    ParameterGroup,
+    ResultGroup,
+)
+from pypet.parameter import (  # noqa: F401
+    ArrayParameter,
+    BaseParameter,
+    BaseResult,
+    Parameter,
+    PickleResult,
+    Result,
+    SparseParameter,
+    SparseResult,
+)
+from pypet.shareddata import SharedResult  # noqa: F401
+
 
 def load_class(full_class_string):
     """Loads a class from a string naming the module and class name.
