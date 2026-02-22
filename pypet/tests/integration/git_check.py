@@ -3,7 +3,7 @@ import os
 import getopt
 
 try:
-    import pypet
+    import pypet  # noqa: F401
 except ImportError:
     # Check if pypet is installed otherwise append /pypet folder
     # this is important for travis-ci

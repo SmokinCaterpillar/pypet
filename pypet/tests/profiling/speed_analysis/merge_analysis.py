@@ -2,13 +2,9 @@ import numpy as np
 from pypet.parameter import Parameter
 from pypet.utils.explore import cartesian_product
 from pypet.environment import Environment
-from pypet import pypetconstants
 import logging
 import os
 import time
-from scipy.stats import pearsonr
-
-import numpy as np
 import scipy.sparse as spsp
 from pycallgraph import PyCallGraph, Config, GlobbingFilter
 from pycallgraph.output import GraphvizOutput
@@ -17,7 +13,7 @@ import unittest
 
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_trajectory_name, \
      parse_args, get_log_config
-from pypet.tests.testutils.data import add_params, simple_calculations, TrajectoryComparator,\
+from pypet.tests.testutils.data import simple_calculations, TrajectoryComparator,\
     multiply, create_param_dict
 from pypet.tests.integration.environment_test import my_set_func, my_run_func
 

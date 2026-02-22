@@ -1,6 +1,5 @@
 import numpy as np
 import sys
-import unittest
 
 from pypet.parameter import Parameter, PickleParameter, ArrayParameter,\
     SparseParameter, ObjectTable, Result, SparseResult, PickleResult, BaseParameter
@@ -696,7 +695,7 @@ class ResultTest(TrajectoryComparator):
 
     def test_warning(self):
         for res in self.results.values():
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True):
                 res._stored=True
                 res.XxxXXXXxxxx = 14
 

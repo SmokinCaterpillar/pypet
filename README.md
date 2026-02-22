@@ -54,12 +54,12 @@ Automatic Sumatra records are supported for
 * Sumatra >= 0.7.1
 
 
-# What is pypet all about?
+## What is pypet all about?
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
 In order to accomplish both you write some hacky I/O functionality to get it done the quick and
-dirty way. This means storing stuff into text files, as *MATLAB* *m*-files, 
+dirty way. This means storing stuff into text files, as *MATLAB* *m*-files,
 or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
@@ -78,24 +78,24 @@ The python parameter exploration toolkit (*pypet*) provides a framework to defin
 that you need to run your simulations. You can actively explore these by following a
 *trajectory* through the space spanned by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
-The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
-(http://www.pytables.org/).
+The storage format of choice is HDF5 (<http://www.hdfgroup.org/HDF5/>) via PyTables
+(<http://www.pytables.org/>).
 
 
 ## Package Organization
 
 This project encompasses these core modules:
 
-*  The `pypet.environment` module for handling the running of simulations
+* The `pypet.environment` module for handling the running of simulations
 
-*  The `pypet.trajectory` module for managing the parameters and results,
+* The `pypet.trajectory` module for managing the parameters and results,
    and providing a way to *explore* your parameter space. Somewhat related is also the
    `pypet.naturalnaming` module, that provides functionality to access and put data into
    the *trajectory*.
 
-*  The `pypet.parameters` module including containers for parameters and results
+* The `pypet.parameters` module including containers for parameters and results
 
-*  The `pypet.storageservice` for saving your data to disk
+* The `pypet.storageservice` for saving your data to disk
 
 
 ## Install
@@ -153,7 +153,7 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 * **Analyse** your data on-the-fly during multiprocessing
 
 * **Adaptively** explore tha parameter space combining *pypet* with optimization
-  tools like the evolutionary algorithms framework DEAP (http://deap.readthedocs.org/en/)
+  tools like the evolutionary algorithms framework DEAP (<http://deap.readthedocs.org/en/>)
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
@@ -164,13 +164,13 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 * **Git Integration**, let *pypet* make automatic commits of your codebase
 
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
-  Sumatra (http://neuralensemble.org/sumatra/)
-  
+  Sumatra (<http://neuralensemble.org/sumatra/>)
+
 * *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
-  SCOOP (http://scoop.readthedocs.org/)
+  SCOOP (<http://scoop.readthedocs.org/>)
 
 
-# Quick Working Example
+## Quick Working Example
 
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
@@ -249,10 +249,10 @@ env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
 ```
 
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
-store the trajectory into, the title of the file, and a comment that is added to the trajectory. 
-There are more options available like the number of processors for multiprocessing or 
+store the trajectory into, the title of the file, and a comment that is added to the trajectory.
+There are more options available like the number of processors for multiprocessing or
 how verbose the final HDF5 file is supposed to be.
-Check out the documentation (https://pypet.readthedocs.io/) if you want to know more.
+Check out the documentation (<https://pypet.readthedocs.io/>) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
 ```python
@@ -299,18 +299,18 @@ Cheers,
     Robert
 
 
-# Miscellaneous
+## Miscellaneous
 
 ## Acknowledgements
 
-*   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
+* Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
-    You might want to check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
-    tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
+    You might want to check out their SpykeViewer (<https://github.com/rproepp/spykeviewer>)
+    tool for visualization of MEA recordings and NEO (<http://pythonhosted.org/neo>) data
 
 *   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
     for this project
-    
+
 *   Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
 
 *   Thanks to Henri Bunting for his work on the BRIAN2 subpackage
@@ -333,7 +333,7 @@ Each test module can be run individually, for instance `$ python trajectory_test
 You can run **all** tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/`
-with `-k` to keep the HDF5 and log files created by the tests 
+with `-k` to keep the HDF5 and log files created by the tests
 (if you want to inspect them, otherwise they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.

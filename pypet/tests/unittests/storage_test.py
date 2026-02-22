@@ -116,7 +116,6 @@ class StorageTest(TrajectoryComparator):
         traj.par.x = Parameter('x', 42, comment='answer')
         traj.f_explore({'x':[1,2,3,4]})
         traj.f_store()
-        name = traj.v_name
 
         traj = Trajectory(filename=filename, add_time=False)
         traj.f_load()
@@ -765,7 +764,7 @@ class StorageTest(TrajectoryComparator):
                           add_time=True)
 
         res = traj.f_add_result('mytest.yourtest.test', a='b', c='d')
-        dpar = traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
+        traj.f_add_derived_parameter('mmm.gr.dpdp', 666)
 
 
         res = traj.f_add_result('hhh.ll', a='b', c='d')

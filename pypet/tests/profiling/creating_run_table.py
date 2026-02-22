@@ -1,7 +1,5 @@
-import logging
 import os
 
-import numpy as np
 import scipy.sparse as spsp
 from pycallgraph import PyCallGraph, Config, GlobbingFilter
 from pycallgraph.output import GraphvizOutput
@@ -20,7 +18,6 @@ class CustomOutput(GraphvizOutput):
 
 from pypet import Environment, Parameter, load_trajectory, cartesian_product, Trajectory
 
-from pypet.tests.testutils.ioutils import make_temp_dir
 from pypet.tests.testutils.data import create_param_dict, add_params, simple_calculations
 
 filename = None

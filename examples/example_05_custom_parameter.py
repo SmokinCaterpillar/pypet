@@ -4,7 +4,7 @@ import os # For path names being viable under Windows and Linux
 
 from pypet import Environment, Parameter, ArrayParameter, Trajectory
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 
 # Here we will see how we can write our own custom parameters and how we can use

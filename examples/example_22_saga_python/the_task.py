@@ -3,7 +3,7 @@ import inspect
 import getopt
 import sys
 
-from pypet import Environment, Parameter, ArrayParameter, Trajectory
+from pypet import Environment, Parameter, ArrayParameter
 
 
 def euler_scheme(traj, diff_func):

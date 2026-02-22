@@ -327,7 +327,7 @@ class EnvironmentTest(TrajectoryComparator):
                           dynamic_imports=SlowResult,
                           display_time=0.1)
         traj = env.v_traj
-        res=traj.f_add_result(SlowResult, 'iii', 42, 43, comment='llk')
+        traj.f_add_result(SlowResult, 'iii', 42, 43, comment='llk')
         traj.f_store()
         service_logger = traj.v_storage_service._logger
         root = logging.getLogger('pypet')

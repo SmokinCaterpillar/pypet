@@ -1,4 +1,4 @@
-from pypet import Trajectory, pypetexceptions, PickleResult
+from pypet import Trajectory, PickleResult
 from pypet.tests.testutils.data import TrajectoryComparator
 from pypet.tests.testutils.ioutils import make_temp_dir, run_suite, parse_args
 import pypet.pypetexceptions as pex

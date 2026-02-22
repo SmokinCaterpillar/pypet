@@ -6,9 +6,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-
-import numpy as np
-import scipy.sparse as spsp
 from pycallgraph import PyCallGraph, Config, GlobbingFilter
 from pycallgraph.output import GraphvizOutput
 from pycallgraph.color import Color
@@ -82,7 +79,7 @@ def get_runtime(length):
 
 def main():
     lengths = [1000, 1000000]
-    runtimes = [get_runtime(x) for x in lengths]
+    _runtimes = [get_runtime(x) for x in lengths]
     # avg_runtimes = [x[0] for x in runtimes]
     # summed_runtime = [x[1] for x in runtimes]
 

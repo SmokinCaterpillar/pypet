@@ -2,7 +2,6 @@ import os
 import logging
 import random
 
-import sys
 import unittest
 
 import tables as pt
@@ -12,7 +11,9 @@ try:
 except ImportError:
     zmq = None
 
-from pypet.shareddata import *
+from pypet.shareddata import (StorageContextManager, SharedResult, SharedArray,
+    SharedCArray, SharedEArray, SharedVLArray, SharedTable, SharedPandasFrame,
+    SharedData, make_ordinary_result)
 from pypet import Trajectory
 from pypet.tests.testutils.ioutils import make_temp_dir, make_trajectory_name, run_suite, \
      get_root_logger, parse_args, get_log_config, get_random_port_url
@@ -31,7 +32,7 @@ def copy_one_entry_from_giant_matrices(traj):
 
 
 def load_from_shared_storage(traj):
-    with StorageContextManager(traj) as cm:
+    with StorageContextManager(traj) as _cm:
         if 'x' in traj:
             raise RuntimeError()
         traj.v_auto_load = True

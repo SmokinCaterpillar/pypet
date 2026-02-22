@@ -682,7 +682,6 @@ class NaturalNamingInterface(HasLogger):
                     item_tuple = self._fetch_from_tuple(store_load, iter_item, args, kwargs)
 
             item = item_tuple[1]
-            msg = item_tuple[0]
 
             if item.v_is_leaf:
                 if only_empties and not item.f_is_empty():

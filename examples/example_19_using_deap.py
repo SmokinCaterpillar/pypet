@@ -90,7 +90,7 @@ def main():
     random.seed(traj.seed)
 
     pop = toolbox.population(n=traj.popsize)
-    CXPB, MUTPB, NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
+    CXPB, MUTPB, _NGEN = traj.CXPB, traj.MUTPB, traj.NGEN
 
 
     print("Start of evolution")

@@ -1,4 +1,3 @@
-import logging
 import os # For path names working under Windows and Linux
 
 from main import add_parameters, add_exploration, run_neuron, neuron_postproc

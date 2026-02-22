@@ -3,7 +3,6 @@ import itertools as itools
 import os
 import platform
 import sys
-import unittest
 
 from pypet import Result
 from pypet.tests.testutils.data import TrajectoryComparator

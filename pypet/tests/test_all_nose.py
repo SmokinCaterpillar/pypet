@@ -1,7 +1,6 @@
 import getopt
 import sys
 import os
-import sys
 import unittest
 
 from pypet.tests.testutils.ioutils import discover_tests, TEST_IMPORT_ERROR

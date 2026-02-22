@@ -35,7 +35,7 @@ def main():
     traj.f_add_result('last_process_name', 'N/A',
                       comment='Name of the last process that manipulated the trajectory')
 
-    with MultiprocContext(trajectory=traj, wrap_mode='LOCK') as mc:
+    with MultiprocContext(trajectory=traj, wrap_mode='LOCK') as _mc:
         # The multiprocessing context manager wraps the storage service of the trajectory
         # and passes the wrapped service to the trajectory.
         # Also restores the original storage service in the end.

@@ -4,10 +4,9 @@ import unittest
 
 import pypet
 from pypet import *
-del test  # To not run all tests if this file is executed with nosetests
+del test  # noqa: F821 — `test` comes from `from pypet import *`
 from pypet.tests.testutils.ioutils import get_root_logger, run_suite, parse_args
 
-import logging
 import inspect
 
 

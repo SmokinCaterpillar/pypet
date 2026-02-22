@@ -9,7 +9,7 @@ import unittest
 
 from pypet.parameter import Parameter, PickleParameter, Result
 from pypet.trajectory import Trajectory
-from pypet.naturalnaming import NaturalNamingInterface, ParameterGroup, NNGroupNode
+from pypet.naturalnaming import ParameterGroup, NNGroupNode
 from pypet.storageservice import LazyStorageService
 import pickle
 import logging
@@ -25,7 +25,6 @@ from pypet.utils.comparisons import nested_equal
 
 import copy as cp
 
-import pypet.storageservice as stsv
 
 class ImAParameterInDisguise(Parameter):
     pass
@@ -343,7 +342,7 @@ class TrajectoryTest(unittest.TestCase):
         filename = make_temp_dir('dummy.h5')
         with Environment(trajectory=self.traj,
                         log_config=get_log_config(), filename=filename,
-                        v_auto_load=False, with_links=False) as env:
+                        v_auto_load=False, with_links=False) as _env:
 
             self.assertFalse(self.traj.v_auto_load)
             self.assertFalse(self.traj.v_with_links)

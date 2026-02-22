@@ -7,7 +7,6 @@ try:
 except ImportError:
     dill = None
 import logging
-import shutil
 
 from pypet.trajectory import Trajectory
 from pypet.utils.explore import cartesian_product
@@ -17,7 +16,7 @@ from pypet.parameter import Parameter
 from pypet.tests.testutils.ioutils import run_suite, make_temp_dir, make_trajectory_name, \
      parse_args, get_log_config
 from pypet.tests.testutils.data import create_param_dict, add_params, multiply, \
-    simple_calculations, TrajectoryComparator, multiply_args
+    simple_calculations, TrajectoryComparator
 
 
 class CustomParameter(Parameter):
