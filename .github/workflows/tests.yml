@@ -2,9 +2,9 @@ name: pypet-test-suite
 
 on:
   push:
-    branches: [ master, develop, modernize ]
+    branches: [ main, develop, modernize ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
 
 jobs:
   test:
