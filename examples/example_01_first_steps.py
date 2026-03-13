@@ -1,9 +1,8 @@
-__author__ = 'Robert Meyer'
-
-import os # To allow file paths working under Windows and Linux
+import os  # To allow file paths working under Windows and Linux
 
 from pypet import Environment
 from pypet.utils.explore import cartesian_product
+
 
 def multiply(traj):
     """Example of a sophisticated simulation that involves multiplying two values.
@@ -16,34 +15,34 @@ def multiply(traj):
 
     """
     z = traj.x * traj.y
-    traj.f_add_result('z', z, comment='Result of our simulation!')
+    traj.f_add_result("z", z, comment="Result of our simulation!")
 
 
 # Create an environment that handles running
-filename = os.path.join('hdf5','example_01.hdf5')
-env = Environment(trajectory='Multiplication',
-                  filename=filename,
-                  overwrite_file=True,
-                  file_title='Example_01_First_Steps',
-                  comment='The first example!',
-                  large_overview_tables=True,  # To see a nice overview of all
-                  # computed `z` values in the resulting HDF5 file.
-                  # Per default disabled for more compact HDF5 files.
-                  )
+filename = os.path.join("hdf5", "example_01.hdf5")
+env = Environment(
+    trajectory="Multiplication",
+    filename=filename,
+    overwrite_file=True,
+    file_title="Example_01_First_Steps",
+    comment="The first example!",
+    large_overview_tables=True,  # To see a nice overview of all
+    # computed `z` values in the resulting HDF5 file.
+    # Per default disabled for more compact HDF5 files.
+)
 
 # The environment has created a trajectory container for us
 traj = env.trajectory
 
 # Add both parameters
-traj.f_add_parameter('x', 1, comment='I am the first dimension!')
-traj.f_add_parameter('y', 1, comment='I am the second dimension!')
+traj.f_add_parameter("x", 1, comment="I am the first dimension!")
+traj.f_add_parameter("y", 1, comment="I am the second dimension!")
 
 # Explore the parameters with a cartesian product
-traj.f_explore(cartesian_product({'x':[1,2,3,4], 'y':[6,7,8]}))
+traj.f_explore(cartesian_product({"x": [1, 2, 3, 4], "y": [6, 7, 8]}))
 
 # Run the simulation
 env.run(multiply)
-
 
 
 # Now let's see how we can reload the stored data from above.
@@ -77,6 +76,5 @@ traj.f_load(index=-1, load_parameters=2, load_results=2)
 
 # Finally we want to print a result of a particular run.
 # Let's take the second run named `run_00000001` (Note that counting starts at 0!).
-print('The result of `run_00000001` is: ')
+print("The result of `run_00000001` is: ")
 print(traj.run_00000001.z)
-

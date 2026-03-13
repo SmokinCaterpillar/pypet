@@ -1,11 +1,6 @@
 """Module containing utility functions to compare parameters and results"""
 
-__author__ = 'Robert Meyer'
-
-try:
-    from collections import Sequence, Mapping
-except ImportError:
-    from collections.abc import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -25,7 +20,7 @@ def results_equal(a, b):
 
     """
     if a.v_is_parameter and b.v_is_parameter:
-        raise ValueError('Both inputs are not results.')
+        raise ValueError("Both inputs are not results.")
 
     if a.v_is_parameter or b.v_is_parameter:
         return False
@@ -33,10 +28,10 @@ def results_equal(a, b):
     if a.v_full_name != b.v_full_name:
         return False
 
-    if hasattr(a, '_data') and not hasattr(b, '_data'):
+    if hasattr(a, "_data") and not hasattr(b, "_data"):
         return False
 
-    if hasattr(a, '_data'):
+    if hasattr(a, "_data"):
         akeyset = set(a._data.keys())
         bkeyset = set(b._data.keys())
 
@@ -63,12 +58,10 @@ def parameters_equal(a, b):
     :raises: ValueError if both inputs are no parameter instances
 
     """
-    if (not b.v_is_parameter and
-            not a.v_is_parameter):
-        raise ValueError('Both inputs are not parameters')
+    if not b.v_is_parameter and not a.v_is_parameter:
+        raise ValueError("Both inputs are not parameters")
 
-    if (not b.v_is_parameter or
-            not a.v_is_parameter):
+    if not b.v_is_parameter or not a.v_is_parameter:
         return False
 
     if a.v_full_name != b.v_full_name:
@@ -109,7 +102,7 @@ def get_all_attributes(instance):
     except AttributeError:
         result_dict = {}
 
-    if hasattr(instance, '__all_slots__'):
+    if hasattr(instance, "__all_slots__"):
         all_slots = instance.__all_slots__
     else:
         all_slots = slots.get_all_slots(instance.__class__)
@@ -117,8 +110,8 @@ def get_all_attributes(instance):
     for slot in all_slots:
         result_dict[slot] = getattr(instance, slot)
 
-    result_dict.pop('__dict__', None)
-    result_dict.pop('__weakref__', None)
+    result_dict.pop("__dict__", None)
+    result_dict.pop("__weakref__", None)
 
     return result_dict
 
@@ -193,7 +186,7 @@ def nested_equal(a, b):
             # numpy arrays. Numpy array comparisons do not evaluate to a single truth value
             for name in a:
                 cola = a[name]
-                if not name in b:
+                if name not in b:
                     return False
                 colb = b[name]
                 if not len(cola) == len(colb):
@@ -268,11 +261,10 @@ def nested_equal(a, b):
     if len(attributes_a) != len(attributes_b):
         return False
     if len(attributes_a) > 0:
-        keys_a = list(attributes_a.keys())
-        if set(keys_a) != set(attributes_b.keys()):
+        if attributes_a.keys() != attributes_b.keys():
             return False
 
-        return all(nested_equal(attributes_a[k], attributes_b[k]) for k in keys_a)
+        return all(nested_equal(attributes_a[k], attributes_b[k]) for k in attributes_a)
 
     # Ok they are really not equal
     return False

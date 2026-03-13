@@ -1,21 +1,20 @@
-""" This module contains a simulation of 1 dimensional cellular automata
+"""This module contains a simulation of 1 dimensional cellular automata
 
 We also simulate famous rule 110: http://en.wikipedia.org/wiki/Rule_110
 
 """
 
-__author__ = 'Robert Meyer'
-
-import numpy as np
 import os
-import matplotlib.pyplot as plt
 import pickle
 
-from pypet import progressbar #  I don't want to write another progressbar, so I use this here
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pypet import progressbar  #  I don't want to write another progressbar, so I use this here
 
 
 def convert_rule(rule_number):
-    """ Converts a rule given as an integer into a binary list representation.
+    """Converts a rule given as an integer into a binary list representation.
 
     It reads from left to right (contrary to the Wikipedia article given below),
     i.e. the 2**0 is found on the left hand side and 2**7 on the right.
@@ -42,12 +41,12 @@ def convert_rule(rule_number):
     see: http://en.wikipedia.org/wiki/Rule_30
 
     """
-    binary_rule = [(rule_number // pow(2,i)) % 2 for i in range(8)]
+    binary_rule = [(rule_number // pow(2, i)) % 2 for i in range(8)]
     return np.array(binary_rule)
 
 
 def make_initial_state(name, ncells, seed=42):
-    """ Creates an initial state for the automaton.
+    """Creates an initial state for the automaton.
 
     :param name:
 
@@ -63,36 +62,36 @@ def make_initial_state(name, ncells, seed=42):
     :raises: ValueError if the ``name`` is unknown
 
     """
-    if name == 'single':
+    if name == "single":
         just_one_cell = np.zeros(ncells)
-        just_one_cell[int(ncells/2)] = 1.0
+        just_one_cell[int(ncells / 2)] = 1.0
         return just_one_cell
-    elif name == 'random':
+    elif name == "random":
         np.random.seed(seed)
         random_init = np.random.randint(2, size=ncells)
         return random_init
     else:
-        raise ValueError('I cannot handel your initial state `%s`.' % name)
+        raise ValueError("I cannot handel your initial state `%s`." % name)
 
 
 def plot_pattern(pattern, rule_number, filename):
-    """ Plots an automaton ``pattern`` and stores the image under a given ``filename``.
+    """Plots an automaton ``pattern`` and stores the image under a given ``filename``.
 
     For axes labels the ``rule_number`` is also required.
 
     """
     plt.figure()
     plt.imshow(pattern)
-    plt.xlabel('Cell No.')
-    plt.ylabel('Time Step')
-    plt.title('CA with Rule %s' % str(rule_number))
+    plt.xlabel("Cell No.")
+    plt.ylabel("Time Step")
+    plt.title("CA with Rule %s" % str(rule_number))
     plt.savefig(filename)
-    #plt.show()
+    # plt.show()
     plt.close()
 
 
 def cellular_automaton_1D(initial_state, rule_number, steps):
-    """ Simulates a 1 dimensional cellular automaton.
+    """Simulates a 1 dimensional cellular automaton.
 
     :param initial_state:
 
@@ -119,7 +118,7 @@ def cellular_automaton_1D(initial_state, rule_number, steps):
     pattern = np.zeros((steps, ncells))
 
     # Pass initial state:
-    pattern[0,:] = initial_state
+    pattern[0, :] = initial_state
 
     # Get the binary rule list
     binary_rule = convert_rule(rule_number)
@@ -129,13 +128,13 @@ def cellular_automaton_1D(initial_state, rule_number, steps):
 
     # Iterate over all steps to compute the CA
     all_cells = range(ncells)
-    for step in range(steps-1):
+    for step in range(steps - 1):
         current_row = pattern[step, :]
-        next_row = pattern[step+1, :]
+        next_row = pattern[step + 1, :]
         for irun in all_cells:
             # Get the neighbourhood
             neighbour_indices = range(irun - 1, irun + 2)
-            neighbourhood = np.take(current_row, neighbour_indices, mode='wrap')
+            neighbourhood = np.take(current_row, neighbour_indices, mode="wrap")
             # Convert neighborhood to decimal
             decimal_neighborhood = int(np.sum(neighbourhood * neighbourhood_factors))
             # Get next state from rule book
@@ -147,20 +146,20 @@ def cellular_automaton_1D(initial_state, rule_number, steps):
 
 
 def main():
-    """ Main simulation function """
+    """Main simulation function"""
     rules_to_test = [10, 30, 90, 110, 184]  # rules we want to explore:
     steps = 250  # cell iterations
     ncells = 400  # number of cells
     seed = 100042  # RNG seed
-    initial_states = ['single', 'random']  # Initial states we want to explore
+    initial_states = ["single", "random"]  # Initial states we want to explore
 
     # create a folder for the plots and the data
-    folder = os.path.join(os.getcwd(), 'experiments', 'ca_patterns_original')
+    folder = os.path.join(os.getcwd(), "experiments", "ca_patterns_original")
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    filename = os.path.join(folder, 'all_patterns.p')
+    filename = os.path.join(folder, "all_patterns.p")
 
-    print('Computing all patterns')
+    print("Computing all patterns")
     all_patterns = []  # list containing the simulation results
     for idx, rule_number in enumerate(rules_to_test):
         # iterate over all rules
@@ -179,19 +178,18 @@ def main():
         progressbar(idx, len(rules_to_test), reprint=True)
 
     # Store all patterns to disk
-    with open(filename, 'wb') as file:
+    with open(filename, "wb") as file:
         pickle.dump(all_patterns, file=file)
 
     # Finally print all patterns
-    print('Plotting all patterns')
+    print("Plotting all patterns")
     for idx, pattern_tuple in enumerate(all_patterns):
         rule_number, initial_name, pattern = pattern_tuple
         # Plot the pattern
-        filename = os.path.join(folder, 'rule_%s_%s.png' % (str(rule_number), initial_name))
+        filename = os.path.join(folder, "rule_%s_%s.png" % (str(rule_number), initial_name))
         plot_pattern(pattern, rule_number, filename)
         progressbar(idx, len(all_patterns), reprint=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

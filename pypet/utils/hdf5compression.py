@@ -1,12 +1,10 @@
 """Module to allow hdf5 compression via ptrepack directly within python scripts"""
 
-__author__ = 'Robert Meyer'
-
 import os
 import subprocess
 
-from pypet.trajectory import load_trajectory
 from pypet import pypetconstants
+from pypet.trajectory import load_trajectory
 
 
 def compact_hdf5_file(filename, name=None, index=None, keep_backup=True):
@@ -45,8 +43,14 @@ def compact_hdf5_file(filename, name=None, index=None, keep_backup=True):
     if name is None and index is None:
         index = -1
 
-    tmp_traj = load_trajectory(name, index, as_new=False, load_all=pypetconstants.LOAD_NOTHING,
-                               force=True, filename=filename)
+    tmp_traj = load_trajectory(
+        name,
+        index,
+        as_new=False,
+        load_all=pypetconstants.LOAD_NOTHING,
+        force=True,
+        filename=filename,
+    )
     service = tmp_traj.v_storage_service
     complevel = service.complevel
     complib = service.complib
@@ -54,33 +58,40 @@ def compact_hdf5_file(filename, name=None, index=None, keep_backup=True):
     fletcher32 = service.fletcher32
 
     name_wo_ext, ext = os.path.splitext(filename)
-    tmp_filename = name_wo_ext + '_tmp' + ext
+    tmp_filename = name_wo_ext + "_tmp" + ext
 
     abs_filename = os.path.abspath(filename)
     abs_tmp_filename = os.path.abspath(tmp_filename)
 
-    command = ['ptrepack', '-v',
-               '--complib', complib,
-               '--complevel', str(complevel),
-               '--shuffle', str(int(shuffle)),
-               '--fletcher32', str(int(fletcher32)),
-               abs_filename, abs_tmp_filename]
-    str_command = ' '.join(command)
-    print('Executing command `%s`' % str_command)
+    command = [
+        "ptrepack",
+        "-v",
+        "--complib",
+        complib,
+        "--complevel",
+        str(complevel),
+        "--shuffle",
+        str(int(shuffle)),
+        "--fletcher32",
+        str(int(fletcher32)),
+        abs_filename,
+        abs_tmp_filename,
+    ]
+    str_command = " ".join(command)
+    print(f"Executing command `{str_command}`")
 
     retcode = subprocess.call(command)
     if retcode != 0:
-        print('#### ERROR: Compacting `%s` failed with errorcode %s! ####' %
-              (filename, str(retcode)))
+        print(f"#### ERROR: Compacting `{filename}` failed with errorcode {retcode}! ####")
     else:
-        print('#### Compacting successful ####')
-        print('Renaming files')
+        print("#### Compacting successful ####")
+        print("Renaming files")
         if keep_backup:
-            backup_file_name = name_wo_ext + '_backup' + ext
+            backup_file_name = name_wo_ext + "_backup" + ext
             os.rename(filename, backup_file_name)
         else:
             os.remove(filename)
         os.rename(tmp_filename, filename)
-        print('### Compacting and Renaming finished ####')
+        print("### Compacting and Renaming finished ####")
 
     return retcode

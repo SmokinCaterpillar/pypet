@@ -1,14 +1,11 @@
 """Module that handles KeyboardInterrupt to exit gracefully"""
 
-__author__ = 'Robert Meyer'
-
 import signal
 import sys
 
 
-class _SigintHandler(object):
-
-    SIGINT = '__SIGINT__'
+class _SigintHandler:
+    SIGINT = "__SIGINT__"
 
     def __init__(self):
         self.original_handler = signal.getsignal(signal.SIGINT)
@@ -34,16 +31,17 @@ class _SigintHandler(object):
 
         """
         if self.hit:
-            prompt = 'Exiting immediately!'
+            prompt = "Exiting immediately!"
             raise KeyboardInterrupt(prompt)
         else:
             self.hit = True
-            prompt = ('\nYou killed the process(es) via `SIGINT` (`CTRL+C`). '
-                      'I am trying to exit '
-                      'gracefully. Using `SIGINT` (`CTRL+C`) '
-                      'again will cause an immediate exit.\n')
+            prompt = (
+                "\nYou killed the process(es) via `SIGINT` (`CTRL+C`). "
+                "I am trying to exit "
+                "gracefully. Using `SIGINT` (`CTRL+C`) "
+                "again will cause an immediate exit.\n"
+            )
             sys.stderr.write(prompt)
 
+
 sigint_handling = _SigintHandler()
-
-

@@ -1,13 +1,12 @@
 """Module containing factory functions for parameter exploration"""
 
-import logging
-import sys
 import itertools as itools
+import logging
 from collections import OrderedDict
 
 
 def cartesian_product(parameter_dict, combined_parameters=()):
-    """ Generates a Cartesian product of the input parameter dictionary.
+    """Generates a Cartesian product of the input parameter dictionary.
 
     For example:
 
@@ -88,9 +87,10 @@ def find_unique_points(explored_parameters):
             unique_elements[val_tuple].append(idx)
         return list(unique_elements.items())
     except TypeError:
-        logger = logging.getLogger('pypet.find_unique')
-        logger.error('Your parameter entries could not be hashed, '
-                     'now I am sorting slowly in O(N**2).')
+        logger = logging.getLogger("pypet.find_unique")
+        logger.error(
+            "Your parameter entries could not be hashed, now I am sorting slowly in O(N**2)."
+        )
         unique_elements = []
         for idx, val_tuple in enumerate(zipped_tuples):
             matches = False
@@ -106,5 +106,3 @@ def find_unique_points(explored_parameters):
             if not matches:
                 unique_elements.append((val_tuple, [idx]))
         return unique_elements
-
-

@@ -1,24 +1,22 @@
 """Module containing wrappers for multiprocessing"""
 
-__author__ = 'Robert Meyer', 'Mehmet Nevvaf Timur'
-
-
-from threading import ThreadError
-import queue
 import pickle
+import queue
+from threading import ThreadError
+
 try:
     import zmq
 except ImportError:
     zmq = None
 
-from collections import deque
 import copy as cp
 import gc
-import sys
-from threading import Thread
-import time
 import os
 import socket
+import sys
+import time
+from collections import deque
+from threading import Thread
 
 import pypet.pypetconstants as pypetconstants
 from pypet.pypetlogging import HasLogger
@@ -26,7 +24,7 @@ from pypet.utils.decorators import retry
 from pypet.utils.helpful_functions import is_ipv6
 
 
-class MultiprocWrapper(object):
+class MultiprocWrapper:
     """Abstract class definition of a Wrapper.
 
     Note that only storing is required, loading is optional.
@@ -34,9 +32,10 @@ class MultiprocWrapper(object):
     ABSTRACT: Needs to be defined in subclass
 
     """
+
     @property
     def is_open(self):
-        """ Normally the file is opened and closed after each insertion.
+        """Normally the file is opened and closed after each insertion.
 
         However, the storage service may provide to keep the store open and signals
         this via this property.
@@ -50,16 +49,16 @@ class MultiprocWrapper(object):
         return True
 
     def store(self, *args, **kwargs):
-        raise NotImplementedError('Implement this!')
+        raise NotImplementedError("Implement this!")
 
 
 class ZMQServer(HasLogger):
-    """ Generic zmq server """
+    """Generic zmq server"""
 
-    PING = 'PING'  # for connection testing
-    PONG = 'PONG'  # for connection testing
-    DONE = 'DONE'  # signals stopping of server
-    CLOSED = 'CLOSED'  # signals closing of server
+    PING = "PING"  # for connection testing
+    PONG = "PONG"  # for connection testing
+    DONE = "DONE"  # signals stopping of server
+    CLOSED = "CLOSED"  # signals closing of server
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
         self._url = url  # server url
@@ -68,38 +67,38 @@ class ZMQServer(HasLogger):
         self._socket = None
 
     def _start(self):
-        self._logger.info('Starting Server at `%s`' % self._url)
+        self._logger.info(f"Starting Server at `{self._url}`")
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REP)
         self._socket.ipv6 = is_ipv6(self._url)
         self._socket.bind(self._url)
 
     def _close(self):
-        self._logger.info('Closing Server')
+        self._logger.info("Closing Server")
         self._socket.close()
         self._context.term()
 
 
 class LockerServer(ZMQServer):
-    """ Manages a database of locks """
+    """Manages a database of locks"""
 
-    LOCK = 'LOCK'  # command for locking a lock
-    RELEASE_ERROR = 'RELEASE_ERROR'  # signals unsuccessful attempt to unlock
-    MSG_ERROR = 'MSG_ERROR'  # signals error in decoding client request
-    UNLOCK = 'UNLOCK'  # command for unlocking a lock
-    RELEASED = 'RELEASED'  # signals successful unlocking
-    LOCK_ERROR = 'LOCK_ERROR'  # signals unsuccessful attempt to lock
-    GO = 'GO'  # signals successful locking and and allwos continuing of client
-    WAIT = 'WAIT'  # signals lock is already in use and client has to wait for release
-    DELIMITER = ':::'  # delimiter to split messages
-    DEFAULT_LOCK = '_DEFAULT_'  # default lock name
+    LOCK = "LOCK"  # command for locking a lock
+    RELEASE_ERROR = "RELEASE_ERROR"  # signals unsuccessful attempt to unlock
+    MSG_ERROR = "MSG_ERROR"  # signals error in decoding client request
+    UNLOCK = "UNLOCK"  # command for unlocking a lock
+    RELEASED = "RELEASED"  # signals successful unlocking
+    LOCK_ERROR = "LOCK_ERROR"  # signals unsuccessful attempt to lock
+    GO = "GO"  # signals successful locking and and allwos continuing of client
+    WAIT = "WAIT"  # signals lock is already in use and client has to wait for release
+    DELIMITER = ":::"  # delimiter to split messages
+    DEFAULT_LOCK = "_DEFAULT_"  # default lock name
 
     def __init__(self, url="tcp://127.0.0.1:7777"):
-        super(LockerServer, self).__init__(url)
+        super().__init__(url)
         self._locks = {}  # lock DB, format 'lock_name': ('client_id', 'request_id')
 
     def _pre_respond_hook(self, response):
-        """ Hook that can be used to temper with the server before responding
+        """Hook that can be used to temper with the server before responding
 
         :param response: Response to be send
 
@@ -120,9 +119,12 @@ class LockerServer(ZMQServer):
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id == client_id:
-                response = (self.LOCK_ERROR + self.DELIMITER +
-                            'Re-request of lock `%s` (old request id `%s`) by `%s` '
-                            '(request id `%s`)' % (name, client_id, other_request_id, request_id))
+                response = (
+                    self.LOCK_ERROR
+                    + self.DELIMITER
+                    + f"Re-request of lock `{name}` (old request id `{client_id}`) by `{other_request_id}` "
+                    f"(request id `{request_id}`)"
+                )
                 self._logger.warning(response)
                 return response
             else:
@@ -142,22 +144,24 @@ class LockerServer(ZMQServer):
         if name in self._locks:
             other_client_id, other_request_id = self._locks[name]
             if other_client_id != client_id:
-                response = (self.RELEASE_ERROR + self.DELIMITER +
-                            'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
-                            '`%s` (request id `%s`)' % (name,
-                                                        other_client_id,
-                                                        other_request_id,
-                                                        client_id,
-                                                        request_id))
+                response = (
+                    self.RELEASE_ERROR
+                    + self.DELIMITER
+                    + f"Lock `{name}` was acquired by `{other_client_id}` (old request id `{other_request_id}`) and not by "
+                    f"`{client_id}` (request id `{request_id}`)"
+                )
                 self._logger.error(response)
                 return response
             else:
                 del self._locks[name]
                 return self.RELEASED
         else:
-            response = (self.RELEASE_ERROR + self.DELIMITER +
-                        'Lock `%s` cannot be found in database (client id `%s`, '
-                        'request id `%s`)' % (name, client_id, request_id))
+            response = (
+                self.RELEASE_ERROR
+                + self.DELIMITER
+                + f"Lock `{name}` cannot be found in database (client id `{client_id}`, "
+                f"request id `{request_id}`)"
+            )
             self._logger.error(response)
             return response
 
@@ -168,13 +172,13 @@ class LockerServer(ZMQServer):
 
             running = True
             while running:
-                msg = ''
-                name = ''
-                client_id = ''
-                request_id = ''
+                msg = ""
+                name = ""
+                client_id = ""
+                request_id = ""
 
                 request = self._socket.recv_string()
-                self._logger.log(1, 'Recevied REQ `%s`', request)
+                self._logger.log(1, "Recevied REQ `%s`", request)
 
                 split_msg = request.split(self.DELIMITER)
 
@@ -195,29 +199,35 @@ class LockerServer(ZMQServer):
                     running = False
 
                 else:
-                    response = (self.MSG_ERROR + self.DELIMITER +
-                                'Request `%s` not understood '
-                                '(or wrong number of delimiters)' % request)
+                    response = (
+                        self.MSG_ERROR + self.DELIMITER + f"Request `{request}` not understood "
+                        "(or wrong number of delimiters)"
+                    )
                     self._logger.error(response)
 
                 respond = self._pre_respond_hook(response)
                 if respond:
-                    self._logger.log(1, 'Sending REP `%s` to `%s` (request id `%s`)',
-                                     response, client_id, request_id)
+                    self._logger.log(
+                        1,
+                        "Sending REP `%s` to `%s` (request id `%s`)",
+                        response,
+                        client_id,
+                        request_id,
+                    )
                     self._socket.send_string(response)
 
             # Close everything in the end
             self._close()
         except Exception:
-            self._logger.exception('Crashed Lock Server!')
+            self._logger.exception("Crashed Lock Server!")
             raise
 
 
 class TimeOutLockerServer(LockerServer):
-    """ Lock Server where each lock is valid only for a fixed period of time. """
+    """Lock Server where each lock is valid only for a fixed period of time."""
 
     def __init__(self, url, timeout):
-        super(TimeOutLockerServer, self).__init__(url)
+        super().__init__(url)
         self._timeout = timeout
         self._timeout_locks = {}
 
@@ -231,9 +241,12 @@ class TimeOutLockerServer(LockerServer):
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id == client_id:
-                response = (self.LOCK_ERROR + self.DELIMITER +
-                            'Re-request of lock `%s` (old request id `%s`) by `%s` '
-                            '(request id `%s`)' % (name, client_id, other_request_id, request_id))
+                response = (
+                    self.LOCK_ERROR
+                    + self.DELIMITER
+                    + f"Re-request of lock `{name}` (old request id `{client_id}`) by `{other_request_id}` "
+                    f"(request id `{request_id}`)"
+                )
                 self._logger.warning(response)
                 return response
             else:
@@ -241,10 +254,12 @@ class TimeOutLockerServer(LockerServer):
                 if current_time - lock_time < self._timeout:
                     return self.WAIT
                 else:
-                    response = (self.GO + self.DELIMITER + 'Lock `%s` by `%s` (old request id `%s) '
-                                                          'timed out' % (name,
-                                                                         other_client_id,
-                                                                         other_request_id))
+                    response = (
+                        self.GO
+                        + self.DELIMITER
+                        + f"Lock `{name}` by `{other_client_id}` (old request id `{other_request_id}) "
+                        "timed out"
+                    )
                     self._logger.info(response)
                     self._locks[name] = (client_id, request_id, time.time())
                     self._timeout_locks[(name, other_client_id)] = (request_id, lock_time)
@@ -258,13 +273,12 @@ class TimeOutLockerServer(LockerServer):
         if name in self._locks:
             other_client_id, other_request_id, lock_time = self._locks[name]
             if other_client_id != client_id:
-                response = (self.RELEASE_ERROR + self.DELIMITER +
-                            'Lock `%s` was acquired by `%s` (old request id `%s`) and not by '
-                            '`%s` (request id `%s`)' % (name,
-                                                        other_client_id,
-                                                        other_request_id,
-                                                        client_id,
-                                                        request_id))
+                response = (
+                    self.RELEASE_ERROR
+                    + self.DELIMITER
+                    + f"Lock `{name}` was acquired by `{other_client_id}` (old request id `{other_request_id}`) and not by "
+                    f"`{client_id}` (request id `{request_id}`)"
+                )
                 self._logger.error(response)
                 return response
             else:
@@ -273,14 +287,20 @@ class TimeOutLockerServer(LockerServer):
         elif (name, client_id) in self._timeout_locks:
             other_request_id, lock_time = self._timeout_locks[(name, client_id)]
             timeout = time.time() - lock_time - self._timeout
-            response = (self.RELEASE_ERROR + self.DELIMITER +
-                        'Lock `%s` timed out %f seconds ago (client id `%s`, '
-                        'old request id `%s`)' % (name, timeout, client_id, other_request_id))
+            response = (
+                self.RELEASE_ERROR
+                + self.DELIMITER
+                + f"Lock `{name}` timed out {timeout:f} seconds ago (client id `{client_id}`, "
+                f"old request id `{other_request_id}`)"
+            )
             return response
         else:
-            response = (self.RELEASE_ERROR + self.DELIMITER +
-                        'Lock `%s` cannot be found in database (client id `%s`, '
-                        'request id `%s`)' % (name, client_id, request_id))
+            response = (
+                self.RELEASE_ERROR
+                + self.DELIMITER
+                + f"Lock `{name}` cannot be found in database (client id `{client_id}`, "
+                f"request id `{request_id}`)"
+            )
             self._logger.warning(response)
             return response
 
@@ -288,8 +308,8 @@ class TimeOutLockerServer(LockerServer):
 class ReliableClient(HasLogger):
     """Implements a reliable client that reconnects on server failure"""
 
-    SLEEP = 0.01   # Sleep time before reconnect in seconds
-    RETRIES = 9   # Number of reconnect retries
+    SLEEP = 0.01  # Sleep time before reconnect in seconds
+    RETRIES = 9  # Number of reconnect retries
     TIMEOUT = 2222  # Waiting time to reconnect in seconds
 
     def __init__(self, url):
@@ -300,17 +320,17 @@ class ReliableClient(HasLogger):
         self._set_logger()
 
     def __getstate__(self):
-        result_dict = super(ReliableClient, self).__getstate__()
+        result_dict = super().__getstate__()
         # Do not pickle zmq data
-        result_dict['_context'] = None
-        result_dict['_socket'] = None
-        result_dict['_poll'] = None
+        result_dict["_context"] = None
+        result_dict["_socket"] = None
+        result_dict["_poll"] = None
         return result_dict
 
     def send_done(self):
         """Notifies the Server to shutdown"""
         self.start(test_connection=False)
-        self._logger.debug('Sending shutdown signal')
+        self._logger.debug("Sending shutdown signal")
         self._req_rep(ZMQServer.DONE)
 
     def test_ping(self):
@@ -318,7 +338,7 @@ class ReliableClient(HasLogger):
         self.start(test_connection=False)
         response = self._req_rep(ZMQServer.PING)
         if response != ZMQServer.PONG:
-            raise RuntimeError('Connection Error to LockServer')
+            raise RuntimeError("Connection Error to LockServer")
 
     def finalize(self):
         """Closes socket and terminates context
@@ -341,7 +361,7 @@ class ReliableClient(HasLogger):
 
         """
         if self._context is None:
-            self._logger.debug('Starting Client')
+            self._logger.debug("Starting Client")
             self._context = zmq.Context()
             self._poll = zmq.Poller()
             self._start_socket()
@@ -374,20 +394,19 @@ class ReliableClient(HasLogger):
         """Returns response and number of retries"""
         retries_left = self.RETRIES
         while retries_left:
-            self._logger.log(1, 'Sending REQ `%s`', request)
+            self._logger.log(1, "Sending REQ `%s`", request)
             self._send_request(request)
             socks = dict(self._poll.poll(self.TIMEOUT))
             if socks.get(self._socket) == zmq.POLLIN:
                 response = self._receive_response()
-                self._logger.log(1, 'Received REP `%s`', response)
+                self._logger.log(1, "Received REP `%s`", response)
                 return response, self.RETRIES - retries_left
             else:
-                self._logger.debug('No response from server (%d retries left)' %
-                                   retries_left)
+                self._logger.debug(f"No response from server ({retries_left} retries left)")
                 self._close_socket(confused=True)
                 retries_left -= 1
                 if retries_left == 0:
-                    raise RuntimeError('Server seems to be offline!')
+                    raise RuntimeError("Server seems to be offline!")
                 time.sleep(self.SLEEP)
                 self._start_socket()
 
@@ -401,37 +420,43 @@ class ReliableClient(HasLogger):
 
 
 class LockerClient(ReliableClient):
-    """ Implements a Lock by requesting lock information from LockServer"""
+    """Implements a Lock by requesting lock information from LockServer"""
 
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        super(LockerClient, self).__init__(url)
+    def __init__(self, url="tcp://127.0.0.1:7777", lock_name=LockerServer.DEFAULT_LOCK):
+        super().__init__(url)
         self.lock_name = lock_name
         self.id = None
 
     def __getstate__(self):
-        result_dict = super(LockerClient, self).__getstate__()
-        result_dict['id'] = None
+        result_dict = super().__getstate__()
+        result_dict["id"] = None
         return result_dict
 
     def start(self, test_connection=True):
         if self._context is None:
             self.id = self._get_id()
             cls = self.__class__
-            self._set_logger('%s.%s_%s' % (cls.__module__, cls.__name__, self.id))
-            super(LockerClient, self).start(test_connection)
+            self._set_logger(f"{cls.__module__}.{cls.__name__}_{self.id}")
+            super().start(test_connection)
 
     @staticmethod
     def _get_id():
-        return socket.getfqdn().replace(LockerServer.DELIMITER, '-') + '__' + str(os.getpid())
+        return socket.getfqdn().replace(LockerServer.DELIMITER, "-") + "__" + str(os.getpid())
 
     @staticmethod
     def _get_request_id():
-        return str(time.time()).replace(LockerServer.DELIMITER, '-')
+        return str(time.time()).replace(LockerServer.DELIMITER, "-")
 
     def _compose_request(self, request_sketch):
-        request = (request_sketch + LockerServer.DELIMITER +
-                   self.lock_name + LockerServer.DELIMITER + self.id +
-                   LockerServer.DELIMITER + self._get_request_id())
+        request = (
+            request_sketch
+            + LockerServer.DELIMITER
+            + self.lock_name
+            + LockerServer.DELIMITER
+            + self.id
+            + LockerServer.DELIMITER
+            + self._get_request_id()
+        )
         return request
 
     def acquire(self):
@@ -448,12 +473,12 @@ class LockerClient(ReliableClient):
                 return True
             elif response[0] == LockerServer.LOCK_ERROR and retries > 0:
                 # Message was sent but Server response was lost and we tried again
-                self._logger.error(str_response + '; Probably due to retry')
+                self._logger.error(str_response + "; Probably due to retry")
                 return True
             elif response[0] == LockerServer.WAIT:
                 time.sleep(self.SLEEP)
             else:
-                raise RuntimeError('Response `%s` not understood' % response)
+                raise RuntimeError(f"Response `{response}` not understood")
 
     def release(self):
         """Releases lock"""
@@ -464,34 +489,33 @@ class LockerClient(ReliableClient):
             pass  # Everything is fine
         elif response[0] == LockerServer.RELEASE_ERROR and retries > 0:
             # Message was sent but Server response was lost and we tried again
-            self._logger.error(str_response + '; Probably due to retry')
+            self._logger.error(str_response + "; Probably due to retry")
         else:
-            raise RuntimeError('Response `%s` not understood' % response)
+            raise RuntimeError(f"Response `{response}` not understood")
 
     def _req_rep_retry(self, request):
         request = self._compose_request(request)
-        return super(LockerClient, self)._req_rep_retry(request)
+        return super()._req_rep_retry(request)
 
 
 class QueuingServerMessageListener(ZMQServer):
-    """ Manages the listening requests"""
+    """Manages the listening requests"""
 
-    SPACE = 'SPACE'  # for space in the queue
-    DATA = 'DATA'  # for sending data
-    SPACE_AVAILABLE = 'SPACE_AVAILABLE'
-    SPACE_NOT_AVAILABLE = 'SPACE_NOT_AVAILABLE'
-    STORING = 'STORING'
-
+    SPACE = "SPACE"  # for space in the queue
+    DATA = "DATA"  # for sending data
+    SPACE_AVAILABLE = "SPACE_AVAILABLE"
+    SPACE_NOT_AVAILABLE = "SPACE_NOT_AVAILABLE"
+    STORING = "STORING"
 
     def __init__(self, url, queue, queue_maxsize):
-        super(QueuingServerMessageListener, self).__init__(url)
+        super().__init__(url)
         self.queue = queue
         if queue_maxsize == 0:
-            queue_maxsize = float('inf')
+            queue_maxsize = float("inf")
         self.queue_maxsize = queue_maxsize
 
     def listen(self):
-        """ Handles listening requests from the client.
+        """Handles listening requests from the client.
 
         There are 4 types of requests:
 
@@ -529,16 +553,16 @@ class QueuingServerMessageListener(ZMQServer):
 
             elif request == self.DONE:
                 self._socket.send_string(ZMQServer.CLOSED)
-                self.queue.put(('DONE', [], {}))
+                self.queue.put(("DONE", [], {}))
                 self._close()
                 break
 
             else:
-                raise RuntimeError('I did not understand your request %s' % request)
+                raise RuntimeError(f"I did not understand your request {request}")
 
 
 class QueuingServer(HasLogger):
-    """ Implements server architecture for Queueing"""
+    """Implements server architecture for Queueing"""
 
     def __init__(self, url, storage_service, queue_maxsize, gc_interval):
         self._url = url
@@ -548,8 +572,12 @@ class QueuingServer(HasLogger):
 
     def run(self):
         main_queue = queue.Queue(maxsize=self._queue_maxsize)
-        server_message_listener = QueuingServerMessageListener(self._url, main_queue, self._queue_maxsize)
-        storage_writer = QueueStorageServiceWriter(self._storage_service, main_queue, self._gc_interval)
+        server_message_listener = QueuingServerMessageListener(
+            self._url, main_queue, self._queue_maxsize
+        )
+        storage_writer = QueueStorageServiceWriter(
+            self._storage_service, main_queue, self._gc_interval
+        )
 
         server_queue = Thread(target=server_message_listener.listen, args=())
         server_queue.start()
@@ -559,10 +587,10 @@ class QueuingServer(HasLogger):
 
 
 class QueuingClient(ReliableClient):
-    """ Manages the returning requests"""
+    """Manages the returning requests"""
 
     def put(self, data, block=True):
-        """ If there is space it sends data to server
+        """If there is space it sends data to server
 
         If no space in the queue
 
@@ -598,31 +626,33 @@ class ForkDetector(HasLogger):
         if self._context is not None:
             current_pid = os.getpid()
             if current_pid != self._pid:
-                self._logger.debug('Fork detected: My pid `%s` != os pid `%s`. '
-                                   'Restarting connection.' % (str(self._pid), str(current_pid)))
+                self._logger.debug(
+                    f"Fork detected: My pid `{self._pid}` != os pid `{current_pid}`. "
+                    "Restarting connection."
+                )
                 self._context = None
                 self._pid = current_pid
 
 
 class ForkAwareQueuingClient(QueuingClient, ForkDetector):
-    """ Queuing Client can detect forking of process.
+    """Queuing Client can detect forking of process.
 
     In this case the context and socket are restarted.
 
     """
 
-    def __init__(self, url='tcp://127.0.0.1:22334'):
-        super(ForkAwareQueuingClient, self).__init__(url)
+    def __init__(self, url="tcp://127.0.0.1:22334"):
+        super().__init__(url)
         self._pid = None
 
     def __getstate__(self):
-        result_dict = super(ForkAwareQueuingClient, self).__getstate__()
-        result_dict['_pid'] = None
+        result_dict = super().__getstate__()
+        result_dict["_pid"] = None
         return result_dict
 
     def start(self, test_connection=True):
         self._detect_fork()
-        super(ForkAwareQueuingClient, self).start(test_connection)
+        super().start(test_connection)
 
 
 class ForkAwareLockerClient(LockerClient, ForkDetector):
@@ -632,29 +662,29 @@ class ForkAwareLockerClient(LockerClient, ForkDetector):
 
     """
 
-    def __init__(self, url='tcp://127.0.0.1:7777', lock_name=LockerServer.DEFAULT_LOCK):
-        super(ForkAwareLockerClient, self).__init__(url, lock_name)
+    def __init__(self, url="tcp://127.0.0.1:7777", lock_name=LockerServer.DEFAULT_LOCK):
+        super().__init__(url, lock_name)
         self._pid = None
 
     def __getstate__(self):
-        result_dict = super(ForkAwareLockerClient, self).__getstate__()
-        result_dict['_pid'] = None
+        result_dict = super().__getstate__()
+        result_dict["_pid"] = None
         return result_dict
 
     def start(self, test_connection=True):
         """Checks for forking and starts/restarts if desired"""
         self._detect_fork()
-        super(ForkAwareLockerClient, self).start(test_connection)
+        super().start(test_connection)
 
 
 class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
-    """ For multiprocessing with :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
-        original storage service.
+    """For multiprocessing with :const:`~pypet.pypetconstants.WRAP_MODE_QUEUE`, replaces the
+    original storage service.
 
-        All storage requests are send over a queue to the process running the
-        :class:`~pypet.storageservice.QdebugueueStorageServiceWriter`.
+    All storage requests are send over a queue to the process running the
+    :class:`~pypet.storageservice.QdebugueueStorageServiceWriter`.
 
-        Does not support loading of data!
+    Does not support loading of data!
 
     """
 
@@ -664,17 +694,19 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         self._set_logger()
 
     def __getstate__(self):
-        result = super(QueueStorageServiceSender, self).__getstate__()
+        result = super().__getstate__()
         if not self.pickle_queue:
-            result['queue'] = None
+            result["queue"] = None
         return result
 
     def load(self, *args, **kwargs):
-        raise NotImplementedError('Queue wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use a Lock '
-                                  'wrapping.')
+        raise NotImplementedError(
+            "Queue wrapping does not support loading. If you want to "
+            "load data in a multiprocessing environment, use a Lock "
+            "wrapping."
+        )
 
-    @retry(9, Exception, 0.01, 'pypet.retry')
+    @retry(9, Exception, 0.01, "pypet.retry")
     def _put_on_queue(self, to_put):
         """Puts data on queue"""
         old = self.pickle_queue
@@ -690,11 +722,11 @@ class QueueStorageServiceSender(MultiprocWrapper, HasLogger):
         Note that the queue will no longer be pickled if the Sender is pickled.
 
         """
-        self._put_on_queue(('STORE', args, kwargs))
+        self._put_on_queue(("STORE", args, kwargs))
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
-        self._put_on_queue(('DONE', [], {}))
+        self._put_on_queue(("DONE", [], {}))
 
 
 class LockAcquisition(HasLogger):
@@ -706,19 +738,21 @@ class LockAcquisition(HasLogger):
     Requires a ``_logger`` for error messaging.
 
     """
-    @retry(9, TypeError, 0.01, 'pypet.retry')
+
+    @retry(9, TypeError, 0.01, "pypet.retry")
     def acquire_lock(self):
         if not self.is_locked:
             self.is_locked = self.lock.acquire()
 
-    @retry(9, TypeError, 0.01, 'pypet.retry')
+    @retry(9, TypeError, 0.01, "pypet.retry")
     def release_lock(self):
         if self.is_locked and not self.is_open:
             try:
                 self.lock.release()
             except (ValueError, ThreadError):
-                self._logger.exception('Could not release lock, '
-                                       'probably has been released already!')
+                self._logger.exception(
+                    "Could not release lock, probably has been released already!"
+                )
             self.is_locked = False
 
 
@@ -730,18 +764,20 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
         self._set_logger()
 
     def __getstate__(self):
-        # result = super(PipeStorageServiceSender, self).__getstate__()
+        # result = super().__getstate__()
         result = self.__dict__.copy()
-        result['conn'] = None
-        result['lock'] = None
+        result["conn"] = None
+        result["lock"] = None
         return result
 
     def load(self, *args, **kwargs):
-        raise NotImplementedError('Pipe wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use the Lock '
-                                  'wrapping.')
+        raise NotImplementedError(
+            "Pipe wrapping does not support loading. If you want to "
+            "load data in a multiprocessing environment, use the Lock "
+            "wrapping."
+        )
 
-    @retry(9, Exception, 0.01, 'pypet.retry')
+    @retry(9, Exception, 0.01, "pypet.retry")
     def _put_on_pipe(self, to_put):
         """Puts data on queue"""
         self.acquire_lock()
@@ -749,12 +785,12 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
         self.release_lock()
 
     def _make_chunk_iterator(self, to_chunk, chunksize):
-        return (to_chunk[i:i + chunksize] for i in range(0, len(to_chunk), chunksize))
+        return (to_chunk[i : i + chunksize] for i in range(0, len(to_chunk), chunksize))
 
     def _send_chunks(self, to_put):
         put_dump = pickle.dumps(to_put)
         data_size = sys.getsizeof(put_dump)
-        nchunks = data_size / 20000000.   # chunks with size 20 MB
+        nchunks = data_size / 20000000.0  # chunks with size 20 MB
         chunksize = int(len(put_dump) / nchunks)
         chunk_iterator = self._make_chunk_iterator(put_dump, chunksize)
         for chunk in chunk_iterator:
@@ -763,7 +799,7 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
             # print('S: sent False')
             # print('S: sending chunk')
             self.conn.send_bytes(chunk)
-            # print('S: sent chunk %s' % chunk[0:10])
+            # print(f'S: sent chunk {chunk[0:10]}')
             # print('S: recv signal')
             self.conn.recv()  # wait for signal that message was received
             # print('S: read signal')
@@ -781,11 +817,11 @@ class PipeStorageServiceSender(MultiprocWrapper, LockAcquisition):
         Note that the queue will no longer be pickled if the Sender is pickled.
 
         """
-        self._put_on_pipe(('STORE', args, kwargs))
+        self._put_on_pipe(("STORE", args, kwargs))
 
     def send_done(self):
         """Signals the writer that it can stop listening to the queue"""
-        self._put_on_pipe(('DONE', [], {}))
+        self._put_on_pipe(("DONE", [], {}))
 
 
 class StorageServiceDataHandler(HasLogger):
@@ -793,48 +829,48 @@ class StorageServiceDataHandler(HasLogger):
 
     def __init__(self, storage_service, gc_interval=None):
         self._storage_service = storage_service
-        self._trajectory_name = ''
+        self._trajectory_name = ""
         self.gc_interval = gc_interval
         self.operation_counter = 0
         self._set_logger()
 
     def __repr__(self):
-        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
-                                                     repr(self._storage_service))
+        return f"<{self.__class__.__name__} wrapping Storage Service {self._storage_service!r}>"
 
     def _open_file(self):
-        self._storage_service.store(pypetconstants.OPEN_FILE, None,
-                                    trajectory_name=self._trajectory_name)
-        self._logger.info('Opened the hdf5 file.')
+        self._storage_service.store(
+            pypetconstants.OPEN_FILE, None, trajectory_name=self._trajectory_name
+        )
+        self._logger.info("Opened the hdf5 file.")
 
     def _close_file(self):
         self._storage_service.store(pypetconstants.CLOSE_FILE, None)
-        self._logger.info('Closed the hdf5 file.')
+        self._logger.info("Closed the hdf5 file.")
 
     def _check_and_collect_garbage(self):
         if self.gc_interval and self.operation_counter % self.gc_interval == 0:
             collected = gc.collect()
-            self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
+            self._logger.debug(f"Garbage Collection: Found {collected} unreachable items.")
         self.operation_counter += 1
 
     def _handle_data(self, msg, args, kwargs):
         """Handles data and returns `True` or `False` if everything is done."""
         stop = False
         try:
-            if msg == 'DONE':
+            if msg == "DONE":
                 stop = True
-            elif msg == 'STORE':
-                if 'msg' in kwargs:
-                    store_msg = kwargs.pop('msg')
+            elif msg == "STORE":
+                if "msg" in kwargs:
+                    store_msg = kwargs.pop("msg")
                 else:
                     store_msg = args[0]
                     args = args[1:]
-                if 'stuff_to_store' in kwargs:
-                    stuff_to_store = kwargs.pop('stuff_to_store')
+                if "stuff_to_store" in kwargs:
+                    stuff_to_store = kwargs.pop("stuff_to_store")
                 else:
                     stuff_to_store = args[0]
                     args = args[1:]
-                trajectory_name = kwargs['trajectory_name']
+                trajectory_name = kwargs["trajectory_name"]
                 if self._trajectory_name != trajectory_name:
                     if self._storage_service.is_open:
                         self._close_file()
@@ -844,11 +880,13 @@ class StorageServiceDataHandler(HasLogger):
                 self._storage_service.store(pypetconstants.FLUSH, None)
                 self._check_and_collect_garbage()
             else:
-                raise RuntimeError('You queued something that was not '
-                                   'intended to be queued. I did not understand message '
-                                   '`%s`.' % msg)
+                raise RuntimeError(
+                    "You queued something that was not "
+                    "intended to be queued. I did not understand message "
+                    f"`{msg}`."
+                )
         except Exception:
-            self._logger.exception('ERROR occurred during storing!')
+            self._logger.exception("ERROR occurred during storing!")
             time.sleep(0.01)
             pass  # We don't want to kill the queue process in case of an error
 
@@ -865,24 +903,24 @@ class StorageServiceDataHandler(HasLogger):
         finally:
             if self._storage_service.is_open:
                 self._close_file()
-            self._trajectory_name = ''
+            self._trajectory_name = ""
 
     def _receive_data(self):
-        raise NotImplementedError('Implement this!')
+        raise NotImplementedError("Implement this!")
 
 
 class QueueStorageServiceWriter(StorageServiceDataHandler):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
 
     def __init__(self, storage_service, storage_queue, gc_interval=None):
-        super(QueueStorageServiceWriter, self).__init__(storage_service, gc_interval=gc_interval)
+        super().__init__(storage_service, gc_interval=gc_interval)
         self.queue = storage_queue
 
-    @retry(9, Exception, 0.01, 'pypet.retry')
+    @retry(9, Exception, 0.01, "pypet.retry")
     def _receive_data(self):
         """Gets data from queue"""
         result = self.queue.get(block=True)
-        if hasattr(self.queue, 'task_done'):
+        if hasattr(self.queue, "task_done"):
             self.queue.task_done()
         return result
 
@@ -891,11 +929,11 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
     """Wrapper class that listens to the queue and stores queue items via the storage service."""
 
     def __init__(self, storage_service, storage_connection, max_buffer_size=10, gc_interval=None):
-        super(PipeStorageServiceWriter, self).__init__(storage_service, gc_interval=gc_interval)
+        super().__init__(storage_service, gc_interval=gc_interval)
         self.conn = storage_connection
         if max_buffer_size == 0:
             # no maximum buffer size
-            max_buffer_size = float('inf')
+            max_buffer_size = float("inf")
         self.max_size = max_buffer_size
         self._buffer = deque()
         self._set_logger()
@@ -906,7 +944,7 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
         while not stop:
             # print('W: recving stop')
             stop = self.conn.recv()
-            # print('W: read stop = %s' % str(stop))
+            # print(f'W: read stop = {stop}')
             if not stop:
                 # print('W: recving chunk')
                 chunk = self.conn.recv_bytes()
@@ -916,18 +954,18 @@ class PipeStorageServiceWriter(StorageServiceDataHandler):
             self.conn.send(True)
             # print('W: sent True')
         # print('W: reconstructing data')
-        to_load = b''.join(chunks)
+        to_load = b"".join(chunks)
         del chunks  # free unnecessary memory
         try:
             data = pickle.loads(to_load)
         except Exception:
             # We don't want to crash the storage service if reconstruction
             # due to errors fails
-            self._logger.exception('Could not reconstruct pickled data.')
+            self._logger.exception("Could not reconstruct pickled data.")
             data = None
         return data
 
-    @retry(9, Exception, 0.01, 'pypet.retry')
+    @retry(9, Exception, 0.01, "pypet.retry")
     def _receive_data(self):
         """Gets data from pipe"""
         while True:
@@ -955,18 +993,17 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
         self._set_logger()
 
     def __getstate__(self):
-        result = super(LockWrapper, self).__getstate__()
+        result = super().__getstate__()
         if not self.pickle_lock:
-            result['lock'] = None
+            result["lock"] = None
         return result
 
     def __repr__(self):
-        return '<%s wrapping Storage Service %s>' % (self.__class__.__name__,
-                                                     repr(self._storage_service))
+        return f"<{self.__class__.__name__} wrapping Storage Service {self._storage_service!r}>"
 
     @property
     def is_open(self):
-        """ Normally the file is opened and closed after each insertion.
+        """Normally the file is opened and closed after each insertion.
 
         However, the storage service may provide the option to keep the store open and signals
         this via this property.
@@ -989,7 +1026,7 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
                 try:
                     self.release_lock()
                 except RuntimeError:
-                    self._logger.error('Could not release lock `%s`!' % str(self.lock))
+                    self._logger.error(f"Could not release lock `{self.lock}`!")
 
     def __del__(self):
         # In order to prevent a dead-lock in case of error,
@@ -1006,26 +1043,29 @@ class LockWrapper(MultiprocWrapper, LockAcquisition):
                 try:
                     self.release_lock()
                 except RuntimeError:
-                    self._logger.error('Could not release lock `%s`!' % str(self.lock))
+                    self._logger.error(f"Could not release lock `{self.lock}`!")
 
 
 class ReferenceWrapper(MultiprocWrapper):
     """Wrapper that just keeps references to data to be stored."""
+
     def __init__(self):
         self.references = {}
 
     def store(self, msg, stuff_to_store, *args, **kwargs):
-        """Simply keeps a reference to the stored data """
-        trajectory_name = kwargs['trajectory_name']
+        """Simply keeps a reference to the stored data"""
+        trajectory_name = kwargs["trajectory_name"]
         if trajectory_name not in self.references:
             self.references[trajectory_name] = []
         self.references[trajectory_name].append((msg, cp.copy(stuff_to_store), args, kwargs))
 
     def load(self, *args, **kwargs):
         """Not implemented"""
-        raise NotImplementedError('Reference wrapping does not support loading. If you want to '
-                                  'load data in a multiprocessing environment, use a Lock '
-                                  'wrapping.')
+        raise NotImplementedError(
+            "Reference wrapping does not support loading. If you want to "
+            "load data in a multiprocessing environment, use a Lock "
+            "wrapping."
+        )
 
     def free_references(self):
         self.references = {}
@@ -1033,6 +1073,7 @@ class ReferenceWrapper(MultiprocWrapper):
 
 class ReferenceStore(HasLogger):
     """Class that can store references"""
+
     def __init__(self, storage_service, gc_interval=None):
         self._storage_service = storage_service
         self.gc_interval = gc_interval
@@ -1042,11 +1083,13 @@ class ReferenceStore(HasLogger):
     def _check_and_collect_garbage(self):
         if self.gc_interval and self.operation_counter % self.gc_interval == 0:
             collected = gc.collect()
-            self._logger.debug('Garbage Collection: Found %d unreachable items.' % collected)
+            self._logger.debug(f"Garbage Collection: Found {collected} unreachable items.")
         self.operation_counter += 1
 
     def store_references(self, references):
         """Stores references to disk and may collect garbage."""
         for trajectory_name in references:
-            self._storage_service.store(pypetconstants.LIST, references[trajectory_name], trajectory_name=trajectory_name)
+            self._storage_service.store(
+                pypetconstants.LIST, references[trajectory_name], trajectory_name=trajectory_name
+            )
         self._check_and_collect_garbage()

@@ -4,16 +4,28 @@ This is done in an independent module to avoid cluttered name spaces.
 
 """
 
-__author__ = 'Robert Meyer'
-
 import importlib
 import inspect
 
-from pypet.naturalnaming import ResultGroup, ParameterGroup, \
-    DerivedParameterGroup, ConfigGroup, NNGroupNode, NNLeafNode
-from pypet.parameter import BaseParameter, BaseResult, Parameter, Result, ArrayParameter, \
-    PickleResult, SparseParameter, SparseResult
-from pypet.shareddata import SharedResult
+from pypet.naturalnaming import (  # noqa: F401
+    ConfigGroup,
+    DerivedParameterGroup,
+    NNGroupNode,
+    NNLeafNode,
+    ParameterGroup,
+    ResultGroup,
+)
+from pypet.parameter import (  # noqa: F401
+    ArrayParameter,
+    BaseParameter,
+    BaseResult,
+    Parameter,
+    PickleResult,
+    Result,
+    SparseParameter,
+    SparseResult,
+)
+from pypet.shareddata import SharedResult  # noqa: F401
 
 
 def load_class(full_class_string):
@@ -45,7 +57,7 @@ def create_class(class_name, dynamic_imports):
         new_class = globals()[class_name]
 
         if not inspect.isclass(new_class):
-            raise TypeError('Not a class!')
+            raise TypeError("Not a class!")
 
         return new_class
     except (KeyError, TypeError):
@@ -60,9 +72,8 @@ def create_class(class_name, dynamic_imports):
             else:
                 # The class name is always the last in an import string,
                 # e.g. `'mypackage.mymodule.MyCustomParameter'`
-                class_name_to_test = dynamic_class.split('.')[-1]
+                class_name_to_test = dynamic_class.split(".")[-1]
                 if class_name == class_name_to_test:
                     new_class = load_class(dynamic_class)
                     return new_class
-        raise ImportError('Could not create the class named `%s`.' % class_name)
-
+        raise ImportError(f"Could not create the class named `{class_name}`.")

@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master)](https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/bdc483ee47304b97a334bb2922d83e8f)](https://www.codacy.com/gh/SmokinCaterpillar/pypet/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SmokinCaterpillar/pypet&amp;utm_campaign=Badge_Grade)
 [![PyPI version](https://badge.fury.io/py/pypet.svg)](https://badge.fury.io/py/pypet)
-[![Documentation Status](https://readthedocs.org/projects/pypet/badge/?version=latest)](http://pypet.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pypet/badge/?version=latest)](https://pypet.readthedocs.io/en/latest/?badge=latest)
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space
@@ -18,17 +18,17 @@ analyses becomes a piece of cake!
 
 ## Requirements
 
-Python 3.7 or higher and
+Python 3.12 or higher and
 
-* tables >=  3.5.0
+* tables >= 3.9.0
 
-* pandas >= 1.0.0
+* pandas >= 2.1.0
 
-* numpy >= 1.16.0
+* numpy >= 1.26.0
 
-* scipy >= 1.3.0
+* scipy >= 1.12.0
 
-* HDF5 >= 1.10.0
+* HDF5 >= 1.14.0
 
 
 There are also some optional packages that you can but do not have to install.
@@ -39,34 +39,27 @@ If you want to combine *pypet* with SCOOP you need
 
 For git integration you additionally need
 
-* GitPython >= 3.1.3
+* GitPython >= 3.1.40
 
 To utilize the cap feature for multiprocessing you need
 
-* psutil >= 5.7.0
+* psutil >= 5.9.6
 
 To utilize the continuing of crashed trajectories you need
 
-* dill >= 0.3.1
+* dill >= 0.3.7
 
 Automatic Sumatra records are supported for
 
 * Sumatra >= 0.7.1
 
 
-## Python 2.7
-
-This release no longer supports Python 2.7.
-If you are still using Python 2.7, you need to
-use the pypet legacy version 0.3.0 (https://pypi.python.org/pypi/pypet/0.3.0).
-
-
-# What is pypet all about?
+## What is pypet all about?
 
 Whenever you do numerical simulations in science, you come across two major challenges.
 First, you need some way to save your data. Secondly, you extensively explore the parameter space.
 In order to accomplish both you write some hacky I/O functionality to get it done the quick and
-dirty way. This means storing stuff into text files, as *MATLAB* *m*-files, 
+dirty way. This means storing stuff into text files, as *MATLAB* *m*-files,
 or whatever comes in handy.
 
 After a while and many simulations later, you want to look back at some of your very
@@ -85,24 +78,24 @@ The python parameter exploration toolkit (*pypet*) provides a framework to defin
 that you need to run your simulations. You can actively explore these by following a
 *trajectory* through the space spanned by the parameters.
 And finally, you can get your *results* together and store everything appropriately to disk.
-The storage format of choice is HDF5 (http://www.hdfgroup.org/HDF5/) via PyTables
-(http://www.pytables.org/).
+The storage format of choice is HDF5 (<http://www.hdfgroup.org/HDF5/>) via PyTables
+(<http://www.pytables.org/>).
 
 
 ## Package Organization
 
 This project encompasses these core modules:
 
-*  The `pypet.environment` module for handling the running of simulations
+* The `pypet.environment` module for handling the running of simulations
 
-*  The `pypet.trajectory` module for managing the parameters and results,
+* The `pypet.trajectory` module for managing the parameters and results,
    and providing a way to *explore* your parameter space. Somewhat related is also the
    `pypet.naturalnaming` module, that provides functionality to access and put data into
    the *trajectory*.
 
-*  The `pypet.parameters` module including containers for parameters and results
+* The `pypet.parameters` module including containers for parameters and results
 
-*  The `pypet.storageservice` for saving your data to disk
+* The `pypet.storageservice` for saving your data to disk
 
 
 ## Install
@@ -112,24 +105,14 @@ These are standard python packages, so chances are high that they are already in
 By the way, in case you use the python package manager ``pip``
 you can list all installed packages with ``pip freeze``.
 
-Next, simply install *pypet* via ``pip install pypet``
+Simply install *pypet* via ``pip install pypet``
 
-**Or**
-
-The package release can also be found on https://pypi.python.org/pypi/pypet. Download, unpack
-and ``python setup.py install`` it.
-
-**Or**
-
-In case you use **Windows**, you have to download the tar file from https://pypi.python.org/pypi/pypet 
-and unzip it. Next, open a windows terminal
-and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above run from the terminal ``python setup.py install``.
+The package release can also be found on <https://pypi.org/project/pypet/>.
 
 
 ## Documentation and Support
 
-Documentation can be found on http://pypet.readthedocs.org/.
+Documentation can be found on <https://pypet.readthedocs.io/>.
 
 If you have any further questions feel free to contact me at **robert.meyer (at) alcemy.tech**.
 
@@ -147,17 +130,17 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 
 * Support for many different **data formats**
 
-    * python native data types: bool, int, long, float, str, complex
+  * python native data types: bool, int, float, str, complex
 
-    * list, tuple, dict
+  * list, tuple, dict
 
-    * Numpy arrays and matrices
+  * Numpy arrays and matrices
 
-    * Scipy sparse matrices
+  * Scipy sparse matrices
 
-    * pandas DataFrames (http://pandas.pydata.org/)
+  * pandas DataFrames (<http://pandas.pydata.org/>)
 
-    * BRIAN2 quantities and monitors (http://briansimulator.org/)
+  * BRIAN2 quantities and monitors (<http://briansimulator.org/>)
 
 * Easily **extendable** to other data formats!
 
@@ -170,7 +153,7 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 * **Analyse** your data on-the-fly during multiprocessing
 
 * **Adaptively** explore tha parameter space combining *pypet* with optimization
-  tools like the evolutionary algorithms framework DEAP (http://deap.readthedocs.org/en/)
+  tools like the evolutionary algorithms framework DEAP (<http://deap.readthedocs.org/en/>)
 
 * **Dynamic Loading**, load only the parts of your data you currently need
 
@@ -181,13 +164,13 @@ If you have any further questions feel free to contact me at **robert.meyer (at)
 * **Git Integration**, let *pypet* make automatic commits of your codebase
 
 * **Sumatra Integration**, let *pypet* add your simulations to the *electronic lab notebook* tool
-  Sumatra (http://neuralensemble.org/sumatra/)
-  
+  Sumatra (<http://neuralensemble.org/sumatra/>)
+
 * *pypet* can be used on **computing clusters** or multiple servers at once if it is combined with
-  SCOOP (http://scoop.readthedocs.org/)
+  SCOOP (<http://scoop.readthedocs.org/>)
 
 
-# Quick Working Example
+## Quick Working Example
 
 The best way to show how stuff works is by giving examples. I will start right away with a
 very simple code snippet.
@@ -266,10 +249,10 @@ env = Environment(trajectory='Multiplication',filename='./HDF/example_01.hdf5',
 ```
 
 The environment uses some parameters here, that is the name of the new trajectory, a filename to
-store the trajectory into, the title of the file, and a comment that is added to the trajectory. 
-There are more options available like the number of processors for multiprocessing or 
+store the trajectory into, the title of the file, and a comment that is added to the trajectory.
+There are more options available like the number of processors for multiprocessing or
 how verbose the final HDF5 file is supposed to be.
-Check out the documentation (http://pypet.readthedocs.org/) if you want to know more.
+Check out the documentation (<https://pypet.readthedocs.io/>) if you want to know more.
 The environment will automatically generate a trajectory for us which we can access via:
 
 ```python
@@ -316,25 +299,25 @@ Cheers,
     Robert
 
 
-# Miscellaneous
+## Miscellaneous
 
 ## Acknowledgements
 
-*   Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
+* Thanks to Robert Pröpper and Philipp Meier for answering all my Python questions
 
-    You might want to check out their SpykeViewer (https://github.com/rproepp/spykeviewer)
-    tool for visualization of MEA recordings and NEO (http://pythonhosted.org/neo) data
+    You might want to check out their SpykeViewer (<https://github.com/rproepp/spykeviewer>)
+    tool for visualization of MEA recordings and NEO (<http://pythonhosted.org/neo>) data
 
-*   Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
-    for this project
-    
-*   Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
+* Thanks to Owen Mackwood for his SNEP toolbox which provided the initial ideas
+  for this project
 
-*   Thanks to Henri Bunting for his work on the BRIAN2 subpackage
+* Thanks to Mehmet Nevvaf Timur for his work on the SCOOP integration and the ``'NETQUEUE'`` feature
 
-*   Thanks to the BCCN Berlin (http://www.bccn-berlin.de),
-    the Research Training Group GRK 1589/1, and the
-    Neural Information Processing Group ( http://www.ni.tu-berlin.de) for support
+* Thanks to Henri Bunting for his work on the BRIAN2 subpackage
+
+* Thanks to the BCCN Berlin (<http://www.bccn-berlin.de>),
+  the Research Training Group GRK 1589/1, and the
+  Neural Information Processing Group (<http://www.ni.tu-berlin.de>) for support
 
 
 ## Tests
@@ -350,7 +333,7 @@ Each test module can be run individually, for instance `$ python trajectory_test
 You can run **all** tests with `$ python all_tests.py` which can also be found under
 `pypet/tests`.
 You can pass additional arguments as `$ python all_tests.py -k --folder=myfolder/`
-with `-k` to keep the HDF5 and log files created by the tests 
+with `-k` to keep the HDF5 and log files created by the tests
 (if you want to inspect them, otherwise they will be deleted after the completed tests),
 and `--folder=` to specify a folder where to store the HDF5 files instead of the temporary one.
 If the folder cannot be created, the program defaults to `tempfile.gettempdir()`.
@@ -358,9 +341,8 @@ If the folder cannot be created, the program defaults to `tempfile.gettempdir()`
 Running all tests can take up to 20 minutes. The test suite encompasses more than **1000** tests
 and has a code coverage of about **90%**!
 
-Moreover, *pypet* is constantly tested with Python 3.7 and 3.8 for **Linux** using
-Travis-CI. Testing for **Windows** platforms is performed via Appveyor.
-The source code is available at https://github.com/SmokinCaterpillar/pypet/.
+Moreover, *pypet* is continuously tested with Python 3.12 and 3.13 for **Linux** using
+GitHub Actions. The source code is available at <https://github.com/SmokinCaterpillar/pypet/>.
 
 
 ## License

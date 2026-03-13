@@ -52,3 +52,15 @@ tmp
 
 # profiling
 .profile*
+
+# Virtual environments
+.venv/
+
+# Lockfiles
+uv.lock
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+__pycache__/

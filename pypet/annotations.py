@@ -1,4 +1,4 @@
-""" Module defining annotations.
+"""Module defining annotations.
 
 This module contains two classes:
 
@@ -20,13 +20,12 @@ This module contains two classes:
 
 """
 
-__author__ = 'Robert Meyer'
-
 from pypet.pypetlogging import HasLogger
 from pypet.slots import HasSlots
 
+
 class Annotations(HasSlots):
-    """ Simple container class for annotations.
+    """Simple container class for annotations.
 
     Every tree node (*leaves* and *group* nodes) can be annotated.
     In case you use the standard :class:`~pypet.storageservice.HDF5StorageService`,
@@ -39,7 +38,8 @@ class Annotations(HasSlots):
     .. _attributes: http://pytables.github.io/usersguide/libref/declarative_classes.html#the-attributeset-class
 
     """
-    __slots__ = ('_dict_',)
+
+    __slots__ = ("_dict_",)
 
     def __init__(self):
         self._dict_ = None
@@ -49,7 +49,6 @@ class Annotations(HasSlots):
         if self._dict_ is None:
             self._dict_ = {}
         return self._dict_
-
 
     def __iter__(self):
         return self._dict.__iter__()
@@ -85,13 +84,13 @@ class Annotations(HasSlots):
         return len(self._dict) == 0
 
     def f_empty(self):
-        """Removes all annotations from RAM """
+        """Removes all annotations from RAM"""
         self._dict_ = None
 
     def __setattr__(self, key, value):
-        if key.startswith('_'):
+        if key.startswith("_"):
             # We set a private attribute
-            super(Annotations, self).__setattr__(key, value)
+            super().__setattr__(key, value)
         else:
             self.f_set_single(key, value)
 
@@ -104,9 +103,9 @@ class Annotations(HasSlots):
     def _translate_key(self, key):
         if isinstance(key, int):
             if key == 0:
-                key = 'annotation'
+                key = "annotation"
             else:
-                key = 'annotation_%d' % key
+                key = f"annotation_{key}"
         return key
 
     def f_get(self, *args):
@@ -126,11 +125,12 @@ class Annotations(HasSlots):
             if len(self._dict) == 1:
                 return self._dict[list(self._dict.keys())[0]]
             elif len(self._dict) > 1:
-                raise ValueError('Your annotation contains more than one entry: '
-                                 '`%s` Please use >>f_get<< with one of these.' %
-                                 (str(list(self._dict.keys()))))
+                raise ValueError(
+                    f"Your annotation contains more than one entry: "
+                    f"`{list(self._dict.keys())}` Please use >>f_get<< with one of these."
+                )
             else:
-                raise AttributeError('Your annotation is empty, cannot access data.')
+                raise AttributeError("Your annotation is empty, cannot access data.")
 
         result_list = []
         for name in args:
@@ -138,7 +138,7 @@ class Annotations(HasSlots):
             try:
                 result_list.append(self._dict[name])
             except KeyError:
-                raise AttributeError('Your annotation does not contain %s.' % name)
+                raise AttributeError(f"Your annotation does not contain {name}.")
 
         if len(args) == 1:
             return result_list[0]
@@ -165,18 +165,17 @@ class Annotations(HasSlots):
         try:
             del self._dict[key]
         except KeyError:
-            raise AttributeError('Your annotations do not contain %s' % key)
-
+            raise AttributeError(f"Your annotations do not contain {key}")
 
     def f_set_single(self, name, data):
-        """ Sets a single annotation. """
+        """Sets a single annotation."""
         self._dict[name] = data
 
     def f_ann_to_str(self):
         """Returns all annotations lexicographically sorted as a concatenated string."""
-        resstr = ''
+        resstr = ""
         for key in sorted(self._dict.keys()):
-            resstr += '%s=%s; ' % (key, str(self._dict[key]))
+            resstr += f"{key}={self._dict[key]}; "
         return resstr[:-2]
 
     def __str__(self):
@@ -184,15 +183,14 @@ class Annotations(HasSlots):
 
 
 class WithAnnotations(HasLogger):
-
-    __slots__ = ('_annotations',)
+    __slots__ = ("_annotations",)
 
     def __init__(self):
         self._annotations = Annotations()  # The annotation object to handle annotations
 
     @property
     def v_annotations(self):
-        """ Annotation feature of a trajectory node.
+        """Annotation feature of a trajectory node.
 
         Store some short additional information about your nodes here.
         If you use the standard HDF5 storage service, they will be stored as hdf5 node

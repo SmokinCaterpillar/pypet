@@ -59,9 +59,6 @@ numpy 64 bit integers, for instance.
 
 """
 
-__author__ = "Robert Meyer"
-
-
 import pickle
 import pickletools
 from io import BytesIO
@@ -70,13 +67,12 @@ import numpy as np
 import scipy.sparse as spsp
 from pandas import DataFrame, Series
 
-
 import pypet.pypetconstants as pypetconstants
-from pypet.naturalnaming import NNLeafNode
-import pypet.utils.comparisons as comparisons
-from pypet.utils.decorators import deprecated, copydoc
-from pypet.utils.helpful_classes import HashArray
 import pypet.pypetexceptions as pex
+import pypet.utils.comparisons as comparisons
+from pypet.naturalnaming import NNLeafNode
+from pypet.utils.decorators import copydoc
+from pypet.utils.helpful_classes import HashArray
 
 
 class ObjectTable(DataFrame):
@@ -108,9 +104,7 @@ class ObjectTable(DataFrame):
     """
 
     def __init__(self, data=None, index=None, columns=None, copy=False):
-        super(ObjectTable, self).__init__(
-            data=data, index=index, columns=columns, dtype=object, copy=copy
-        )
+        super().__init__(data=data, index=index, columns=columns, dtype=object, copy=copy)
 
 
 class BaseParameter(NNLeafNode):
@@ -149,7 +143,7 @@ class BaseParameter(NNLeafNode):
     __slots__ = ("_locked", "_full_copy", "_explored")
 
     def __init__(self, full_name, comment=""):
-        super(BaseParameter, self).__init__(full_name, comment, is_parameter=True)
+        super().__init__(full_name, comment, is_parameter=True)
 
         self._locked = False
 
@@ -309,9 +303,9 @@ class BaseParameter(NNLeafNode):
 
         if not self.f_supports(val1) and not self.f_supports(val2):
             raise TypeError(
-                "I do not support the types of both inputs (`%s` and `%s`), "
+                f"I do not support the types of both inputs (`{type(val1)}` and `{type(val2)}`), "
                 "therefore I cannot judge whether "
-                "the two are equal." % (str(type(val1)), str(type(val2)))
+                "the two are equal."
             )
 
         if not self._values_of_same_type(val1, val2):
@@ -364,16 +358,14 @@ class BaseParameter(NNLeafNode):
 
         if not self.f_supports(val1) and not self.f_supports(val2):
             raise TypeError(
-                "I do not support the types of both inputs (`%s` and `%s`),"
+                f"I do not support the types of both inputs (`{type(val1)}` and `{type(val2)}`),"
                 " therefore I cannot judge whether the two are of same type."
-                % str(type(val1)),
-                str(type(val2)),
             )
 
         return type(val1) is type(val2)
 
     def __repr__(self):
-        return "<%s>" % self.__str__()
+        return f"<{self.__str__()}>"
 
     def __str__(self):
         """String representation of the Parameter
@@ -384,18 +376,18 @@ class BaseParameter(NNLeafNode):
 
         """
         if self.f_has_range():
-            lenstr = "len:%d" % self.f_get_range_length()
+            lenstr = f"len:{self.f_get_range_length()}"
         else:
             lenstr = ""
 
         if self.v_comment:
-            commentstr = "`%s`" % self.v_comment
+            commentstr = f"`{self.v_comment}`"
         else:
             commentstr = ""
 
         if commentstr or lenstr:
             if commentstr and lenstr:
-                combined_str = "%s, %s" % (lenstr, commentstr)
+                combined_str = f"{lenstr}, {commentstr}"
             elif commentstr:
                 combined_str = commentstr
             elif lenstr:
@@ -403,12 +395,12 @@ class BaseParameter(NNLeafNode):
             else:
                 raise RuntimeError("You shall not pass!")
 
-            infostr = " (%s)" % combined_str
+            infostr = f" ({combined_str})"
 
         else:
             infostr = ""
 
-        return_string = "%s %s%s" % (self.f_get_class_name(), self.v_full_name, infostr)
+        return_string = f"{self.f_get_class_name()} {self.v_full_name}{infostr}"
 
         if not self.f_is_empty():
             return_string += ": " + self.f_val_to_str()
@@ -589,7 +581,7 @@ class BaseParameter(NNLeafNode):
         raise NotImplementedError("Should have implemented this.")
 
     def f_get_class_name(self):
-        """ Returns the name of the class i.e. `return self.__class__.__name__`"""
+        """Returns the name of the class i.e. `return self.__class__.__name__`"""
         return self.__class__.__name__
 
     def f_is_empty(self):
@@ -661,10 +653,10 @@ class Parameter(BaseParameter):
 
     Supported data values for the parameter are
 
-    * python natives (int, long, str, bool, float, complex),
+    * python natives (int, str, bool, float, complex),
 
     * numpy natives, arrays and matrices of type
-      np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
+      np.int8-64, np.uint8-64, np.float32-64, np.complex128, np.str_
 
     * python homogeneous non-nested tuples and lists
 
@@ -723,18 +715,14 @@ class Parameter(BaseParameter):
     __slots__ = ("_data", "_default", "_explored_range")
 
     def __init__(self, full_name, data=None, comment=""):
-        super(Parameter, self).__init__(full_name, comment)
+        super().__init__(full_name, comment)
         self._data = None
 
-        self._default = (
-            None  # The default value, which is the same as _data in the beginning,
-        )
+        self._default = None  # The default value, which is the same as _data in the beginning,
         # but it is necessary to keep a reference to it to restore the original value
         # after exploration
 
-        self._explored_range = (
-            []
-        )  # List that will changed later on if parameter is explored
+        self._explored_range = []  # List that will changed later on if parameter is explored
         self._set_logger()
 
         if data is not None:
@@ -814,7 +802,7 @@ class Parameter(BaseParameter):
         If `v_full_copy` is true the exploration range is also pickled, otherwise it is omitted.
 
         """
-        result = super(Parameter, self).__getstate__()
+        result = super().__getstate__()
 
         # If we don't need a full copy of the Parameter (because a single process needs
         # only access to a single point in the parameter space) we can delete the rest
@@ -831,9 +819,7 @@ class Parameter(BaseParameter):
         elif item == "default":
             return self.f_get_default()
         else:
-            raise AttributeError(
-                "`%s` object has no attribute `%s`." % (self.f_get_class_name(), item)
-            )
+            raise AttributeError(f"`{self.f_get_class_name()}` object has no attribute `{item}`.")
 
     def __getitem__(self, item):
         """Equivalent to `f_get_range[item] if item is integer`
@@ -848,14 +834,14 @@ class Parameter(BaseParameter):
         elif item == "default" or item == -1:
             return self.f_get_default()
         else:
-            return super(Parameter, self).__getitem__(item)
+            return super().__getitem__(item)
 
     @copydoc(BaseParameter._set_parameter_access)
     def _set_parameter_access(self, idx=0):
         if idx >= len(self) and self.f_has_range():
             raise ValueError(
-                "You try to access data item No. %d in the parameter range, "
-                "yet there are only %d potential items." % (idx, len(self))
+                f"You try to access data item No. {idx} in the parameter range, "
+                f"yet there are only {len(self)} potential items."
             )
         elif self.f_has_range():
             self._data = self._explored_range[idx]
@@ -870,7 +856,6 @@ class Parameter(BaseParameter):
         """Checks if input data is supported by the parameter."""
         dtype = type(data)
         if dtype is tuple or dtype is list:
-
             # Parameters cannot handle empty tuples
             if len(data) == 0:
                 return False
@@ -879,15 +864,14 @@ class Parameter(BaseParameter):
 
             # Check if the data in the tuple is homogeneous
             for item in data:
-                if not type(item) in pypetconstants.PARAMETER_SUPPORTED_DATA:
+                if type(item) not in pypetconstants.PARAMETER_SUPPORTED_DATA:
                     return False
-                if not old_type is None and old_type != type(item):
+                if old_type is not None and old_type is not type(item):
                     return False
                 old_type = type(item)
             return True
 
         elif dtype is np.ndarray or dtype is np.matrix:
-
             if data.size == 0:
                 return False  # Parameters cannot handle empty arrays and matrices
 
@@ -921,18 +905,16 @@ class Parameter(BaseParameter):
 
         if not self.f_supports(val1) and not self.f_supports(val2):
             raise TypeError(
-                "I do not support the types of both inputs (`%s` and `%s`),"
+                f"I do not support the types of both inputs (`{type(val1)}` and `{type(val2)}`),"
                 " therefore I cannot judge whether the two are of same type."
-                % str(type(val1)),
-                str(type(val2)),
             )
 
-        if not type(val1) is type(val2):
+        if type(val1) is not type(val2):
             return False
 
         # Numpy arrays must agree in data type and shape
         if type(val1) is np.array:
-            if not val1.dtype is val2.dtype:
+            if val1.dtype is not val2.dtype:
                 return False
 
             if not np.shape(val1) == np.shape(val2):
@@ -949,14 +931,10 @@ class Parameter(BaseParameter):
     def f_set(self, data):
 
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self._full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self._full_name}` is locked!")
 
         if self.f_has_range():
-            raise AttributeError(
-                "Your Parameter is an explored array can no longer change values!"
-            )
+            raise AttributeError("Your Parameter is an explored array can no longer change values!")
 
         if self.v_stored:
             self._logger.debug(
@@ -967,10 +945,10 @@ class Parameter(BaseParameter):
 
         if not self.f_supports(data):
             raise TypeError(
-                "Unsupported data `%s` of type `%s`. "
+                f"Unsupported data `{data}` of type `{type(data)}`. "
                 "If you passed a tuple or list, this error might also be caused "
                 "by heterogeneous data within the "
-                "tuple or list." % (str(data), str(type(data)))
+                "tuple or list."
             )
 
         self._data = data
@@ -979,9 +957,7 @@ class Parameter(BaseParameter):
     @copydoc(BaseParameter.f_get_default)
     def f_get_default(self):
         if self.f_is_empty():
-            raise TypeError(
-                "Parameter `%s` is empty cannot access data" % self.v_full_name
-            )
+            raise TypeError(f"Parameter `{self.v_full_name}` is empty cannot access data")
 
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._default
@@ -1005,8 +981,7 @@ class Parameter(BaseParameter):
         """
         if not self.f_has_range():
             raise TypeError(
-                "Your parameter `%s` is not array, so cannot return array."
-                % self.v_full_name
+                f"Your parameter `{self.v_full_name}` is not array, so cannot return array."
             )
         elif copy:
             return self._explored_range[:]
@@ -1037,20 +1012,17 @@ class Parameter(BaseParameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         if self.f_has_range():
             raise TypeError(
-                "Your parameter `%s` is already explored, "
-                "cannot _explore it further!" % self._name
+                f"Your parameter `{self._name}` is already explored, cannot _explore it further!"
             )
 
         if self._data is None:
             raise TypeError(
-                "Your parameter `%s` has no default value, please specify one "
-                "via `f_set` before exploration. " % self.v_full_name
+                f"Your parameter `{self.v_full_name}` has no default value, please specify one "
+                "via `f_set` before exploration. "
             )
 
         data_list = self._data_sanity_checks(explore_iterable)
@@ -1085,14 +1057,11 @@ class Parameter(BaseParameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         if not self.f_has_range():
             raise TypeError(
-                "Your Parameter `%s` is not an array and can therefore "
-                "not be expanded." % self._name
+                f"Your Parameter `{self._name}` is not an array and can therefore not be expanded."
             )
 
         data_list = self._data_sanity_checks(explore_iterable)
@@ -1110,17 +1079,13 @@ class Parameter(BaseParameter):
         data_list = []
 
         for val in explore_iterable:
-
             if not self.f_supports(val):
-                raise TypeError(
-                    "%s is of not supported type %s." % (repr(val), str(type(val)))
-                )
+                raise TypeError(f"{val!r} is of not supported type {type(val)}.")
 
             if not self._values_of_same_type(val, self._default):
                 raise TypeError(
-                    "Data of `%s` is not of the same type as the original entry value, "
-                    "new type is %s vs old type %s."
-                    % (self.v_full_name, str(type(val)), str(type(self._default)))
+                    f"Data of `{self.v_full_name}` is not of the same type as the original entry value, "
+                    f"new type is {type(val)} vs old type {type(self._default)}."
                 )
 
             data_list.append(val)
@@ -1144,9 +1109,7 @@ class Parameter(BaseParameter):
             store_dict = {"data": ObjectTable(data={"data": [self._data]})}
 
         if self.f_has_range():
-            store_dict["explored_data"] = ObjectTable(
-                data={"data": self._explored_range}
-            )
+            store_dict["explored_data"] = ObjectTable(data={"data": self._explored_range})
 
         self._locked = True
 
@@ -1160,23 +1123,18 @@ class Parameter(BaseParameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         if "data" in load_dict:
             self._data = load_dict["data"]["data"][0]
             self._default = self._data
         else:
             self._logger.warning(
-                "Your parameter `%s` is empty, "
-                "I did not find any data on disk." % self.v_full_name
+                f"Your parameter `{self.v_full_name}` is empty, I did not find any data on disk."
             )
 
         if "explored_data" in load_dict:
-            self._explored_range = [
-                x for x in load_dict["explored_data"]["data"].tolist()
-            ]
+            self._explored_range = [x for x in load_dict["explored_data"]["data"].tolist()]
             self._explored = True
 
         self._locked = True
@@ -1184,9 +1142,7 @@ class Parameter(BaseParameter):
     @copydoc(BaseParameter.f_get)
     def f_get(self):
         if self.f_is_empty():
-            raise TypeError(
-                "Parameter `%s` is empty cannot access data" % self.v_full_name
-            )
+            raise TypeError(f"Parameter `{self.v_full_name}` is empty cannot access data")
 
         self.f_lock()  # As soon as someone accesses an entry the parameter gets locked
         return self._data
@@ -1195,9 +1151,7 @@ class Parameter(BaseParameter):
     def _shrink(self):
 
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter %s is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter {self.v_full_name} is locked!")
 
         if not self.f_has_range():
             raise TypeError("Cannot shrink Parameter without a range.")
@@ -1213,9 +1167,7 @@ class Parameter(BaseParameter):
     def f_empty(self):
 
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter %s is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter {self.v_full_name} is locked!")
 
         if self.f_has_range():
             self._shrink()
@@ -1264,7 +1216,7 @@ class ArrayParameter(Parameter):
 
         """
         if type(self._data) not in (np.ndarray, tuple, np.matrix, list):
-            return super(ArrayParameter, self)._store()
+            return super()._store()
         else:
             store_dict = {"data" + ArrayParameter.IDENTIFIER: self._data}
 
@@ -1272,14 +1224,10 @@ class ArrayParameter(Parameter):
                 # Supports smart storage by hashable arrays
                 # Keys are the hashable arrays or tuples and values are the indices
                 smart_dict = {}
-
-                store_dict["explored_data" + ArrayParameter.IDENTIFIER] = ObjectTable(
-                    columns=["idx"], index=list(range(len(self)))
-                )
+                idx_values = [None] * len(self)
 
                 count = 0
                 for idx, elem in enumerate(self._explored_range):
-
                     # First we need to distinguish between tuples and array and extract a
                     # hashable part of the array
                     if isinstance(elem, np.ndarray):
@@ -1302,9 +1250,7 @@ class ArrayParameter(Parameter):
 
                     name = self._build_name(name_idx)
                     # Store the reference to the array
-                    store_dict["explored_data" + ArrayParameter.IDENTIFIER]["idx"][
-                        idx
-                    ] = name_idx
+                    idx_values[idx] = name_idx
 
                     # Only if the array was not encountered before,
                     # store the array and remember the index
@@ -1312,6 +1258,10 @@ class ArrayParameter(Parameter):
                         store_dict[name] = elem
                         smart_dict[hash_elem] = name_idx
                         count += 1
+
+                store_dict["explored_data" + ArrayParameter.IDENTIFIER] = ObjectTable(
+                    data={"idx": idx_values}
+                )
 
             self._locked = True
 
@@ -1326,11 +1276,8 @@ class ArrayParameter(Parameter):
             'xa__rr__XXXXXXXX' where 'XXXXXXXX' is the index of the array
 
         """
-        return "explored%s.set_%05d.xa_%08d" % (
-            ArrayParameter.IDENTIFIER,
-            name_idx // 1000,
-            name_idx,
-        )
+        name_idx = int(name_idx)
+        return f"explored{ArrayParameter.IDENTIFIER}.set_{name_idx // 1000:05d}.xa_{name_idx:08d}"
 
     def _load(self, load_dict):
         """Reconstructs the data and exploration array.
@@ -1343,9 +1290,7 @@ class ArrayParameter(Parameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         try:
             self._data = load_dict["data" + ArrayParameter.IDENTIFIER]
@@ -1366,7 +1311,7 @@ class ArrayParameter(Parameter):
                 self._explored = True
 
         except KeyError:
-            super(ArrayParameter, self)._load(load_dict)
+            super()._load(load_dict)
 
         self._default = self._data
         self._locked = True
@@ -1379,12 +1324,10 @@ class ArrayParameter(Parameter):
         regardless of their size and values they contain.
 
         """
-        if (type(val1) in (np.ndarray, tuple, np.matrix)) and (
-            type(val2) is type(val1)
-        ):
+        if (type(val1) in (np.ndarray, tuple, np.matrix)) and (type(val2) is type(val1)):
             return True
         else:
-            return super(ArrayParameter, self)._values_of_same_type(val1, val2)
+            return super()._values_of_same_type(val1, val2)
 
     def f_supports(self, data):
         """Checks if input data is supported by the parameter."""
@@ -1394,7 +1337,7 @@ class ArrayParameter(Parameter):
         elif dtype is np.ndarray and data.size == 0 and data.ndim == 1:
             return True  #  ArrayParameter supports empty numpy arrays
         else:
-            return super(ArrayParameter, self).f_supports(data)
+            return super().f_supports(data)
 
 
 class SparseParameter(ArrayParameter):
@@ -1423,13 +1366,12 @@ class SparseParameter(ArrayParameter):
         if self._is_supported_matrix(val1) and self._is_supported_matrix(val2):
             return True
         else:
-            return super(SparseParameter, self)._values_of_same_type(val1, val2)
+            return super()._values_of_same_type(val1, val2)
 
     def _equal_values(self, val1, val2):
         """Matrices are equal if they serialize to the same value."""
         if self._is_supported_matrix(val1):
             if self._is_supported_matrix(val2):
-
                 serial_string1 = self._serialize_matrix(val1)
                 serial_string2 = self._serialize_matrix(val2)
 
@@ -1437,7 +1379,7 @@ class SparseParameter(ArrayParameter):
             else:
                 return False
         else:
-            return super(SparseParameter, self)._equal_values(val1, val2)
+            return super()._equal_values(val1, val2)
 
     @staticmethod
     def _is_supported_matrix(data):
@@ -1457,7 +1399,7 @@ class SparseParameter(ArrayParameter):
         if self._is_supported_matrix(data):
             return True
         else:
-            return super(SparseParameter, self).f_supports(data)
+            return super().f_supports(data)
 
     @staticmethod
     def _serialize_matrix(matrix):
@@ -1491,23 +1433,19 @@ class SparseParameter(ArrayParameter):
 
         """
         if not self._is_supported_matrix(self._data):
-            return super(SparseParameter, self)._store()
+            return super()._store()
         else:
             store_dict = {}
             serial_string = self._serialize_matrix(self._data)
-            store_dict["data%s" % SparseParameter.IDENTIFIER] = serial_string
+            store_dict[f"data{SparseParameter.IDENTIFIER}"] = serial_string
 
             if self.f_has_range():
                 # # Supports smart storage by hashing
                 smart_dict = {}
-
-                store_dict["explored_data" + SparseParameter.IDENTIFIER] = ObjectTable(
-                    columns=["idx"], index=list(range(len(self)))
-                )
+                idx_values = [None] * len(self)
 
                 count = 0
                 for idx, elem in enumerate(self._explored_range):
-
                     serial_string = self._serialize_matrix(elem)
 
                     # Use the hash_tuple as a key for the smart_dict
@@ -1518,18 +1456,19 @@ class SparseParameter(ArrayParameter):
                         name_idx = count
                         add = True
 
-                    store_dict["explored_data" + SparseParameter.IDENTIFIER]["idx"][
-                        idx
-                    ] = name_idx
+                    idx_values[idx] = name_idx
 
                     if add:
-
-                        store_dict[
-                            "xspm%s%08d" % (SparseParameter.IDENTIFIER, name_idx)
-                        ] = serial_string
+                        store_dict[f"xspm{SparseParameter.IDENTIFIER}{int(name_idx):08d}"] = (
+                            serial_string
+                        )
 
                         smart_dict[serial_string] = name_idx
                         count += 1
+
+                store_dict["explored_data" + SparseParameter.IDENTIFIER] = ObjectTable(
+                    data={"idx": idx_values}
+                )
 
             self._locked = True
 
@@ -1554,12 +1493,10 @@ class SparseParameter(ArrayParameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         try:
-            serial_string = load_dict["data%s" % SparseParameter.IDENTIFIER]
+            serial_string = load_dict[f"data{SparseParameter.IDENTIFIER}"]
             self._data = self._reconstruct_matrix(serial_string)
 
             if "explored_data" + SparseParameter.IDENTIFIER in load_dict:
@@ -1568,7 +1505,7 @@ class SparseParameter(ArrayParameter):
                 explore_list = []
                 for irun, name_idx in enumerate(idx_col):
                     serial_string = load_dict[
-                        "xspm%s%08d" % (SparseParameter.IDENTIFIER, name_idx)
+                        f"xspm{SparseParameter.IDENTIFIER}{int(name_idx):08d}"
                     ]
                     matrix = self._reconstruct_matrix(serial_string)
                     explore_list.append(matrix)
@@ -1576,8 +1513,8 @@ class SparseParameter(ArrayParameter):
                 self._explored_range = explore_list
                 self._explored = True
 
-        except KeyError as e:
-            super(SparseParameter, self)._load(load_dict)
+        except KeyError:
+            super()._load(load_dict)
 
         self._default = self._data
         self._locked = True
@@ -1605,7 +1542,7 @@ class PickleParameter(Parameter):
     __slots__ = ("_protocol",)
 
     def __init__(self, full_name, data=None, comment="", protocol=2):
-        super(PickleParameter, self).__init__(full_name, data, comment)
+        super().__init__(full_name, data, comment)
         self._protocol = None
         self.v_protocol = protocol
 
@@ -1641,7 +1578,7 @@ class PickleParameter(Parameter):
         Explored data is stored as 'xp_XXXXXXXX' where 'XXXXXXXX' is the index of the object.
 
         """
-        return "xp_%08d" % name_id
+        return f"xp_{int(name_id):08d}"
 
     def _store(self):
         """Returns a dictionary for storage.
@@ -1662,16 +1599,11 @@ class PickleParameter(Parameter):
             store_dict[PickleParameter.PROTOCOL] = self.v_protocol
 
         if self.f_has_range():
-
-            store_dict["explored_data"] = ObjectTable(
-                columns=["idx"], index=list(range(len(self)))
-            )
-
             smart_dict = {}
+            idx_values = [None] * len(self)
             count = 0
 
             for idx, val in enumerate(self._explored_range):
-
                 obj_id = id(val)
 
                 if obj_id in smart_dict:
@@ -1682,12 +1614,14 @@ class PickleParameter(Parameter):
                     add = True
 
                 name = self._build_name(name_id)
-                store_dict["explored_data"]["idx"][idx] = name_id
+                idx_values[idx] = name_id
 
                 if add:
                     store_dict[name] = pickle.dumps(val, protocol=self.v_protocol)
                     smart_dict[obj_id] = name_id
                     count += 1
+
+            store_dict["explored_data"] = ObjectTable(data={"idx": idx_values})
 
         self._locked = True
 
@@ -1696,11 +1630,7 @@ class PickleParameter(Parameter):
     @staticmethod
     def _get_protocol(dump):
         pops = pickletools.genops(dump)
-        proto = (
-            2
-            if next(pops)[0].proto == 2
-            else int(any(op.proto for op, fst, snd in pops))
-        )
+        proto = 2 if next(pops)[0].proto == 2 else int(any(op.proto for op, fst, snd in pops))
         return proto
 
     def _load(self, load_dict):
@@ -1713,17 +1643,14 @@ class PickleParameter(Parameter):
 
         """
         if self.v_locked:
-            raise pex.ParameterLockedException(
-                "Parameter `%s` is locked!" % self.v_full_name
-            )
+            raise pex.ParameterLockedException(f"Parameter `{self.v_full_name}` is locked!")
 
         if "data" in load_dict:
             dump = load_dict["data"]
             self._data = pickle.loads(dump)
         else:
             self._logger.warning(
-                "Your parameter `%s` is empty, "
-                "I did not find any data on disk." % self.v_full_name
+                f"Your parameter `{self.v_full_name}` is empty, I did not find any data on disk."
             )
 
         try:
@@ -1762,7 +1689,7 @@ class BaseResult(NNLeafNode):
     __slots__ = ()
 
     def __init__(self, full_name, comment=""):
-        super(BaseResult, self).__init__(full_name, comment, is_parameter=False)
+        super().__init__(full_name, comment, is_parameter=False)
 
 
 class Result(BaseResult):
@@ -1774,11 +1701,11 @@ class Result(BaseResult):
 
     Data that can safely be stored into a Result are:
 
-        *   python natives (int, long, str, bool, float, complex),
+        *   python natives (int, str, bool, float, complex),
 
         *
             numpy natives, arrays and matrices of type
-            np.int8-64, np.uint8-64, np.float32-64, np.complex, np.str
+            np.int8-64, np.uint8-64, np.float32-64, np.complex128, np.str_
 
         *
             python lists and tuples of the previous types
@@ -1879,7 +1806,7 @@ class Result(BaseResult):
 
     def __init__(self, full_name, *args, **kwargs):
         comment = kwargs.pop("comment", "")
-        super(Result, self).__init__(full_name, comment)
+        super().__init__(full_name, comment)
         self._data_ = None
         self._set_logger()
         self.f_set(*args, **kwargs)
@@ -1893,7 +1820,7 @@ class Result(BaseResult):
 
     def __dir__(self):
         """Adds all data to auto-completion"""
-        result = super(Result, self).__dir__()
+        result = super().__dir__()
         if self._data_ is not None:
             result.extend(self._data.keys())
         return result
@@ -1904,7 +1831,7 @@ class Result(BaseResult):
             if key == 0:
                 key = self.v_name
             else:
-                key = self.v_name + "_%d" % key
+                key = f"{self.v_name}_{key}"
         return key
 
     def __contains__(self, key):
@@ -1928,7 +1855,7 @@ class Result(BaseResult):
 
         for key in self._data:
             val = self._data[key]
-            resstr = "%s=%s, " % (key, repr(val))
+            resstr = f"{key}={val!r}, "
             resstrlist.append(resstr)
 
             strlen += len(resstr)
@@ -1938,8 +1865,7 @@ class Result(BaseResult):
         return_string = "".join(resstrlist)
         if len(return_string) > pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH:
             return_string = (
-                return_string[0 : pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH - 3]
-                + "..."
+                return_string[0 : pypetconstants.HDF5_STRCOL_MAX_VALUE_LENGTH - 3] + "..."
             )
         else:
             return_string = return_string[0:-2]  # Delete the last `, `
@@ -1947,7 +1873,7 @@ class Result(BaseResult):
         return return_string
 
     def __repr__(self):
-        return "<%s>" % self.__str__()
+        return f"<{self.__str__()}>"
 
     def __str__(self):
         """String representation of the result.
@@ -1960,9 +1886,9 @@ class Result(BaseResult):
 
         """
         datastr = self.f_val_to_str()
-        return_string = "%s %s" % (self.f_get_class_name(), self.v_full_name)
+        return_string = f"{self.f_get_class_name()} {self.v_full_name}"
         if self.v_comment:
-            return_string += " (`%s`)" % self.v_comment
+            return_string += f" (`{self.v_comment}`)"
         if datastr:
             return_string += ": " + datastr
 
@@ -2023,9 +1949,7 @@ class Result(BaseResult):
 
         """
         if args and self.v_name is None:
-            raise AttributeError(
-                "Cannot set positional value because I do not have a name!"
-            )
+            raise AttributeError("Cannot set positional value because I do not have a name!")
         for idx, arg in enumerate(args):
             valstr = self.f_translate_key(idx)
             self.f_set_single(valstr, arg)
@@ -2034,7 +1958,7 @@ class Result(BaseResult):
             self.f_set_single(key, arg)
 
     def __getitem__(self, name):
-        """ Equivalent to calling `f_get`"""
+        """Equivalent to calling `f_get`"""
         return self.f_get(name)
 
     def __setitem__(self, key, value):
@@ -2085,25 +2009,23 @@ class Result(BaseResult):
                 return list(self._data.values())[0]
             elif len(self._data) > 1:
                 raise ValueError(
-                    "Your result `%s` contains more than one entry: "
-                    "`%s` Please use >>f_get<< with one of these."
-                    % (self.v_full_name, str(list(self._data.keys())))
+                    f"Your result `{self.v_full_name}` contains more than one entry: "
+                    f"`{list(self._data.keys())}` Please use >>f_get<< with one of these."
                 )
             else:
                 raise AttributeError(
-                    "Your result `%s` is empty, cannot access data." % self.v_full_name
+                    f"Your result `{self.v_full_name}` is empty, cannot access data."
                 )
 
         result_list = []
         for name in args:
             name = self.f_translate_key(name)
-            if not name in self._data:
+            if name not in self._data:
                 if name == "data" and len(self._data) == 1:
                     return self._data[list(self._data.keys())[0]]
                 else:
                     raise AttributeError(
-                        "`%s` is not part of your result `%s`."
-                        % (name, self.v_full_name)
+                        f"`{name}` is not part of your result `{self.v_full_name}`."
                     )
 
             result_list.append(self._data[name])
@@ -2142,20 +2064,14 @@ class Result(BaseResult):
             )
 
         if self._supports(item):
-
             # self._check_if_empty(item, name) # No longer needed
 
             if name in self._data:
-                self._logger.debug(
-                    "Replacing `%s` in result `%s`." % (name, self.v_full_name)
-                )
+                self._logger.debug(f"Replacing `{name}` in result `{self.v_full_name}`.")
 
             self._data[name] = item
         else:
-            raise TypeError(
-                "Your result `%s` of type `%s` is not supported."
-                % (name, str(type(item)))
-            )
+            raise TypeError(f"Your result `{name}` of type `{type(item)}` is not supported.")
 
     def _supports(self, item):
         """Checks if outer data structure is supported."""
@@ -2190,12 +2106,10 @@ class Result(BaseResult):
             if arg in self._data:
                 del self._data[arg]
             else:
-                raise AttributeError(
-                    "Your result `%s` does not contain %s." % (self.name_, arg)
-                )
+                raise AttributeError(f"Your result `{self.name_}` does not contain {arg}.")
 
     def __delitem__(self, key):
-        """ Deletes an item, see also __delattr__"""
+        """Deletes an item, see also __delattr__"""
         self.f_remove(key)
 
     def __delattr__(self, item):
@@ -2219,19 +2133,19 @@ class Result(BaseResult):
 
         """
         if item[0] == "_":
-            super(Result, self).__delattr__(item)
+            super().__delattr__(item)
         else:
             self.f_remove(item)
 
     def __setattr__(self, key, value):
         if key[0] == "_":
             # We set a private attribute
-            super(Result, self).__setattr__(key, value)
+            super().__setattr__(key, value)
         elif hasattr(self.__class__, key):
             # Work around for python properties
             python_property = getattr(self.__class__, key)
             if python_property.fset is None:
-                raise AttributeError("%s is read only!" % key)
+                raise AttributeError(f"{key} is read only!")
             else:
                 python_property.fset(self, value)
         else:
@@ -2262,17 +2176,17 @@ class SparseResult(Result):
         if SparseResult.IDENTIFIER in name:
             raise AttributeError(
                 "Your result name contains the identifier for sparse matrices,"
-                " please do not use %s in your result names." % SparseResult.IDENTIFIER
+                f" please do not use {SparseResult.IDENTIFIER} in your result names."
             )
         else:
-            super(SparseResult, self).f_set_single(name, item)
+            super().f_set_single(name, item)
 
     def _supports(self, item):
         """Supports everything of parent class and csr, csc, bsr, and dia sparse matrices."""
         if SparseParameter._is_supported_matrix(item):
             return True
         else:
-            return super(SparseResult, self)._supports(item)
+            return super()._supports(item)
 
     def _store(self):
         """Returns a storage dictionary understood by the storage service.
@@ -2286,7 +2200,7 @@ class SparseResult(Result):
             val = self._data[key]
             if SparseParameter._is_supported_matrix(val):
                 serial_string = SparseParameter._serialize_matrix(val)
-                store_dict["%s%s" % (key, SparseParameter.IDENTIFIER)] = serial_string
+                store_dict[f"{key}{SparseParameter.IDENTIFIER}"] = serial_string
             else:
                 store_dict[key] = val
 
@@ -2335,7 +2249,7 @@ class PickleResult(Result):
         protocol = kwargs.pop("protocol", 0)
         self.v_protocol = protocol
 
-        super(PickleResult, self).__init__(full_name, *args, **kwargs)
+        super().__init__(full_name, *args, **kwargs)
 
     @property
     def v_protocol(self):
@@ -2368,9 +2282,7 @@ class PickleResult(Result):
             )
 
         if name == PickleResult.PROTOCOL:
-            raise AttributeError(
-                "You cannot name an entry `%s`" % PickleResult.PROTOCOL
-            )
+            raise AttributeError(f"You cannot name an entry `{PickleResult.PROTOCOL}`")
 
         self._data[name] = item
 

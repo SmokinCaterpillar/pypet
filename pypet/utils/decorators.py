@@ -1,11 +1,9 @@
 """Module containing decorators"""
 
-__author__ = 'Robert Meyer'
-
 import functools
-import warnings
 import logging
 import time
+import warnings
 
 
 def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
@@ -28,6 +26,7 @@ def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
         if ``turn_into_run=True``.
 
     """
+
     def wrapper(func):
         @functools.wraps(func)
         def new_func(traj, *args, **kwargs):
@@ -36,8 +35,7 @@ def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
                 traj.f_start_run(turn_into_run=turn_into_run)
             result = func(traj, *args, **kwargs)
             if do_wrap:
-                traj.f_finalize_run(store_meta_data=store_meta_data,
-                                    clean_up=clean_up)
+                traj.f_finalize_run(store_meta_data=store_meta_data, clean_up=clean_up)
             return result
 
         return new_func
@@ -45,7 +43,7 @@ def manual_run(turn_into_run=True, store_meta_data=True, clean_up=True):
     return wrapper
 
 
-def deprecated(msg=''):
+def deprecated(msg=""):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used.
@@ -59,8 +57,8 @@ def deprecated(msg=''):
     def wrapper(func):
         @functools.wraps(func)
         def new_func(*args, **kwargs):
-            warning_string = "Call to deprecated function or property `%s`." % func.__name__
-            warning_string = warning_string + ' ' + msg
+            warning_string = f"Call to deprecated function or property `{func.__name__}`."
+            warning_string = warning_string + " " + msg
             warnings.warn(
                 warning_string,
                 category=DeprecationWarning,
@@ -84,14 +82,14 @@ def copydoc(fromfunc, sep="\n"):
         sourcedoc = fromfunc.__doc__
 
         # Remove the ABSTRACT line:
-        split_doc = sourcedoc.split('\n')
-        split_doc_no_abstract = [line for line in split_doc if not 'ABSTRACT' in line]
+        split_doc = sourcedoc.split("\n")
+        split_doc_no_abstract = [line for line in split_doc if "ABSTRACT" not in line]
 
         # If the length is different we have found an ABSTRACT line
         # Finally we want to remove the final blank line, otherwise
         # we would have three blank lines at the end
         if len(split_doc) != len(split_doc_no_abstract):
-            sourcedoc = '\n'.join(split_doc_no_abstract[:-1])
+            sourcedoc = "\n".join(split_doc_no_abstract[:-1])
 
         if func.__doc__ is None:
             func.__doc__ = sourcedoc
@@ -103,14 +101,17 @@ def copydoc(fromfunc, sep="\n"):
 
 
 def kwargs_mutual_exclusive(param1_name, param2_name, map2to1=None):
-    """ If there exist mutually exclusive parameters checks for them and maps param2 to 1."""
+    """If there exist mutually exclusive parameters checks for them and maps param2 to 1."""
+
     def wrapper(func):
         @functools.wraps(func)
         def new_func(*args, **kwargs):
             if param2_name in kwargs:
                 if param1_name in kwargs:
-                    raise ValueError('You cannot specify `%s` and `%s` at the same time, '
-                                     'they are mutually exclusive.' % (param1_name, param2_name))
+                    raise ValueError(
+                        f"You cannot specify `{param1_name}` and `{param2_name}` at the same time, "
+                        f"they are mutually exclusive."
+                    )
                 param2 = kwargs.pop(param2_name)
                 if map2to1 is not None:
                     param1 = map2to1(param2)
@@ -148,13 +149,16 @@ def kwargs_api_change(old_name, new_name=None):
 
             if old_name in kwargs:
                 if new_name is None:
-                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`. ' \
-                                 'This keyword is no longer supported, please don`t use it ' \
-                                 'anymore.' % (old_name, func.__name__)
+                    warning_string = (
+                        f"Using deprecated keyword argument `{old_name}` in function `{func.__name__}`. "
+                        "This keyword is no longer supported, please don`t use it "
+                        "anymore."
+                    )
                 else:
-                    warning_string = 'Using deprecated keyword argument `%s` in function `%s`, ' \
-                                 'please use keyword `%s` instead.' % \
-                                 (old_name, func.__name__, new_name)
+                    warning_string = (
+                        f"Using deprecated keyword argument `{old_name}` in function `{func.__name__}`, "
+                        f"please use keyword `{new_name}` instead."
+                    )
                 warnings.warn(warning_string, category=DeprecationWarning)
                 value = kwargs.pop(old_name)
                 if new_name is not None:
@@ -168,22 +172,19 @@ def kwargs_api_change(old_name, new_name=None):
 
 
 def not_in_run(func):
-    """This is a decorator that signaling that a function is not available during a single run.
-
-    """
+    """This is a decorator that signaling that a function is not available during a single run."""
     doc = func.__doc__
-    na_string = '''\nATTENTION: This function is not available during a single run!\n'''
+    na_string = """\nATTENTION: This function is not available during a single run!\n"""
 
     if doc is not None:
-        func.__doc__ = '\n'.join([doc, na_string])
+        func.__doc__ = "\n".join([doc, na_string])
     func._not_in_run = True
 
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
         if self._is_run:
-            raise TypeError('Function `%s` is not available during a single run.' %
-                            func.__name__)
+            raise TypeError(f"Function `{func.__name__}` is not available during a single run.")
 
         return func(self, *args, **kwargs)
 
@@ -191,22 +192,19 @@ def not_in_run(func):
 
 
 def with_open_store(func):
-    """This is a decorator that signaling that a function is only available if the storage is open.
-
-    """
+    """This is a decorator that signaling that a function is only available if the storage is open."""
     doc = func.__doc__
-    na_string = '''\nATTENTION: This function can only be used if the store is open!\n'''
+    na_string = """\nATTENTION: This function can only be used if the store is open!\n"""
 
     if doc is not None:
-        func.__doc__ = '\n'.join([doc, na_string])
+        func.__doc__ = "\n".join([doc, na_string])
     func._with_open_store = True
 
     @functools.wraps(func)
     def new_func(self, *args, **kwargs):
 
         if not self.traj.v_storage_service.is_open:
-            raise TypeError('Function `%s` is only available if the storage is open.' %
-                            func.__name__)
+            raise TypeError(f"Function `{func.__name__}` is only available if the storage is open.")
 
         return func(self, *args, **kwargs)
 
@@ -235,26 +233,27 @@ def retry(n, errors, wait=0.0, logger_name=None):
                     result = func(*args, **kwargs)
                     if retries and logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.debug('Retry of `%s` successful' % func.__name__)
+                        logger.debug(f"Retry of `{func.__name__}` successful")
                     return result
                 except errors:
                     if retries >= n:
                         if logger_name:
                             logger = logging.getLogger(logger_name)
-                            logger.exception('I could not execute `%s` with args %s and kwargs %s, '
-                                             'starting next try. ' % (func.__name__,
-                                                                      str(args),
-                                                                      str(kwargs)))
+                            logger.exception(
+                                f"I could not execute `{func.__name__}` with args {args} and kwargs {kwargs}, "
+                                f"starting next try. "
+                            )
                         raise
                     elif logger_name:
                         logger = logging.getLogger(logger_name)
-                        logger.debug('I could not execute `%s` with args %s and kwargs %s, '
-                                         'starting next try. ' % (func.__name__,
-                                                                  str(args),
-                                                                  str(kwargs)))
+                        logger.debug(
+                            f"I could not execute `{func.__name__}` with args {args} and kwargs {kwargs}, "
+                            f"starting next try. "
+                        )
                     retries += 1
                     if wait:
                         time.sleep(wait)
+
         return new_func
 
     return wrapper
@@ -262,14 +261,14 @@ def retry(n, errors, wait=0.0, logger_name=None):
 
 def _prfx_getattr_(obj, item):
     """Replacement of __getattr__"""
-    if item.startswith('f_') or item.startswith('v_'):
+    if item.startswith("f_") or item.startswith("v_"):
         return getattr(obj, item[2:])
-    raise AttributeError('`%s` object has no attribute `%s`' % (obj.__class__.__name__, item))
+    raise AttributeError(f"`{obj.__class__.__name__}` object has no attribute `{item}`")
 
 
 def _prfx_setattr_(obj, item, value):
     """Replacement of __setattr__"""
-    if item.startswith('v_'):
+    if item.startswith("v_"):
         return setattr(obj, item[2:], value)
     else:
         return super(obj.__class__, obj).__setattr__(item, value)
@@ -277,9 +276,8 @@ def _prfx_setattr_(obj, item, value):
 
 def prefix_naming(cls):
     """Decorate that adds the prefix naming scheme"""
-    if hasattr(cls, '__getattr__'):
-        raise TypeError('__getattr__ already defined')
+    if hasattr(cls, "__getattr__"):
+        raise TypeError("__getattr__ already defined")
     cls.__getattr__ = _prfx_getattr_
     cls.__setattr__ = _prfx_setattr_
     return cls
-

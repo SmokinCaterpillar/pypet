@@ -9,42 +9,41 @@ later on we simply merge the batches into a single trajectory.
 
 """
 
-import sys
-import saga
-from saga.filesystem import OVERWRITE
 import os
+import sys
 import traceback
 
+import saga
+from saga.filesystem import OVERWRITE
 
-ADDRESS = '12345.fake.street'  # Address of your server
-USER = 'user'  # Username
-PASSWORD = '12345'  # That's amazing I got the same combination on my luggage!
-WORKING_DIR = '/myhome/'  # Your working directory
+ADDRESS = "12345.fake.street"  # Address of your server
+USER = "user"  # Username
+PASSWORD = "12345"  # That's amazing I got the same combination on my luggage!
+WORKING_DIR = "/myhome/"  # Your working directory
 
 
 def upload_file(filename, session):
-    """ Uploads a file """
-    print('Uploading file %s' % filename)
+    """Uploads a file"""
+    print("Uploading file %s" % filename)
     outfilesource = os.path.join(os.getcwd(), filename)
-    outfiletarget = 'sftp://' + ADDRESS + WORKING_DIR
+    outfiletarget = "sftp://" + ADDRESS + WORKING_DIR
     out = saga.filesystem.File(outfilesource, session=session, flags=OVERWRITE)
     out.copy(outfiletarget)
-    print('Transfer of `%s` to `%s` successful' % (filename, outfiletarget))
+    print("Transfer of `%s` to `%s` successful" % (filename, outfiletarget))
 
 
 def download_file(filename, session):
-    """ Downloads a file """
-    print('Downloading file %s' % filename)
-    infilesource = os.path.join('sftp://' + ADDRESS + WORKING_DIR,
-                                 filename)
+    """Downloads a file"""
+    print("Downloading file %s" % filename)
+    infilesource = os.path.join("sftp://" + ADDRESS + WORKING_DIR, filename)
     infiletarget = os.path.join(os.getcwd(), filename)
     incoming = saga.filesystem.File(infilesource, session=session, flags=OVERWRITE)
     incoming.copy(infiletarget)
-    print('Transfer of `%s` to `%s` successful' % (filename, infiletarget))
+    print("Transfer of `%s` to `%s` successful" % (filename, infiletarget))
 
 
 def create_session():
-    """ Creates and returns a new SAGA session """
+    """Creates and returns a new SAGA session"""
     ctx = saga.Context("UserPass")
     ctx.user_id = USER
     ctx.user_pass = PASSWORD
@@ -56,16 +55,16 @@ def create_session():
 
 
 def merge_trajectories(session):
-    """ Merges all trajectories found in the working directory """
+    """Merges all trajectories found in the working directory"""
     jd = saga.job.Description()
 
-    jd.executable      = 'python'
-    jd.arguments       = ['merge_trajs.py']
-    jd.output          = "mysagajob_merge.stdout"
-    jd.error           = "mysagajob_merge.stderr"
+    jd.executable = "python"
+    jd.arguments = ["merge_trajs.py"]
+    jd.output = "mysagajob_merge.stdout"
+    jd.error = "mysagajob_merge.stderr"
     jd.working_directory = WORKING_DIR
 
-    js = saga.job.Service('ssh://' + ADDRESS, session=session)
+    js = saga.job.Service("ssh://" + ADDRESS, session=session)
     myjob = js.create_job(jd)
     print("\n...starting job...\n")
 
@@ -83,22 +82,22 @@ def merge_trajectories(session):
 
 
 def start_jobs(session):
-    """ Starts all jobs and runs `the_task.py` in batches. """
+    """Starts all jobs and runs `the_task.py` in batches."""
 
-    js = saga.job.Service('ssh://' + ADDRESS, session=session)
+    js = saga.job.Service("ssh://" + ADDRESS, session=session)
 
     batches = range(3)
     jobs = []
 
     for batch in batches:
-        print('Starting batch %d' % batch)
+        print("Starting batch %d" % batch)
 
         jd = saga.job.Description()
 
-        jd.executable      = 'python'
-        jd.arguments       = ['the_task.py --batch=' + str(batch)]
-        jd.output          = "mysagajob.stdout" + str(batch)
-        jd.error           = "mysagajob.stderr" + str(batch)
+        jd.executable = "python"
+        jd.arguments = ["the_task.py --batch=" + str(batch)]
+        jd.output = "mysagajob.stdout" + str(batch)
+        jd.error = "mysagajob.stderr" + str(batch)
         jd.working_directory = WORKING_DIR
 
         myjob = js.create_job(jd)
@@ -126,8 +125,8 @@ def start_jobs(session):
 def main():
     try:
         session = create_session()
-        upload_file('the_task.py', session)
-        upload_file('merge_trajs.py', session)
+        upload_file("the_task.py", session)
+        upload_file("merge_trajs.py", session)
         # download_file('saga_0.hdf5', session)  # currently buggy, wait for SAGA python update
         # To see the resulting file manually download it from the server!
 

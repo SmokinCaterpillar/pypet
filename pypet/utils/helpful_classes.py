@@ -1,18 +1,18 @@
-__author__ = 'Robert Meyer'
-
-import numpy as np
-import itertools as itools
 import hashlib
+import itertools as itools
 from collections import deque
 
+import numpy as np
 
-class Universe(object):
+
+class Universe:
     """Contains everything"""
+
     def __contains__(self, item):
         return True
 
 
-class IteratorChain(object):
+class IteratorChain:
     """Helper class that chains arbitrary generators and iterators and iterables.
 
     Preferably used over itertools.chain to avoid recursive calls.
@@ -20,6 +20,7 @@ class IteratorChain(object):
     You can already pass some `iterators` on creation.
 
     """
+
     def __init__(self, *iterables):
         # Deque containing the iterators to come
         self._chain = deque()
@@ -54,7 +55,7 @@ class IteratorChain(object):
                 except IndexError:
                     # If we run out of iterators we are sure that
                     # there can be no more element
-                    raise StopIteration('Reached end of iterator chain')
+                    raise StopIteration("Reached end of iterator chain")
 
     def __next__(self):
         """For python 3 compatibility"""
@@ -70,9 +71,8 @@ class IteratorChain(object):
                 return
 
 
-class ChainMap(object):
-    """Combine multiple mappings for sequential lookup.
-    """
+class ChainMap:
+    """Combine multiple mappings for sequential lookup."""
 
     def __init__(self, *maps):
         self._maps = maps
@@ -98,13 +98,13 @@ class ChainMap(object):
         return itools.chain(*iter_list)
 
 
-class HashArray(object):
+class HashArray:
     """Hashable wrapper for numpy arrays"""
 
     def __init__(self, ndarray):
         """Creates a new hashable object encapsulating an ndarray.
 
-            :param ndarray: The wrapped ndarray.
+        :param ndarray: The wrapped ndarray.
 
         """
         self._ndarray = ndarray
@@ -120,7 +120,7 @@ class HashArray(object):
         return int(hashlib.sha1(self._ndarray.view(np.uint8)).hexdigest(), 16)
 
 
-class TrajectoryMock(object):
+class TrajectoryMock:
     """Helper class that mocks properties of a trajectory.
 
     The full trajectory is not needed to rename a log file.
@@ -128,6 +128,7 @@ class TrajectoryMock(object):
     this class is used.
 
     """
+
     def __init__(self, traj):
         self.v_environment_name = traj.v_environment_name
         self.v_name = traj.v_name
