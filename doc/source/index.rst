@@ -7,16 +7,16 @@
 Welcome to *pypet*'s documentation
 ==================================
 
-.. image:: https://travis-ci.org/SmokinCaterpillar/pypet.svg?branch=master
-   :target: https://travis-ci.org/SmokinCaterpillar/pypet
-.. image:: https://ci.appveyor.com/api/projects/status/9amhj3iyf105xa2y/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/SmokinCaterpillar/pypet/branch/master
+.. image:: https://github.com/SmokinCaterpillar/pypet/actions/workflows/tests.yml/badge.svg?branch=master
+   :target: https://github.com/SmokinCaterpillar/pypet/actions/workflows/tests.yml
 .. image:: https://coveralls.io/repos/github/SmokinCaterpillar/pypet/badge.svg?branch=master
    :target: https://coveralls.io/github/SmokinCaterpillar/pypet?branch=master
-.. image:: https://api.codacy.com/project/badge/grade/86268960751442799fcf6192b36e386f
-   :target: https://www.codacy.com/app/robert-meyer/pypet
-.. image:: http://depsy.org/api/package/pypi/pypet/badge.svg
-   :target: http://depsy.org/package/python/pypet
+.. image:: https://app.codacy.com/project/badge/Grade/bdc483ee47304b97a334bb2922d83e8f
+   :target: https://app.codacy.com/gh/SmokinCaterpillar/pypet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade
+.. image:: https://badge.fury.io/py/pypet.svg
+   :target: https://badge.fury.io/py/pypet
+.. image:: https://readthedocs.org/projects/pypet/badge/?version=latest
+   :target: https://pypet.readthedocs.io/en/latest/?badge=latest
 
 The new python parameter exploration toolkit:
 *pypet* manages exploration of the parameter space

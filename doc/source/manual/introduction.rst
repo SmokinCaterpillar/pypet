@@ -90,20 +90,20 @@ Getting Started
 Requirements
 ------------
 
-3.7 or higher [#pythonversion]_ and
+Python 3.12 or higher and
 
-* numpy_ >= 1.16.0
+* numpy_ >= 1.26.0
 
-* scipy_ >= 1.0.0
+* scipy_ >= 1.12.0
 
-* tables_ >= 3.5.0
+* tables_ >= 3.9.0
 
-* pandas_ >= 1.0.0
+* pandas_ >= 2.1.0
 
-* HDF5_ >= 1.10.0
+* HDF5_ >= 1.14.0
 
-Python 2.6 and 2.7 are no longer supported. Still if you
-need *pypet* for these versions check out the legacy `0.3.0`_ package.
+Python 2 and Python 3.6–3.11 are no longer supported. If you
+need *pypet* for Python 2, check out the legacy `0.3.0`_ package.
 
 ^^^^^^^^^^^^^^^^^
 Optional Packages
@@ -115,62 +115,31 @@ If you want to combine *pypet* with the `SCOOP framework`_ you need
 
 For git integration you additionally need
 
-* GitPython_ >= 3.1.3
+* GitPython_ >= 3.1.40
 
 To utilize the cap feature for :ref:`more-on-multiprocessing` you need
 
-* psutil_ >= 5.7.0
+* psutil_ >= 5.9.6
 
 To utilize the continuing of crashed trajectories you need
 
-* dill_ >= 0.3.1
+* dill_ >= 0.3.7
 
 Automatic sumatra records are supported for
 
 * Sumatra_ >= 0.7.1
 
-.. rubric:: Footnotes
-
-.. [#pythonversion]
-
-    *pypet* might also work under Python 3.0-3.6 but has not been tested.
-
-
 -------
 Install
 -------
 
-If you don't have all prerequisites (numpy_, scipy_, tables_, pandas_) install them first.
-These are standard python packages, so chances are high that they are already installed.
-By the way, in case you use the python package manager ``pip``
-you can list all installed packages with ``pip freeze``.
+Simply install *pypet* via pip::
 
-Next, simply install *pypet* via ``pip install pypet``
+    pip install pypet
 
-**Or**
+The package release can also be found on `pypi.org`_.
 
-The package release can also be found on `pypi.python.org`_. Download, unpack
-and ``python setup.py install`` it.
-
-**Or**
-
-In case you use **Windows**, you have to download the tar file from `pypi.python.org`_ and
-unzip it [#tar]_. Next, open a windows terminal [#win]_
-and navigate to your unpacked *pypet* files to the folder containing the `setup.py` file.
-As above, run from the terminal ``python setup.py install``.
-
-
-.. _`pypi.python.org`: https://pypi.python.org/pypi/pypet
-
-.. [#tar]
-
-    Extract using WinRaR, 7zip, etc. You might need to unpack it twice, first
-    the `tar.gz` file and then the remaining `tar` file in the subfolder.
-
-.. [#Win]
-
-    In case you forgot how, you open a terminal by pressing *Windows Button* + *R*.
-    Then type *cmd* into the dialog box and press *OK*.
+.. _`pypi.org`: https://pypi.org/project/pypet/
 
 
 ^^^^^^^
