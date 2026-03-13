@@ -2,6 +2,7 @@
 set -e # Exit on any error
 
 echo "+++++++++++ Installing libraries +++++++++++++"
+sudo apt-get update
 sudo apt-get install -y gfortran libopenblas-dev liblapack-dev libhdf5-serial-dev
 echo "+++++++++++ Installing Stuff for Python $PYTHON_VERSION +++++++++++"
 if [[ ${DEPS:-latest} == "minimum" ]]; then
